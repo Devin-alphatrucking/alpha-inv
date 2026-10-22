@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sanvicasa Invoice & Billing - Staff User Guide</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Gujarati:wght@400;500;600;700&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', 'Noto Sans Gujarati', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #f8fafc;
+      color: #1e293b;
+      line-height: 1.6;
+      padding: 30px 16px;
+    }
+
+    .container {
+      max-width: 880px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: #ffffff;
+      padding: 36px;
+      position: relative;
+    }
+
+    .header h1 {
+      font-size: 26px;
+      font-weight: 800;
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
+    }
+
+    .header p {
+      font-size: 15px;
+      opacity: 0.85;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 4px 14px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      letter-spacing: 0.8px;
+    }
+
+    .content {
+      padding: 36px;
+    }
+
+    .intro-box {
+      background: #f0fdf4;
+      border-left: 4px solid #16a34a;
+      padding: 16px 20px;
+      border-radius: 0 12px 12px 0;
+      margin-bottom: 30px;
+      font-size: 14px;
+      color: #166534;
+    }
+
+    .step-card {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 24px;
+      padding: 22px;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      background: #ffffff;
+      transition: all 0.2s ease;
+      page-break-inside: avoid;
+    }
+
+    .step-card:hover {
+      border-color: #0284c7;
+      box-shadow: 0 6px 20px rgba(2, 132, 199, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .step-number {
+      flex-shrink: 0;
+      width: 44px;
+      height: 44px;
+      background: #0f172a;
+      color: #ffffff;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 800;
+      box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.2);
+    }
+
+    .step-info {
+      flex: 1;
+    }
+
+    .step-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .step-subtitle {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    .step-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .step-list li {
+      font-size: 14px;
+      color: #334155;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .step-list li::before {
+      content: "✔";
+      color: #16a34a;
+      font-weight: bold;
+      flex-shrink: 0;
+      font-size: 13px;
+      margin-top: 1px;
+    }
+
+    .tip-box {
+      margin-top: 12px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      color: #475569;
+      font-weight: 500;
+    }
+
+    .footer {
+      background: #f8fafc;
+      padding: 24px 36px;
+      text-align: center;
+      font-size: 13px;
+      color: #64748b;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .print-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0f172a;
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 1000;
+      transition: all 0.2s;
+    }
+
+    .print-btn:hover {
+      background: #1e293b;
+      transform: scale(1.02);
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 12px;
+      }
+      .content {
+        padding: 20px 16px;
+      }
+      .step-card {
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+      }
+      .header {
+        padding: 24px 20px;
+      }
+      .header h1 {
+        font-size: 22px;
+      }
+    }
+
+    @media print {
+      body {
+        padding: 0;
+        background: white;
+      }
+      .container {
+        box-shadow: none;
+        border: none;
+        max-width: 100%;
+      }
+      .print-btn {
+        display: none;
+      }
+      .header {
+        padding: 20px;
+      }
+      .content {
+        padding: 20px;
+      }
+      .step-card {
+        padding: 14px;
+        margin-bottom: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <button class="print-btn" onclick="window.print()">
+    🖨️ Print / Save as PDF
+  </button>
+
+  <div class="container">
+    <div class="header">
+      <div class="badge">Sanvicasa Invoice & Billing CRM</div>
+      <h1>સરળ સ્ટાફ ઉપયોગ માર્ગદર્શિકા (Staff User Guide)</h1>
+      <p>લોગિન કર્યા પછી બિલ અપલોડ કરવા, વેરિફાઈ કરવા અને પેમેન્ટ ટ્રેક કરવા માટેનું સ્ટેપ-બાય-સ્ટેપ ગાઈડ</p>
+    </div>
+
+    <div class="content">
+      <div class="intro-box">
+        <strong>💡 મુખ્ય ઉદ્દેશ:</strong> આ સિસ્ટમમાં જ્યારે પણ સાઈટ કે શોપ પર નવું મટીરીયલ/ખરીદીનું બિલ આવે, ત્યારે માત્ર ફોટો અથવા PDF અપલોડ કરવાની રહે છે. AI સિસ્ટમ આપોઆપ બિલ વાંચીને ડેટા તૈયાર કરશે. નીચેના સ્ટેપ્સ ધ્યાનથી વાંચો:
+      </div>
+
+      <!-- Step 1 -->
+      <div class="step-card">
+        <div class="step-number">1</div>
+        <div class="step-info">
+          <div class="step-title">૧. સિસ્ટમમાં લોગિન કરો (Login to System)</div>
+          <div class="step-subtitle">URL: your-domain/login ➜ Email & Password</div>
+          <ul class="step-list">
+            <li>તમારા <strong>Email</strong> અને <strong>Password</strong> દાખલ કરીને <strong>Sign In</strong> કરો.</li>
+            <li>Admin અને Staff બંને માટે અલગ અલગ પ્રોજેક્ટ અને ડેટા ઍક્સેસ આપોઆપ સેટ થયેલ હોય છે.</li>
+            <li>મોબાઇલમાં નીચે <strong>Bottom Navigation Bar</strong> દેખાશે જેથી સરળતાથી ૧-ટૅપમાં કોઈપણ પેજ પર જઈ શકાય.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step-card">
+        <div class="step-number">2</div>
+        <div class="step-info">
+          <div class="step-title">૨. નવું બિલ અપલોડ કરો (Upload Purchase Invoice)</div>
+          <div class="step-subtitle">Navigation ➜ Invoices ➜ Upload Invoice (+ Button)</div>
+          <ul class="step-list">
+            <li><strong>Browse files:</strong> કમ્પ્યુટર કે ફોનમાંથી બિલની <strong>PDF</strong> અથવા <strong>ફોટો</strong> સિલેક્ટ કરો.</li>
+            <li><strong>Use camera:</strong> મોબાઇલમાંથી સીધો બિલનો ફોટો પાડીને પણ અપલોડ કરી શકો છો.</li>
+            <li><strong>Extract invoice data</strong> બટન પર ક્લિક કરો. AI થોડીક સેકન્ડમાં બિલ વાંચી લેશે.</li>
+          </ul>
+          <div class="tip-box">
+            📌 <i>ટિપ: બિલનો ફોટો સ્પષ્ટ અને સીધો પાડવો જેથી વેપારીનું નામ, GST નંબર, તારીખ અને રકમ ૧૦૦% સાચી વંચાય.</i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step-card">
+        <div class="step-number">3</div>
+        <div class="step-info">
+          <div class="step-title">૩. સાઇડ-બાય-સાઇડ રિવ્યુ & કન્ફર્મ કરો (Review & Verify)</div>
+          <div class="step-subtitle">Review Screen ➜ Verify Extracted Fields</div>
+          <ul class="step-list">
+            <li><strong>ડાબી બાજુ (Left):</strong> ઓરિજિનલ બિલ દેખાશે (Zoom In / Zoom Out કરીને ચેક કરી શકાય).</li>
+            <li><strong>જમણી બાજુ (Right):</strong> AI દ્વારા વંચાયેલી વિગતો:
+              <br>• <strong>Vendor (વેપારી):</strong> વેપારી સિલેક્ટ કરો અથવા નવો વેપારી બનાવો.
+              <br>• <strong>Category (કેટેગરી):</strong> Plumbing, Steel, Cement, Tiles, Sanitary વગેરે.
+              <br>• <strong>Invoice No & Date:</strong> બિલ નંબર અને તારીખ ચેક કરો.
+              <br>• <strong>Line Items:</strong> મટીરીયલનું નામ, જથ્થો (Qty), ભાવ (Rate) અને GST %.
+            </li>
+            <li>બધી વિગત સાચી હોય તો <strong>Confirm & Save Invoice</strong> બટન દબાવો.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="step-card">
+        <div class="step-number">4</div>
+        <div class="step-info">
+          <div class="step-title">૪. બિલોનું લિસ્ટ અને ફિલ્ટર (Invoices List & Search)</div>
+          <div class="step-subtitle">Navigation ➜ Invoices List</div>
+          <ul class="step-list">
+            <li>અહીં બધા અપલોડ થયેલા બિલનું લિસ્ટ, સ્ટેટસ અને ટોટલ રકમ જોવા મળશે.</li>
+            <li><strong>Filters બટન:</strong> વેપારી પ્રમાણે, કેટેગરી પ્રમાણે, અથવા સ્ટેટસ (Unpaid, Paid, Overdue) મુજબ ફિલ્ટર કરો.</li>
+            <li><strong>Modern Date Picker:</strong> તારીખ સિલેક્ટ કરવા માટે નવો કેલેન્ડર પોપઅપ અને "This Month", "Last 30 Days" જેવા ક્વિક બટન્સ આપેલા છે.</li>
+            <li>કોઈપણ બિલની PDF જોવા માટે કાર્ડમાં <strong>Preview</strong> બટન દબાવો.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="step-card">
+        <div class="step-number">5</div>
+        <div class="step-info">
+          <div class="step-title">૫. પેમેન્ટ નોંધણી અને હિસાબ (Payment Recording)</div>
+          <div class="step-subtitle">Invoices ➜ Mark Paid / Record Payment</div>
+          <ul class="step-list">
+            <li>જ્યારે વેપારીને રકમ ચૂકવવામાં આવે ત્યારે બિલ સામે <strong>Mark as Paid</strong> કરો.</li>
+            <li>જો પાર્ટ પેમેન્ટ કર્યું હોય તો રકમ (Amount), મોડ (UPI, NEFT, Cheque, Cash) અને રેફરન્સ નંબર નાખો.</li>
+            <li><strong>Payments પેજ:</strong> આ મહિને કુલ કેટલું ચૂકવ્યું અને કેટલી રકમ બાકી (Outstanding) છે તેનો લાઈવ હિસાબ દેખાશે.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Step 6 -->
+      <div class="step-card">
+        <div class="step-number">6</div>
+        <div class="step-info">
+          <div class="step-title">૬. વેપારી અને મટીરીયલ માસ્ટર (Vendors & Materials)</div>
+          <div class="step-subtitle">Navigation ➜ Vendors & Materials</div>
+          <ul class="step-list">
+            <li><strong>Vendors:</strong> નવા સપ્લાયર/વેપારીનું નામ, GST નંબર, સરનામું અને કોન્ટેક્ટ નંબર સેવ કરો.</li>
+            <li><strong>Materials:</strong> સામાન્ય મટીરીયલના સ્ટાન્ડર્ડ યુનિટ (BAG, KG, NOS, MTR, SQFT) અને HSN કોડ મેનેજ કરો.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Step 7 -->
+      <div class="step-card">
+        <div class="step-number">7</div>
+        <div class="step-info">
+          <div class="step-title">૭. ડેશબોર્ડ & ખર્ચ વિશ્લેષણ (Dashboard Analytics)</div>
+          <div class="step-subtitle">Navigation ➜ Dashboard</div>
+          <ul class="step-list">
+            <li>આખા મહિનાનો કુલ ખર્ચ અને બાકી પેમેન્ટનું ચાર્ટ સ્વરૂપે વિશ્લેષણ જુઓ.</li>
+            <li>કઈ કેટેગરીમાં સૌથી વધુ ખર્ચ થયો (દા.ત. Steel, Cement, Tiles) તે ગ્રાફમાં સ્પષ્ટ દેખાશે.</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="footer">
+      Sanvicasa Invoice & Billing CRM • Smart AI Invoice Intake, Material Management & Billing Solution
+    </div>
+  </div>
+
+</body>
+</html>

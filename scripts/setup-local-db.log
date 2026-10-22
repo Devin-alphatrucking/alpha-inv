@@ -1,0 +1,10 @@
+
+2026-08-02T15:43:56.8242211+05:30 Starting local DB setup (pass 4)
+2026-08-02T15:43:57.8973634+05:30 Enabled temporary trust auth
+2026-08-02T15:43:59.3247467+05:30 role invoice_crm ensured
+2026-08-02T15:43:59.4719241+05:30 db_exists_count=0
+2026-08-02T15:44:02.0057956+05:30 database created
+2026-08-02T15:44:02.1499366+05:30 schema permissions granted
+2026-08-02T15:44:02.2438048+05:30 SCRAM auth restored
+2026-08-02T15:44:02.4107865+05:30 app_user_check=connected exit=0
+2026-08-02T15:44:02.4239016+05:30 SUCCESS

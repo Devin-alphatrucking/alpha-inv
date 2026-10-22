@@ -1,0 +1,672 @@
+// Construction Material Invoice & Billing System
+// See project plan for background on the data model.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Auth
+// ---------------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  STAFF
+}
+
+model User {
+  id           String @id @default(cuid())
+  name         String
+  email        String @unique
+  passwordHash String
+  role         Role   @default(STAFF)
+
+  // Account lifecycle (step 2f)
+  emailVerifiedAt DateTime? // set when the person proved they own the address
+  termsAcceptedAt DateTime?
+  deletedAt       DateTime? // account deleted: personal data removed, row kept for history
+  sessionVersion  Int       @default(0) // bump to sign the person out everywhere
+  // Platform operator (our own team). Set ONLY with `npm run master -- add <email>`; never from a screen or sign-up.
+  isPlatformAdmin Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // STAFF users are scoped to specific projects; ADMIN sees everything.
+  projectAssignments ProjectAssignment[]
+  uploadedInvoices   Invoice[]           @relation("UploadedBy")
+  reviewedInvoices   Invoice[]           @relation("ReviewedBy")
+  auditLogs          AuditLog[]
+  payments           Payment[]           @relation("PaidBy")
+  projectNotes       ProjectNote[]
+  activityLogs       ActivityLog[]
+  memberships        Membership[]
+  authTokens         AuthToken[]
+  supportTickets     SupportTicket[]
+}
+
+// ---------------------------------------------------------------------------
+// Core taxonomy: Project -> Category -> Material, Vendor
+// ---------------------------------------------------------------------------
+
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+model Project {
+  id             String        @id @default(cuid())
+  organizationId String // company that owns this row
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  name           String
+  description    String?
+  address        String?
+  status         ProjectStatus @default(ACTIVE)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Per-project Azure Document Intelligence credentials, managed by admins.
+  // The key is stored AES-256-GCM encrypted (see src/lib/crypto.ts) and is
+  // never sent to the browser. When unset, the env-level credentials are used.
+  azureEndpoint    String?
+  azureKeyEnc      String?
+  azureKeyHint     String? // last 4 chars, display only
+  monthlyPageLimit Int     @default(500) // AI pages per calendar month (IST)
+
+  invoices    Invoice[]
+  assignments ProjectAssignment[]
+  notes       ProjectNote[]
+
+  @@index([organizationId])
+}
+
+model ProjectAssignment {
+  id             String   @id @default(cuid())
+  organizationId String // company that owns this row
+  userId         String
+  projectId      String
+  createdAt      DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@index([organizationId])
+}
+
+model ProjectNote {
+  id             String   @id @default(cuid())
+  organizationId String // company that owns this row
+  projectId      String
+  userId         String
+  content        String
+  createdAt      DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([organizationId])
+}
+
+model Category {
+  id             String       @id @default(cuid())
+  organizationId String // company that owns this row
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String // Plumbing, Steel, Cement, Jaquar, Sumeru 501...
+  unit           String? // default unit for quick entry
+  createdAt      DateTime     @default(now())
+
+  materials Material[]
+  invoices  Invoice[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model Material {
+  id             String       @id @default(cuid())
+  organizationId String // company that owns this row
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  categoryId     String
+  name           String
+  hsnCode        String?
+  defaultUnit    String // NOS, BAG, KG, MTR, PKT...
+  createdAt      DateTime     @default(now())
+
+  category  Category          @relation(fields: [categoryId], references: [id])
+  lineItems InvoiceLineItem[]
+
+  @@unique([categoryId, name])
+  @@index([organizationId])
+}
+
+model Vendor {
+  id             String       @id @default(cuid())
+  organizationId String // company that owns this row
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  gstin          String?
+  address        String?
+  contact        String?
+  createdAt      DateTime     @default(now())
+
+  invoices Invoice[]
+
+  @@unique([organizationId, gstin])
+  @@index([organizationId])
+}
+
+// ---------------------------------------------------------------------------
+// Invoices
+// ---------------------------------------------------------------------------
+
+enum InvoiceStatus {
+  PROCESSING
+  NEEDS_REVIEW
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+}
+
+model Invoice {
+  id             String       @id @default(cuid())
+  organizationId String // company that owns this row
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  invoiceNumber  String
+  projectId      String
+  vendorId       String
+  categoryId     String?
+  invoiceDate    DateTime
+  dueDate        DateTime?
+  deliveryDate   DateTime?
+
+  subtotal Decimal @default(0) @db.Decimal(14, 2)
+  sgst     Decimal @default(0) @db.Decimal(14, 2)
+  cgst     Decimal @default(0) @db.Decimal(14, 2)
+  igst     Decimal @default(0) @db.Decimal(14, 2)
+  rounding Decimal @default(0) @db.Decimal(14, 2)
+  total    Decimal @default(0) @db.Decimal(14, 2)
+
+  paymentTerms String?
+  status       InvoiceStatus @default(PROCESSING)
+  paidAt       DateTime? // set when marked PAID; cleared when marked UNPAID
+
+  fileUrl       String // original uploaded PDF/image in Azure Blob Storage
+  fileHash      String? // SHA-256 of the uploaded file, used to block repeat uploads before AI runs
+  pageCount     Int? // pages analysed by Azure for this file
+  extractionRaw Json? // raw Azure Document Intelligence response, for audit
+
+  uploadedById String?
+  reviewedById String?
+  reviewedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project    Project           @relation(fields: [projectId], references: [id])
+  vendor     Vendor            @relation(fields: [vendorId], references: [id])
+  category   Category?         @relation(fields: [categoryId], references: [id])
+  uploadedBy User?             @relation("UploadedBy", fields: [uploadedById], references: [id])
+  reviewedBy User?             @relation("ReviewedBy", fields: [reviewedById], references: [id])
+  lineItems  InvoiceLineItem[]
+  payments   Payment[]
+  auditLogs  AuditLog[]
+
+  @@unique([vendorId, invoiceNumber])
+  @@index([projectId])
+  @@index([vendorId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([invoiceDate])
+  @@index([projectId, fileHash])
+  @@index([organizationId])
+}
+
+model InvoiceLineItem {
+  id             String  @id @default(cuid())
+  organizationId String // company that owns this row
+  invoiceId      String
+  materialId     String?
+  description    String
+  hsnCode        String?
+
+  quantity    Decimal @db.Decimal(14, 3)
+  unit        String
+  rateExclGst Decimal @db.Decimal(14, 4)
+  gstPercent  Decimal @default(0) @db.Decimal(5, 2)
+  gstAmount   Decimal @default(0) @db.Decimal(14, 2)
+  lineTotal   Decimal @db.Decimal(14, 2)
+
+  // Rate anomaly detection: how far this line's rate deviated from the
+  // material's rolling average at the time it was saved.
+  rateDeviationPercent Decimal? @db.Decimal(6, 2)
+
+  invoice  Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  material Material? @relation(fields: [materialId], references: [id])
+
+  @@index([materialId])
+  @@index([organizationId])
+}
+
+model Payment {
+  id             String   @id @default(cuid())
+  organizationId String // company that owns this row
+  invoiceId      String
+  amount         Decimal  @db.Decimal(14, 2)
+  paidOn         DateTime
+  mode           String? // NEFT, cheque, UPI...
+  reference      String?
+  notes          String?
+  paidById       String?
+  createdAt      DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  paidBy  User?   @relation("PaidBy", fields: [paidById], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId])
+  @@index([paidOn])
+  @@index([paidById])
+  @@index([organizationId])
+}
+
+// ---------------------------------------------------------------------------
+// Audit trail — tracks manual edits made to AI-extracted fields.
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String // company that owns this row
+  invoiceId      String
+  userId         String?
+  field          String
+  oldValue       String?
+  newValue       String?
+  createdAt      DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id])
+
+  @@index([invoiceId])
+  @@index([organizationId])
+}
+
+// ---------------------------------------------------------------------------
+// Activity log — system-wide audit of important admin/user actions.
+// ---------------------------------------------------------------------------
+
+model ActivityLog {
+  id             String   @id @default(cuid())
+  organizationId String? // company, or NULL for events with no company (stays nullable on purpose)
+  userId         String?
+  action         String // e.g. USER_CREATED, INVOICE_PAID, PROJECT_UPDATED
+  module         String // e.g. AUTH, USER, PROJECT, INVOICE, PAYMENT
+  entityId       String?
+  details        Json?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([module, createdAt])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([organizationId])
+}
+
+// ---------------------------------------------------------------------------
+// API error log — centralized backend error tracking (admin only).
+// ---------------------------------------------------------------------------
+
+model ApiErrorLog {
+  id             String   @id @default(cuid())
+  organizationId String? // company, or NULL for events with no company (stays nullable on purpose)
+  statusCode     Int
+  errorCode      String
+  endpoint       String
+  method         String
+  userId         String?
+  message        String
+  requestId      String
+  stack          String?
+  createdAt      DateTime @default(now())
+
+  @@index([errorCode])
+  @@index([createdAt])
+  @@index([organizationId])
+}
+
+// ---------------------------------------------------------------------------
+// AI page quota — counts Azure Document Intelligence PAGES, not invoices.
+// Deleting an invoice never lowers these numbers.
+// ---------------------------------------------------------------------------
+
+// Key/value app-wide settings, e.g. "companyMonthlyPageLimit".
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// Running monthly counter. scopeKey is "COMPANY" or "PROJECT:<projectId>".
+// Plain text (no relation) so history survives project deletion.
+model PageUsage {
+  id        String   @id @default(cuid())
+  scopeKey  String
+  period    String // "YYYY-MM" in Asia/Kolkata
+  pagesUsed Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([scopeKey, period])
+}
+
+// Append-only ledger of every reservation. No foreign keys on purpose:
+// deleting an invoice, user or project must not alter usage history.
+model PageUsageEvent {
+  id             String   @id @default(cuid())
+  organizationId String // company that owns this row
+  projectId      String
+  userId         String?
+  invoiceId      String?
+  fileHash       String?
+  period         String
+  pagesReserved  Int
+  pagesActual    Int?
+  status         String // RESERVED | CONSUMED | REFUNDED
+  reason         String?
+  createdAt      DateTime @default(now())
+
+  @@index([projectId, createdAt])
+  @@index([userId, createdAt])
+  @@index([period])
+  @@index([organizationId])
+}
+
+// ---------------------------------------------------------------------------
+// Companies (multi-tenant). Step 2a of docs/PHASE-2-COMPANIES.md.
+// ---------------------------------------------------------------------------
+
+enum OrgStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CLOSED
+}
+
+model Organization {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique // short code, also used to look up branding
+  status    OrgStatus @default(TRIAL)
+  country   String    @default("IN")
+  timezone  String    @default("Asia/Kolkata")
+  currency  String    @default("INR")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // White-label branding, loaded by the web and mobile apps at run time.
+  displayName  String?
+  logoUrl      String?
+  primaryColor String? // e.g. "#0F4C81"
+  accentColor  String?
+  supportEmail String?
+  supportUrl   String?
+  appModel     String  @default("A") // A shared app | B branded (ours) | C branded (client's accounts)
+
+  logo             OrganizationLogo?
+  authTokens       AuthToken[]
+  subscription     Subscription?
+  billingPurchases BillingPurchase[]
+  supportTickets   SupportTicket[]
+  memberships      Membership[]
+  projects         Project[]
+  categories       Category[]
+  materials        Material[]
+  vendors          Vendor[]
+  invoices         Invoice[]
+}
+
+model Membership {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String
+  role           Role     @default(STAFF)
+  createdAt      DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+// Company logo, stored in the database (small PNG/JPEG/WebP only; SVG is refused).
+// Not a Row-Level-Security table: the sign-in page must be able to show it before
+// anyone is signed in. It is served by /api/branding/logo/<company slug>.
+model OrganizationLogo {
+  organizationId String       @id
+  contentType    String
+  data           Bytes
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Account security (step 2f): one-time links and abuse limits.
+// ---------------------------------------------------------------------------
+
+enum AuthTokenType {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+  INVITE
+}
+
+// One-time links sent by email (verify address, reset password, join a company).
+// Only the SHA-256 of the link token is stored, never the token itself.
+model AuthToken {
+  id             String        @id @default(cuid())
+  type           AuthTokenType
+  tokenHash      String        @unique
+  email          String
+  userId         String?
+  organizationId String?
+  role           Role?
+  payload        Json? // e.g. { "projectIds": [...], "invitedByName": "..." }
+  createdById    String?
+  expiresAt      DateTime
+  usedAt         DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime      @default(now())
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([email, type])
+  @@index([organizationId, type])
+  @@index([userId, type])
+}
+
+// Fixed-window counters shared by every server instance (sign-up, sign-in, reset, invites).
+model RateLimit {
+  key         String   @id
+  windowStart DateTime
+  count       Int
+}
+
+// ---------------------------------------------------------------------------
+// Plans and limits (Phase 4). One plan = one project; more projects = buy the plan again (quantity).
+// See docs/PHASE-4-PLANS-AND-SUPPORT.md.
+// ---------------------------------------------------------------------------
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+model Plan {
+  id                 String   @id @default(cuid())
+  code               String   @unique
+  name               String
+  priceMinor         Int? // price per plan per interval in minor units (paise/cents); null until pricing is decided
+  currency           String   @default("INR")
+  interval           String   @default("MONTH") // MONTH | YEAR
+  includedProjects   Int      @default(1) // projects ONE copy of the plan includes
+  userLimit          Int      @default(5) // users ONE copy of the plan includes
+  aiPagesPerProject  Int      @default(500) // AI pages per project per month
+  active             Boolean  @default(true)
+  // Razorpay plan this plan is sold as (created by `npm run billing -- sync-plan`). The amount is a snapshot, so a price
+  // change is noticed and a NEW provider plan is made (existing buyers keep the price they agreed to).
+  providerPlanId     String?
+  providerPlanAmount Int?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  subscriptions Subscription[]
+  purchases     BillingPurchase[]
+}
+
+// What a company has bought. `quantity` = how many copies of the plan (= how many projects). Not a Row-Level-Security
+// table: it is read and changed only by server code that is given the company id from the signed session, and by operators.
+model Subscription {
+  id                     String             @id @default(cuid())
+  organizationId         String             @unique
+  planId                 String
+  quantity               Int                @default(1)
+  status                 SubscriptionStatus @default(TRIALING)
+  trialEndsAt            DateTime?
+  currentPeriodEnd       DateTime?
+  graceEndsAt            DateTime? // when PAST_DUE stops allowing new work
+  cancelAtPeriodEnd      Boolean            @default(false)
+  provider               String? // razorpay | stripe | manual
+  providerCustomerId     String?
+  providerSubscriptionId String?
+  overrides              Json? // operator overrides, e.g. { "extraProjects": 1, "extraUsers": 3, "aiPagesPerProject": 800 }
+  // MANUAL: an operator sets quantity/status by hand (trial, legacy companies). RAZORPAY: quantity and status are DERIVED from
+  // the company's purchases (BillingPurchase) plus `extraQuantity` (free project plans granted by an operator).
+  billing                String             @default("MANUAL")
+  extraQuantity          Int                @default(0)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan         Plan         @relation(fields: [planId], references: [id])
+
+  @@index([planId])
+}
+
+// ---------------------------------------------------------------------------
+// Support (Phase 4): customers raise tickets by email or from the Support page.
+// ---------------------------------------------------------------------------
+
+enum TicketStatus {
+  OPEN
+  WAITING // waiting for the customer
+  RESOLVED
+}
+
+model SupportTicket {
+  id             String       @id @default(cuid())
+  number         Int          @unique @default(autoincrement()) // shown as SUP-000123
+  organizationId String
+  userId         String?
+  name           String
+  email          String
+  subject        String
+  body           String
+  status         TicketStatus @default(OPEN)
+  priority       String       @default("NORMAL") // NORMAL | HIGH (set from the plan when the ticket is created)
+  planCode       String? // snapshot: which plan the company was on
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  resolvedAt     DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Payments (Razorpay). Each project plan a company buys is its OWN Razorpay subscription (quantity 1),
+// because Razorpay cannot change the quantity of UPI / eMandate subscriptions. The company's allowed
+// projects = purchases that entitle + free grants (see src/lib/billing/rules.ts).
+// These tables are not Row-Level-Security tables: webhooks arrive with no company, so they are read and
+// written only by server code that filters by company explicitly.
+// ---------------------------------------------------------------------------
+
+model BillingPurchase {
+  id                     String    @id @default(cuid())
+  organizationId         String
+  planId                 String
+  provider               String    @default("razorpay")
+  providerSubscriptionId String    @unique
+  providerPlanId         String
+  status                 String    @default("created") // Razorpay status: created authenticated active pending halted cancelled completed expired paused
+  paidCount              Int       @default(0)
+  totalCount             Int
+  amountMinor            Int // price per cycle when it was bought
+  currency               String
+  currentStart           DateTime?
+  currentEnd             DateTime?
+  chargeAt               DateTime?
+  endedAt                DateTime?
+  cancelAtCycleEnd       Boolean   @default(false)
+  pastDueSince           DateTime? // when a charge first failed; the grace period counts from here
+  shortUrl               String? // the authorisation link, to resume an unfinished checkout
+  lastEventAt            DateTime? // newest provider event applied (an older one arriving late is ignored)
+  createdById            String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan         Plan             @relation(fields: [planId], references: [id])
+  payments     BillingPayment[]
+
+  @@index([organizationId, status])
+}
+
+model BillingPayment {
+  id                String   @id @default(cuid())
+  organizationId    String
+  purchaseId        String
+  providerPaymentId String   @unique
+  amountMinor       Int
+  currency          String
+  status            String // captured | failed ...
+  method            String?
+  paidAt            DateTime
+  createdAt         DateTime @default(now())
+
+  purchase BillingPurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, paidAt])
+}
+
+// Inbox of every webhook received. The event id is unique, so a repeated delivery is recognised and ignored.
+model BillingEvent {
+  id             String    @id @default(cuid())
+  provider       String    @default("razorpay")
+  eventId        String    @unique
+  type           String
+  organizationId String?
+  payload        Json
+  outcome        String? // processed | ignored | error
+  error          String?
+  receivedAt     DateTime  @default(now())
+  processedAt    DateTime?
+
+  @@index([receivedAt])
+  @@index([organizationId])
+}

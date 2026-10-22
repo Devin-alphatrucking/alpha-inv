@@ -1,0 +1,32 @@
+{
+  "name": "alpha-inv",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Invoice & billing monorepo: web app, shared database package (API, admin and mobile apps join here).",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "postinstall": "npm run generate --workspace @alpha/db",
+    "dev": "npm run dev --workspace @alpha/web",
+    "build": "npm run build --workspace @alpha/web",
+    "start": "npm run start --workspace @alpha/web",
+    "lint": "npm run lint --workspace @alpha/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test:unit": "npm run test:unit --workspace @alpha/web",
+    "test:isolation": "node scripts/test-isolation.mjs",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:generate": "npm run generate --workspace @alpha/db",
+    "db:migrate": "npm run migrate:dev --workspace @alpha/db",
+    "db:deploy": "npm run migrate:deploy --workspace @alpha/db",
+    "db:seed": "npm run seed --workspace @alpha/db",
+    "brand:logo": "npm run set-logo --workspace @alpha/db --",
+    "plan": "npm run plans --workspace @alpha/db --",
+    "ticket": "npm run tickets --workspace @alpha/db --",
+    "billing": "npm run billing --workspace @alpha/db --",
+    "master": "npm run master --workspace @alpha/db --",
+    "db:studio": "npm run studio --workspace @alpha/db"
+  }
+}

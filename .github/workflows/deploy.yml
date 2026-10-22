@@ -1,0 +1,82 @@
+name: Build and ship standalone bundle
+
+# Builds the Next.js standalone server (apps/web) in CI and pushes ONLY the
+# runnable output to the `deploy` branch. The host never builds:
+#   git pull (deploy branch) -> ensure .env -> panel Restart
+#   startup command (unchanged): node .next/standalone/server.js (port 3000)
+#
+# Monorepo note: the real server is .next/standalone/apps/web/server.js. The
+# "Assemble runnable layout" step puts a small entry file (scripts/
+# standalone-entry.cjs) at .next/standalone/server.js so the host start command
+# does not change. That entry also reads a .env file if present.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-ship:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          # `prisma generate` runs on install; it does not connect to a database.
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
+
+      - name: Apply database migrations
+        run: npm run db:deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Build standalone bundle
+        run: npm run build
+        env:
+          # Dummy build-time env. Pages are dynamic, so the build never
+          # touches the database. Real secrets live in the server's .env.
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
+          AUTH_SECRET: ci-build-placeholder-not-a-secret
+          AUTH_TRUST_HOST: "true"
+          AUTH_URL: http://localhost:3000
+          AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT: https://example.cognitiveservices.azure.com/
+          AZURE_DOCUMENT_INTELLIGENCE_KEY: ci-placeholder
+
+      - name: Assemble runnable layout
+        run: |
+          STANDALONE=apps/web/.next/standalone
+          test -f "$STANDALONE/apps/web/server.js"
+          cp -r apps/web/public "$STANDALONE/apps/web/public"
+          mkdir -p "$STANDALONE/apps/web/.next"
+          cp -r apps/web/.next/static "$STANDALONE/apps/web/.next/static"
+          cp scripts/standalone-entry.cjs "$STANDALONE/server.js"
+          ls "$STANDALONE/server.js" "$STANDALONE/apps/web/server.js"
+          mkdir -p /tmp/deploy-bundle
+          cp -r "$STANDALONE" /tmp/deploy-bundle/standalone
+          cp .env.example README.md /tmp/deploy-bundle/
+
+      - name: Publish deploy branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin deploy
+          git checkout -B deploy origin/deploy
+          rm -rf .next/standalone
+          mkdir -p .next
+          cp -r /tmp/deploy-bundle/standalone .next/standalone
+          cp /tmp/deploy-bundle/.env.example /tmp/deploy-bundle/README.md .
+          git add -f .next/standalone .env.example README.md
+          git commit -m "deploy: ${GITHUB_SHA}" || echo "nothing to commit"
+          git push origin deploy
