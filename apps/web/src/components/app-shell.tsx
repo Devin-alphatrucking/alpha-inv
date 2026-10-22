@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Download, LogOut, Settings, ShieldCheck, UserRound } from "lucide-react";
+import { Download, LogOut, Settings, ShieldCheck, UserRound } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { AppNav } from "@/components/app-nav";
 import { MobileBottomBar } from "@/components/mobile-bottom-bar";
@@ -80,26 +80,26 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
             {role === "ADMIN" && (
-              <div className="hidden sm:block">
+              <div className="hidden xl:block">
                 <ExportDataButton label="Download all data" />
               </div>
             )}
             <Badge
               variant="secondary"
-              className="hidden text-[11px] font-semibold sm:inline-flex"
+              className="hidden text-[11px] font-semibold xl:inline-flex"
             >
               {role}
             </Badge>
-            <Avatar className="hidden size-8 shrink-0 sm:flex">
+            <Avatar className="hidden size-8 shrink-0 xl:flex">
               <AvatarFallback className="text-xs font-semibold">{initials}</AvatarFallback>
             </Avatar>
-            <div className="hidden min-w-0 text-right lg:block">
+            <div className="hidden min-w-0 text-right xl:block">
               <p className="truncate text-sm font-medium leading-none">{name}</p>
               <p className="truncate text-xs text-muted-foreground">{email}</p>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="flex size-9 shrink-0 items-center justify-center rounded-full outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring sm:hidden"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring xl:hidden"
                 aria-label="Open account menu"
               >
                 <Avatar className="size-9">
@@ -160,19 +160,19 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
             </DropdownMenu>
             {companies.length > 1 && <CompanySwitcher companies={companies} currentOrgId={currentOrgId} />}
             {isPlatformAdmin && (
-              <Button variant="ghost" size="sm" className="hidden shrink-0 sm:inline-flex" render={<a href="/master" />} nativeButton={false}>
+              <Button variant="ghost" size="sm" className="hidden shrink-0 xl:inline-flex" render={<a href="/master" />} nativeButton={false}>
                 <ShieldCheck className="size-4" />
                 Master
               </Button>
             )}
-            <Button variant="ghost" size="sm" className="hidden shrink-0 sm:inline-flex" render={<a href="/account" />} nativeButton={false}>
+            <Button variant="ghost" size="sm" className="hidden shrink-0 xl:inline-flex" render={<a href="/account" />} nativeButton={false}>
               <UserRound className="size-4" />
               Account
             </Button>
             <Button
               variant="outline"
               size="sm"
-              className="hidden shrink-0 sm:inline-flex"
+              className="hidden shrink-0 xl:inline-flex"
               onClick={() => signOut({ callbackUrl: "/login" })}
             >
               Sign out

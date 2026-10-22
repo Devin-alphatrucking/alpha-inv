@@ -44,7 +44,7 @@ export default async function ActivityLogsPage({
   if (session.user.role !== "ADMIN") redirect("/invoices/upload");
 
   const params = await searchParams;
-  const page = Math.max(1, Number(params.page) || 1);
+  const page = Math.max(1, Math.min(100000, Number.parseInt(params.page ?? "1", 10) || 1)); // a bad ?page= never reaches the database
   const moduleFilter = params.module || "";
   const q = params.q?.trim() || "";
 

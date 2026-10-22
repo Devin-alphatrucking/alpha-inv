@@ -50,6 +50,16 @@ export async function deliver(mail: Mail): Promise<void> {
   await transporter.sendMail({ from: fromAddress(), to: mail.to, replyTo: mail.replyTo, subject: mail.subject, text: mail.text, html: mail.html });
 }
 
+/**
+ * For answers that must look the same whether or not an account exists (sign-up, "send me a link", reset): with a real mail server the
+ * message is sent in the background, so the time the reply takes does not reveal whether a mail was sent. With the file transport
+ * (tests, local) it is awaited so the result can be read straight away.
+ */
+export function sendMailQuietly(mail: Mail): Promise<unknown> {
+  const sending = sendMail(mail);
+  return transportName() === "smtp" ? Promise.resolve() : sending;
+}
+
 /** Sends a mail and never throws: a mail problem must not break the page that asked for it. */
 export async function sendMail(mail: Mail): Promise<{ ok: true } | { ok: false; error: string }> {
   try {

@@ -239,6 +239,31 @@ export async function cancelPurchase(user: BillingUser, purchaseId: string) {
   return { atCycleEnd };
 }
 
+/**
+ * Stops every running project-plan subscription of a company at once (used when the company is closed, so Razorpay does not keep charging
+ * people who can no longer sign in to cancel). Best effort: a plan that cannot be cancelled is returned so the caller can record it for an operator.
+ */
+export async function cancelCompanyPurchases(orgId: string): Promise<{ cancelled: number; failed: string[] }> {
+  if (!razorpayConfig()) return { cancelled: 0, failed: [] };
+  const open = await rawDb.billingPurchase.findMany({
+    where: { organizationId: orgId, status: { notIn: ["cancelled", "completed", "expired"] } },
+    select: { id: true, providerSubscriptionId: true },
+  });
+  let cancelled = 0;
+  const failed: string[] = [];
+  for (const p of open) {
+    try {
+      const remote = await cancelSubscription(p.providerSubscriptionId, false);
+      await applySubscriptionUpdate(remote, new Date(), { pull: true });
+      cancelled++;
+    } catch (error) {
+      console.error("[billing] could not cancel", p.providerSubscriptionId, error instanceof Error ? error.message : error);
+      failed.push(p.providerSubscriptionId);
+    }
+  }
+  return { cancelled, failed };
+}
+
 /** Safety net for a missed webhook: re-reads every unfinished purchase from Razorpay. Returns how many changed. */
 export async function reconcile(orgId?: string) {
   const rows = await rawDb.billingPurchase.findMany({

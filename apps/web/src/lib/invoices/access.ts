@@ -1,4 +1,5 @@
 import { dbFor } from "@/lib/org/scoped-db";
+import { AppError } from "@/lib/errors";
 
 export type SessionUser = {
   id: string;
@@ -27,7 +28,7 @@ export async function assertInvoiceAccess(
     where: { id: invoiceId, ...invoiceAccessWhere(user) },
   });
   if (!invoice) {
-    throw new Error("Invoice not found or access denied");
+    throw new AppError("NOT_FOUND_001", "Invoice not found or access denied.");
   }
   return invoice;
 }

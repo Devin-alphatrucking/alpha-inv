@@ -44,6 +44,10 @@ export async function createInvite(admin: Admin, raw: unknown): Promise<FlowResu
     await assertCanInvite(admin.orgId);
   } catch (error) {
     if (error instanceof AppError && error.code === "PLAN_001") return { ok: false, error: error.message };
+    // Someone signed up with this address a moment ago: the unique email rule stopped the second account. Ask them to sign in instead.
+    if ((error as { code?: string })?.code === "P2002") {
+      return { ok: false, error: "An account with this email already exists. Sign in instead, then open this invitation again." };
+    }
     throw error;
   }
 

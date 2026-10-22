@@ -114,9 +114,9 @@ export async function handleError(params: {
   requestId: string;
 }): Promise<AppError> {
   const { error } = params;
-  const appError = isAppError(error)
-    ? error
-    : new AppError("INTERNAL_001", safeMessage(error));
+  // What the CLIENT sees is generic for anything unexpected (database, file and library errors name tables, columns and paths).
+  // The real message goes to the error log, which only administrators can read.
+  const appError = isAppError(error) ? error : new AppError("INTERNAL_001");
 
   await logApiError({
     statusCode: appError.status,
@@ -125,7 +125,7 @@ export async function handleError(params: {
     method: params.method,
     userId: params.userId,
     organizationId: params.organizationId,
-    message: appError.message,
+    message: isAppError(error) ? appError.message : safeMessage(error),
     requestId: params.requestId,
     error,
   });

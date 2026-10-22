@@ -147,6 +147,16 @@ export async function updateUser(input: {
     );
   }
 
+  // A company must always keep an administrator: nobody could reach settings, users or the plan page otherwise.
+  if (membership.role === "ADMIN" && parsed.role !== "ADMIN") {
+    const otherAdmins = await rawDb.membership.count({
+      where: { organizationId: admin.orgId, role: "ADMIN", userId: { not: parsed.id }, user: { deletedAt: null } },
+    });
+    if (otherAdmins === 0) {
+      throw new AppError("VALIDATION_001", "This is the only administrator. Make someone else an administrator first, then change this role.");
+    }
+  }
+
   const emailTaken = await rawDb.user.findFirst({
     where: { email, id: { not: parsed.id } },
   });
@@ -168,8 +178,8 @@ export async function updateUser(input: {
       data: {
         name: parsed.name,
         email,
-        // legacy column kept in step with the membership until it is retired
-        role: parsed.role,
+        // legacy column: only for people who belong to this company alone (otherwise it would overwrite their role elsewhere)
+        ...(otherCompanies === 0 ? { role: parsed.role } : {}),
         ...(passwordHash ? { passwordHash, sessionVersion: { increment: 1 } } : {}),
       },
     });

@@ -3,7 +3,7 @@ import { logActivity } from "@/lib/activity";
 import { hashPassword } from "@/lib/security/password";
 import { issueToken } from "@/lib/security/tokens";
 import { hitAll, limitKey, retryMessage } from "@/lib/security/rate-limit";
-import { isEmailConfigured, sendMail } from "@/lib/email/transport";
+import { isEmailConfigured, sendMailQuietly } from "@/lib/email/transport";
 import { accountExistsMail, verifyEmailMail } from "@/lib/email/templates";
 import { absoluteUrl } from "@/lib/app-url";
 import { PRODUCT_NAME } from "@/lib/brand/product";
@@ -36,8 +36,10 @@ export async function signUp(raw: unknown, ctx: { ip: string }): Promise<FlowRes
 
   const existing = await rawDb.user.findUnique({ where: { email: v.email } });
   if (existing) {
+    // Do the same expensive work as a real sign-up, so the time taken does not tell an attacker the address is registered.
+    await hashPassword(v.password);
     if (!existing.deletedAt) {
-      await sendMail(accountExistsMail(v.email, { link: absoluteUrl("/forgot-password"), brand: mailBrand }));
+      await sendMailQuietly(accountExistsMail(v.email, { link: absoluteUrl("/forgot-password"), brand: mailBrand }));
     }
     return { ok: true, checkEmail: true };
   }
@@ -93,7 +95,7 @@ export async function signUp(raw: unknown, ctx: { ip: string }): Promise<FlowRes
   }
 
   const token = await issueToken({ type: "EMAIL_VERIFY", email: v.email, userId: created.user.id });
-  await sendMail(verifyEmailMail(v.email, { name: v.name, link: absoluteUrl(`/verify-email?token=${token}`), brand: mailBrand }));
+  await sendMailQuietly(verifyEmailMail(v.email, { name: v.name, link: absoluteUrl(`/verify-email?token=${token}`), brand: mailBrand }));
 
   await logActivity({
     userId: created.user.id,

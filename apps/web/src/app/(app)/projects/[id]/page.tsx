@@ -78,9 +78,12 @@ export default async function ProjectDetailPage({ params }: PageProps) {
     const p = invoice.payments.reduce((s, pay) => s + Number(pay.amount), 0);
     return { invoice, paid: p, balance: Math.max(0, t - p) };
   });
-  const total = invoiceRows.reduce((sum, row) => sum + Number(row.invoice.total), 0);
-  const paid = invoiceRows.reduce((sum, row) => sum + row.paid, 0);
-  const pending = Math.max(0, total - paid);
+  // Same rule as the projects list and the dashboard: invoices still being read or reviewed are not counted yet, and what is
+  // pending is the sum of each invoice's own balance (an overpaid invoice never reduces another one's).
+  const counted = invoiceRows.filter((row) => row.invoice.status !== "PROCESSING" && row.invoice.status !== "NEEDS_REVIEW");
+  const total = counted.reduce((sum, row) => sum + Number(row.invoice.total), 0);
+  const paid = counted.reduce((sum, row) => sum + row.paid, 0);
+  const pending = counted.reduce((sum, row) => sum + row.balance, 0);
 
   const payments = project.invoices.flatMap((invoice) =>
     invoice.payments.map((payment) => ({

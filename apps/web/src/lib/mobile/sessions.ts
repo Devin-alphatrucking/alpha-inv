@@ -103,7 +103,7 @@ export async function refreshMobile(refreshToken: unknown, ctx: { ip: string }):
   if (!current) {
     const reused = await rawDb.mobileSession.findFirst({ where: { previousRefreshHash: hash } });
     if (reused && !reused.revokedAt) {
-      if (now.getTime() - reused.lastUsedAt.getTime() < ROTATION_GRACE_MS) return fail(409, "refresh_in_progress", "Please try again.");
+      if (now.getTime() - (reused.refreshedAt ?? reused.lastUsedAt).getTime() < ROTATION_GRACE_MS) return fail(409, "refresh_in_progress", "Please try again.");
       await revoke(reused.id, "refresh token reuse");
       await logActivity({ userId: reused.userId, organizationId: reused.organizationId, action: "SESSIONS_REVOKED", module: "AUTH", entityId: reused.id, details: { via: "mobile", reason: "refresh token reuse" } });
     }
@@ -130,7 +130,7 @@ export async function refreshMobile(refreshToken: unknown, ctx: { ip: string }):
   // Claim the rotation: only one of two simultaneous refreshes can win.
   const claimed = await rawDb.mobileSession.updateMany({
     where: { id: current.id, refreshHash: hash, revokedAt: null },
-    data: { refreshHash: next.hash, previousRefreshHash: hash, lastUsedAt: now, refreshExpiresAt },
+    data: { refreshHash: next.hash, previousRefreshHash: hash, lastUsedAt: now, refreshedAt: now, refreshExpiresAt },
   });
   if (claimed.count !== 1) return fail(409, "refresh_in_progress", "Please try again.");
   return { ok: true, tokens: issue(current.id, next, refreshExpiresAt) };

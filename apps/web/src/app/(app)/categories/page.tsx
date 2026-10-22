@@ -15,8 +15,8 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { createCategory } from "./actions";
+import { ActionForm } from "@/components/action-form";
 
 export default async function CategoriesPage() {
   const { db } = await pageOrg();
@@ -39,7 +39,7 @@ export default async function CategoriesPage() {
           <CardTitle>Add category</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={createCategory} className="grid gap-4 sm:grid-cols-2">
+          <ActionForm action={createCategory} submitLabel="Add category" successMessage="Category added" className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label htmlFor="name">Name</Label>
               <Input id="name" name="name" required />
@@ -48,10 +48,7 @@ export default async function CategoriesPage() {
               <Label htmlFor="unit">Default unit</Label>
               <Input id="unit" name="unit" placeholder="NOS, BAG, KG..." />
             </div>
-            <div className="sm:col-span-2">
-              <Button type="submit">Add category</Button>
-            </div>
-          </form>
+          </ActionForm>
         </CardContent>
       </Card>
 

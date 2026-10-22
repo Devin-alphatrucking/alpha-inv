@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import { rawDb } from "@/lib/db";
 import { scoped } from "@/lib/org/context";
 import { requireAdmin } from "@/lib/permissions";
+import { AppError } from "@/lib/errors";
 
 export const runtime = "nodejs";
 
@@ -44,7 +45,8 @@ async function loadData(orgId: string, db: ReturnType<typeof scoped>): Promise<R
     db.vendor.findMany({ orderBy: { createdAt: "asc" } }),
     db.category.findMany({ orderBy: { createdAt: "asc" } }),
     db.material.findMany({ include: { category: true }, orderBy: { createdAt: "asc" } }),
-    rawDb.user.findMany({ where: { memberships: { some: { organizationId: orgId } } }, select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true }, orderBy: { createdAt: "asc" } }),
+    // The role in THIS company (membership), never the legacy global role; no password hash, ever.
+    rawDb.membership.findMany({ where: { organizationId: orgId }, select: { role: true, createdAt: true, user: { select: { id: true, name: true, email: true, updatedAt: true } } }, orderBy: { createdAt: "asc" } }),
     db.projectAssignment.findMany({ include: { user: true, project: true }, orderBy: { createdAt: "asc" } }),
     db.projectNote.findMany({ include: { user: true, project: true }, orderBy: { createdAt: "asc" } }),
     db.auditLog.findMany({ include: { user: true, invoice: true }, orderBy: { createdAt: "asc" } }),
@@ -53,7 +55,11 @@ async function loadData(orgId: string, db: ReturnType<typeof scoped>): Promise<R
   ]);
 
   return {
-    projects: projects.map((row) => ({ ...row })),
+    // Explicit columns only: a new column (such as a secret) must never reach an export by accident. The encrypted Azure key stays out.
+    projects: projects.map((row) => ({
+      id: row.id, name: row.name, description: row.description, address: row.address, status: row.status,
+      monthlyPageLimit: row.monthlyPageLimit, azureConfigured: Boolean(row.azureKeyEnc), createdAt: row.createdAt, updatedAt: row.updatedAt,
+    })),
     invoices: invoices.map((row) => ({
       id: row.id, invoiceNumber: row.invoiceNumber, project: row.project.name,
       vendor: row.vendor.name, category: row.category?.name ?? null,
@@ -77,13 +83,13 @@ async function loadData(orgId: string, db: ReturnType<typeof scoped>): Promise<R
       amount: decimalValue(row.amount), paidOn: row.paidOn, mode: row.mode, reference: row.reference,
       notes: row.notes, paidBy: row.paidBy?.email ?? null, createdAt: row.createdAt,
     })),
-    vendors: vendors.map((row) => ({ ...row })),
-    categories: categories.map((row) => ({ ...row })),
+    vendors: vendors.map((row) => ({ id: row.id, name: row.name, gstin: row.gstin, address: row.address, contact: row.contact, createdAt: row.createdAt })),
+    categories: categories.map((row) => ({ id: row.id, name: row.name, unit: row.unit, createdAt: row.createdAt })),
     materials: materials.map((row) => ({
       id: row.id, category: row.category.name, name: row.name, hsnCode: row.hsnCode,
       defaultUnit: row.defaultUnit, createdAt: row.createdAt,
     })),
-    users: users.map((row) => ({ ...row })),
+    users: users.map((row) => ({ id: row.user.id, name: row.user.name, email: row.user.email, role: row.role, joinedAt: row.createdAt, updatedAt: row.user.updatedAt })),
     assignments: assignments.map((row) => ({
       id: row.id, userId: row.userId, userName: row.user.name, userEmail: row.user.email,
       projectId: row.projectId, project: row.project.name, createdAt: row.createdAt,
@@ -102,7 +108,10 @@ async function loadData(orgId: string, db: ReturnType<typeof scoped>): Promise<R
       entityId: row.entityId, details: jsonValue(row.details), ipAddress: row.ipAddress,
       userAgent: row.userAgent, createdAt: row.createdAt,
     })),
-    "error-logs": errorLogs.map((row) => ({ ...row })),
+    "error-logs": errorLogs.map((row) => ({
+      id: row.id, statusCode: row.statusCode, errorCode: row.errorCode, endpoint: row.endpoint, method: row.method,
+      userId: row.userId, message: row.message, requestId: row.requestId, createdAt: row.createdAt,
+    })),
   };
 }
 
@@ -116,7 +125,10 @@ function addSheet(workbook: ExcelJS.Workbook, name: string, rows: ExportRow[]) {
     key,
     width: Math.min(42, Math.max(14, key.length + 3)),
   }));
-  rows.forEach((row) => sheet.addRow(row));
+  // Excel refuses cells above 32,767 characters (the raw AI response can be larger) and would offer to "repair" the file.
+  const LIMIT = 32000;
+  const fit = (v: CellValue) => (typeof v === "string" && v.length > LIMIT ? `${v.slice(0, LIMIT)} ...[cut: use the JSON export for the full text]` : v);
+  rows.forEach((row) => sheet.addRow(Object.fromEntries(Object.entries(row).map(([k, v]) => [k, fit(v)]))));
   sheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
   sheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF171717" } };
   sheet.getRow(1).alignment = { vertical: "middle" };
@@ -127,7 +139,13 @@ function addSheet(workbook: ExcelJS.Workbook, name: string, rows: ExportRow[]) {
 }
 
 export async function GET(request: Request) {
-  const admin = await requireAdmin();
+  let admin: Awaited<ReturnType<typeof requireAdmin>>;
+  try {
+    admin = await requireAdmin();
+  } catch (error) {
+    const forbidden = error instanceof AppError && error.code === "PERMISSION_001";
+    return Response.json({ error: forbidden ? "Only administrators can export data." : "Authentication required." }, { status: forbidden ? 403 : 401 });
+  }
   const db = scoped(admin);
   const url = new URL(request.url);
   const requested = url.searchParams.get("dataset") ?? "all";

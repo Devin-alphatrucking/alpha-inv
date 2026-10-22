@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { signOut, unstable_update } from "@/lib/auth";
+import { serverUpdateProof, signOut, unstable_update } from "@/lib/auth";
 import { requireAdmin, requireUser } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { changePassword, closeCompany, deleteAccount, listMyCompanies, signOutEverywhere } from "@/lib/flows/account";
@@ -12,7 +12,7 @@ export async function changePasswordAction(current: string, next: string) {
   const user = await requireUser();
   const result = await changePassword(user.id, current, next);
   // Keep THIS session working (other devices are signed out by the version bump).
-  if (result.ok) await unstable_update({ refreshSv: true } as never);
+  if (result.ok) await unstable_update({ refreshSv: true, serverProof: serverUpdateProof() } as never);
   return result;
 }
 

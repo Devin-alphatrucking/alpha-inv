@@ -1,5 +1,3 @@
-"use server";
-
 import { pageOrg } from "@/lib/org/page";
 import type { Prisma } from "@alpha/db";
 import { getProjectScope } from "@/lib/projects/scope";
@@ -14,11 +12,14 @@ import {
 } from "@/components/dashboard-view";
 import { getFormat } from "@/lib/brand/brand";
 
+/** Invoice dates are calendar dates stored at midnight UTC, so months are counted in UTC. Labels use mid-month noon so no time zone can shift them to the neighbouring month. */
+const monthKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+
 function buildMonthBuckets(anchorDate: Date, label: (d: Date) => string, count = 12): MonthSpendPoint[] {
   const points: MonthSpendPoint[] = [];
   for (let i = count - 1; i >= 0; i--) {
-    const d = new Date(anchorDate.getFullYear(), anchorDate.getMonth() - i, 1);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const d = new Date(Date.UTC(anchorDate.getUTCFullYear(), anchorDate.getUTCMonth() - i, 15, 12));
+    const key = monthKey(d);
     points.push({
       month: key,
       label: label(d),
@@ -67,23 +68,12 @@ export default async function DashboardPage({
   const selectedMonthStart = new Date(Date.UTC(selectedYear, selectedMonthNumber - 1, 1));
   const selectedMonthEnd = new Date(Date.UTC(selectedYear, selectedMonthNumber, 1));
 
-  // Robust date parsing: prevent Invalid Date exceptions in Prisma
-  let from: Date | undefined;
-  if (params.from) {
-    const parsed = new Date(params.from);
-    if (!isNaN(parsed.getTime())) {
-      from = parsed;
-    }
-  }
-
-  let to: Date | undefined;
-  if (params.to) {
-    const parsed = new Date(params.to);
-    if (!isNaN(parsed.getTime())) {
-      parsed.setHours(23, 59, 59, 999);
-      to = parsed;
-    }
-  }
+  // Dates from the address bar: only YYYY-MM-DD is accepted, read as whole UTC days (how invoice and payment dates are stored).
+  const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+  const parsedFrom = params.from && DATE_ONLY.test(params.from) ? new Date(`${params.from}T00:00:00.000Z`) : null;
+  const parsedTo = params.to && DATE_ONLY.test(params.to) ? new Date(`${params.to}T23:59:59.999Z`) : null;
+  const from: Date | undefined = parsedFrom && !isNaN(parsedFrom.getTime()) ? parsedFrom : undefined;
+  const to: Date | undefined = parsedTo && !isNaN(parsedTo.getTime()) ? parsedTo : undefined;
 
   const confirmed: Prisma.InvoiceWhereInput = {
     status: { notIn: ["PROCESSING", "NEEDS_REVIEW"] },
@@ -97,13 +87,6 @@ export default async function DashboardPage({
     if (from) dateFilter.invoiceDate = { ...dateFilter.invoiceDate, gte: from };
     if (to) dateFilter.invoiceDate = { ...dateFilter.invoiceDate, lte: to };
   }
-  const paymentDateFilter: Prisma.PaymentWhereInput = {};
-  if (from || to) {
-    paymentDateFilter.paidOn = {};
-    if (from) paymentDateFilter.paidOn = { ...paymentDateFilter.paidOn, gte: from };
-    if (to) paymentDateFilter.paidOn = { ...paymentDateFilter.paidOn, lte: to };
-  }
-
   // Streamlined fast queries: fetch report invoices with joins and categories in parallel
   const [allCategories, reportInvoices, projectsCount, monthlyBillCount] = await Promise.all([
     db.category.findMany({
@@ -116,10 +99,8 @@ export default async function DashboardPage({
         vendor: { select: { id: true, name: true } },
         project: { select: { id: true, name: true } },
         category: { select: { id: true, name: true } },
-        payments: {
-          select: { amount: true, paidOn: true },
-          ...(from || to ? { where: paymentDateFilter } : {}),
-        },
+        // All payments are loaded: "Paid" follows the selected dates, but what is still owed must count every payment ever made.
+        payments: { select: { amount: true, paidOn: true } },
       },
       orderBy: { invoiceDate: "desc" },
     }),
@@ -149,13 +130,15 @@ export default async function DashboardPage({
   const vendorMap = new Map<string, VendorSpendPoint>();
   const statusMap = new Map<string, StatusPoint>();
 
+  const inRange = (p: { paidOn: Date }) => (!from || p.paidOn >= from) && (!to || p.paidOn <= to);
+
   for (const inv of reportInvoices) {
     const invTotal = Number(inv.total ?? 0);
-    const invPaid = (inv.payments ?? []).reduce((s, p) => s + Number(p.amount ?? 0), 0);
+    const invPaidAll = (inv.payments ?? []).reduce((s, p) => s + Number(p.amount ?? 0), 0);
+    const invPaid = (inv.payments ?? []).filter(inRange).reduce((s, p) => s + Number(p.amount ?? 0), 0);
     revenue += invTotal;
     paid += invPaid;
-    const invBalance = Math.max(0, invTotal - invPaid);
-    outstandingTotal += invBalance;
+    outstandingTotal += Math.max(0, invTotal - invPaidAll);
 
     if (inv.status === "UNPAID" || inv.status === "PARTIALLY_PAID") {
       unpaidCount++;
@@ -230,11 +213,11 @@ export default async function DashboardPage({
   for (const inv of reportInvoices) {
     const d = inv.invoiceDate ? new Date(inv.invoiceDate) : null;
     if (!d || isNaN(d.getTime())) continue;
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const key = monthKey(d);
     const idx = monthIndex.get(key);
     if (idx != null) {
       monthlySpend[idx].total += Number(inv.total ?? 0);
-      const invPaid = (inv.payments ?? []).reduce((s, p) => s + Number(p.amount ?? 0), 0);
+      const invPaid = (inv.payments ?? []).filter(inRange).reduce((s, p) => s + Number(p.amount ?? 0), 0);
       monthlySpend[idx].paid += invPaid;
     }
   }

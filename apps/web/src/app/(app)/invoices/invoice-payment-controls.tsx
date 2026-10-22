@@ -40,9 +40,9 @@ export function InvoicePaymentControls({
   const formatPaidAt = (date: Date) => fmt.dateTimeShort(date);
   const [open, setOpen] = useState(false);
   const balance = Math.max(0, total - paidAmount);
-  const [amount, setAmount] = useState(String(balance || total));
+  const [amount, setAmount] = useState((balance || total).toFixed(2));
   const [paidOn, setPaidOn] = useState(today());
-  const [mode, setMode] = useState("BANK_TRANSFER");
+  const [mode, setMode] = useState("Bank transfer");
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
   const canPay = balance > 0.009 &&
@@ -80,7 +80,19 @@ export function InvoicePaymentControls({
       )}
       <div className="flex items-center gap-1.5">
         {canPay && (
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog
+            open={open}
+            onOpenChange={(next) => {
+              // Every time the dialog opens it starts from the CURRENT balance (a payment saved a moment ago changes it).
+              if (next) {
+                setAmount((balance || total).toFixed(2));
+                setPaidOn(today());
+                setReference("");
+                setNotes("");
+              }
+              setOpen(next);
+            }}
+          >
             <DialogTrigger
               render={
                 <Button
@@ -127,10 +139,16 @@ export function InvoicePaymentControls({
                   <Label htmlFor={`mode-${invoiceId}`}>Mode</Label>
                   <Input
                     id={`mode-${invoiceId}`}
-                    placeholder="NEFT, UPI, cheque…"
+                    list={`modes-${invoiceId}`}
+                    placeholder="Bank transfer, UPI, cheque…"
                     value={mode}
                     onChange={(e) => setMode(e.target.value)}
                   />
+                  <datalist id={`modes-${invoiceId}`}>
+                    {["Bank transfer", "NEFT", "RTGS", "IMPS", "UPI", "Cheque", "Cash", "Card"].map((m) => (
+                      <option key={m} value={m} />
+                    ))}
+                  </datalist>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor={`ref-${invoiceId}`}>Reference</Label>

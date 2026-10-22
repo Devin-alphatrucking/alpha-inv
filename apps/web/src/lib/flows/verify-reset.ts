@@ -3,7 +3,7 @@ import { logActivity } from "@/lib/activity";
 import { checkPassword, hashPassword } from "@/lib/security/password";
 import { claimToken, consumeToken, hashToken, issueToken, revokeTokens } from "@/lib/security/tokens";
 import { hitAll, limitKey, retryMessage } from "@/lib/security/rate-limit";
-import { isEmailConfigured, sendMail } from "@/lib/email/transport";
+import { isEmailConfigured, sendMail, sendMailQuietly } from "@/lib/email/transport";
 import { passwordChangedMail, passwordResetMail, verifyEmailMail } from "@/lib/email/templates";
 import { absoluteUrl } from "@/lib/app-url";
 import { PRODUCT_NAME } from "@/lib/brand/product";
@@ -45,7 +45,7 @@ export async function resendVerification(rawEmail: unknown, ctx: { ip: string })
   const user = await rawDb.user.findUnique({ where: { email } });
   if (user && !user.deletedAt && !user.emailVerifiedAt) {
     const token = await issueToken({ type: "EMAIL_VERIFY", email, userId: user.id });
-    await sendMail(verifyEmailMail(email, { name: user.name, link: absoluteUrl(`/verify-email?token=${token}`), brand: mailBrand }));
+    await sendMailQuietly(verifyEmailMail(email, { name: user.name, link: absoluteUrl(`/verify-email?token=${token}`), brand: mailBrand }));
   }
   return { ok: true, message: NEUTRAL };
 }
@@ -67,7 +67,7 @@ export async function requestPasswordReset(rawEmail: unknown, ctx: { ip: string 
   const user = await rawDb.user.findUnique({ where: { email }, include: { memberships: { select: { id: true }, take: 1 } } });
   if (user && !user.deletedAt && user.memberships.length > 0) {
     const token = await issueToken({ type: "PASSWORD_RESET", email, userId: user.id });
-    await sendMail(passwordResetMail(email, { name: user.name, link: absoluteUrl(`/reset-password?token=${token}`), brand: mailBrand }));
+    await sendMailQuietly(passwordResetMail(email, { name: user.name, link: absoluteUrl(`/reset-password?token=${token}`), brand: mailBrand }));
   }
   return { ok: true, message: NEUTRAL };
 }

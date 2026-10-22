@@ -73,15 +73,13 @@ export default async function ProjectsPage() {
     let paid = 0;
     let pending = 0;
     for (const invoice of project.invoices) {
+      // Invoices still being read or reviewed are not counted yet (same rule as the dashboard and the project page).
+      if (invoice.status === "PROCESSING" || invoice.status === "NEEDS_REVIEW") continue;
       const t = Number(invoice.total);
       const p = invoice.payments.reduce((s, pay) => s + Number(pay.amount), 0);
       total += t;
       paid += p;
-      const remaining = Math.max(0, t - p);
-      pending += remaining;
-      if (invoice.status === "PROCESSING" || invoice.status === "NEEDS_REVIEW") {
-        pending -= remaining;
-      }
+      pending += Math.max(0, t - p);
     }
     return {
       id: project.id,
@@ -161,11 +159,9 @@ export default async function ProjectsPage() {
             {/* Mobile cards */}
             <div className="space-y-3 md:hidden">
               {rows.map((project) => (
-                <Link
-                  key={project.id}
-                  href={`/projects/${project.id}`}
-                  className="block rounded-xl border bg-card p-4 shadow-sm transition-colors hover:border-foreground/20"
-                >
+                <div key={project.id} className="rounded-xl border bg-card p-4 shadow-sm transition-colors hover:border-foreground/20">
+                  {/* The link covers the summary only: Edit and Delete sit outside it, so tapping them never opens the project page. */}
+                  <Link href={`/projects/${project.id}`} className="block">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="truncate font-semibold">{project.name}</p>
@@ -202,13 +198,14 @@ export default async function ProjectsPage() {
                         </p>
                       </div>
                     </div>
-                    {isAdmin && (
-                      <div className="mt-3 border-t pt-3">
-                        <ProjectActions project={project} users={assignableUsers} />
-                      </div>
-                    )}
                   </Link>
-                ))}
+                  {isAdmin && (
+                    <div className="mt-3 border-t pt-3">
+                      <ProjectActions project={project} users={assignableUsers} />
+                    </div>
+                  )}
+                </div>
+              ))}
               </div>
 
             {/* Desktop table */}

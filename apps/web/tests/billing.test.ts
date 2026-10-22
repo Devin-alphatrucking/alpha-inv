@@ -442,6 +442,35 @@ async function main() {
     assert.equal(await count(`SELECT count(*) n FROM "ActivityLog" WHERE action='BILLING_CHANGED' AND "organizationId"=$1`, [legacy.orgId]), 1);
   });
 
+  await check("closing a company cancels its Razorpay plans first, so nobody keeps being charged after they can no longer sign in", async () => {
+    const { closeCompany } = await import("@/lib/flows/account");
+    const open = await q<{ providerSubscriptionId: string }>(`SELECT "providerSubscriptionId" FROM "BillingPurchase" WHERE "organizationId"=$1 AND status NOT IN ('cancelled','completed','expired')`, [legacy.orgId]);
+    assert.ok(open.length >= 1, "the company has a running plan");
+    for (const o of open) assert.notEqual(fake.subs.get(o.providerSubscriptionId)?.status, "cancelled");
+    const r = await closeCompany({ id: legacy.user.id, orgId: legacy.orgId }, PW);
+    assert.equal(r.ok, true, JSON.stringify(r));
+    for (const o of open) {
+      assert.equal(fake.subs.get(o.providerSubscriptionId)?.status, "cancelled", "cancelled at the provider");
+      assert.equal((await purchaseOf(o.providerSubscriptionId)).status, "cancelled", "and recorded here");
+    }
+    assert.equal((await q<{ status: string }>(`SELECT status FROM "Organization" WHERE id=$1`, [legacy.orgId]))[0].status, "CLOSED");
+    const [log] = await q<{ details: { plansCancelled: number; plansNotCancelled: string[] } }>(`SELECT details FROM "ActivityLog" WHERE action='COMPANY_CLOSED' AND "organizationId"=$1`, [legacy.orgId]);
+    assert.ok(log.details.plansCancelled >= 1);
+    assert.deepEqual(log.details.plansNotCancelled, []);
+  });
+
+  await check("closing still works when a plan cannot be cancelled at the provider, and records which one", async () => {
+    const { closeCompany } = await import("@/lib/flows/account");
+    const c = await makeCompany("Close Fail Co", "admin@close-fail.test");
+    await q(`INSERT INTO "BillingPurchase"(id,"organizationId","planId",provider,"providerSubscriptionId","providerPlanId",status,"paidCount","totalCount","amountMinor",currency,"updatedAt")
+             SELECT 'bp_closefail', $1, id, 'razorpay','sub_not_at_provider','plan_x','active',1,120,99900,'INR', now() FROM "Plan" WHERE code='PROJECT'`, [c.orgId]);
+    const r = await closeCompany({ id: c.user.id, orgId: c.orgId }, PW);
+    assert.equal(r.ok, true);
+    assert.equal((await q<{ status: string }>(`SELECT status FROM "Organization" WHERE id=$1`, [c.orgId]))[0].status, "CLOSED");
+    const [log] = await q<{ details: { plansNotCancelled: string[] } }>(`SELECT details FROM "ActivityLog" WHERE action='COMPANY_CLOSED' AND "organizationId"=$1`, [c.orgId]);
+    assert.deepEqual(log.details.plansNotCancelled, ["sub_not_at_provider"]);
+  });
+
   await owner.end();
   fakeServer.close();
   console.log(`\n${passed} passed, ${failed} failed`);

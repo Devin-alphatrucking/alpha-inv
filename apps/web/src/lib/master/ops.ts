@@ -127,7 +127,9 @@ export async function editPlan(
   const why = parseReason(reason);
   const plan = await rawDb.plan.findUnique({ where: { code } });
   if (!plan) throw new AppError("NOT_FOUND_001", "Plan not found.");
-  await rawDb.plan.update({ where: { code }, data: v.data });
+  // A different currency needs a different Razorpay plan: forget the cached one so the next purchase creates it.
+  const reset = v.data.currency !== plan.currency ? { providerPlanId: null, providerPlanAmount: null } : {};
+  await rawDb.plan.update({ where: { code }, data: { ...v.data, ...reset } });
   await audit(admin, null, "MASTER_EDITED_PLAN", {
     reason: why,
     plan: code,

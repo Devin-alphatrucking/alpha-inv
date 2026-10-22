@@ -67,12 +67,12 @@ export function DatePicker({
     return selectedDate ?? new Date();
   });
 
-  // When selected date changes from outside, sync viewDate
-  React.useEffect(() => {
-    if (selectedDate) {
-      setViewDate(selectedDate);
-    }
-  }, [value]);
+  // When the selected date changes from outside, move the calendar to it (adjusting state while rendering, not in an effect).
+  const [seenValue, setSeenValue] = React.useState(value);
+  if (value !== seenValue) {
+    setSeenValue(value);
+    if (selectedDate) setViewDate(selectedDate);
+  }
 
   const viewYear = viewDate.getFullYear();
   const viewMonth = viewDate.getMonth();
@@ -99,7 +99,7 @@ export function DatePicker({
     setOpen(false);
   }
 
-  function handleClear(e: React.MouseEvent) {
+  function handleClear(e: { stopPropagation(): void; preventDefault(): void }) {
     e.stopPropagation();
     e.preventDefault();
     onChange("");
@@ -166,7 +166,7 @@ export function DatePicker({
             role="button"
             tabIndex={0}
             onClick={handleClear}
-            onKeyDown={(e) => e.key === "Enter" && handleClear(e as any)}
+            onKeyDown={(e) => e.key === "Enter" && handleClear(e)}
             className="flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
             title="Clear date"
           >

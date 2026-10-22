@@ -1,6 +1,7 @@
 import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { rawDb } from "@/lib/db";
 import { logActivity } from "@/lib/activity";
@@ -19,6 +20,23 @@ class EmailNotVerified extends CredentialsSignin {
 }
 class TooManyAttempts extends CredentialsSignin {
   code = "rate_limited";
+}
+
+/**
+ * Proof that a session update comes from OUR server code. Auth.js lets a browser post to /api/auth/session with data of its own
+ * choosing, which reaches the jwt callback as `session`, so a flag such as `refreshSv` cannot be trusted by itself: someone holding
+ * an old cookie could use it to revive a session that "sign out everywhere" just ended. Only code that can read the server secret can make this value.
+ */
+export function serverUpdateProof(): string {
+  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "";
+  return createHmac("sha256", secret).update("session-update-v1").digest("hex");
+}
+function isServerUpdate(session: unknown): boolean {
+  const given = (session as { serverProof?: unknown } | null)?.serverProof;
+  if (typeof given !== "string") return false;
+  const want = Buffer.from(serverUpdateProof());
+  const got = Buffer.from(given);
+  return want.length === got.length && timingSafeEqual(want, got);
 }
 
 /** How often an open session is re-checked against the database (sign-out-everywhere, role changes, closed companies). */
@@ -128,7 +146,7 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
             token.role = m.role;
           }
         }
-        if ((session as { refreshSv?: boolean }).refreshSv) {
+        if ((session as { refreshSv?: boolean }).refreshSv && isServerUpdate(session)) {
           const u = await rawDb.user.findUnique({ where: { id: token.id as string }, select: { sessionVersion: true } });
           if (u) token.sv = u.sessionVersion;
         }

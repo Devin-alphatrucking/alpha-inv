@@ -70,7 +70,7 @@ try {
   console.log("Created app_runtime role (ordinary role, no BYPASSRLS)");
 
   const emailFile = path.join(os.tmpdir(), `outbox-${dbName}.jsonl`);
-  const suites = (process.env.ISOLATION_SUITES || "tests/isolation.test.ts,tests/auth-flows.test.ts,tests/plans.test.ts,tests/billing.test.ts,tests/master.test.ts,tests/mobile.test.ts").split(",");
+  const suites = (process.env.ISOLATION_SUITES || "tests/isolation.test.ts,tests/auth-flows.test.ts,tests/plans.test.ts,tests/billing.test.ts,tests/master.test.ts,tests/mobile.test.ts,tests/hardening.test.ts").split(",");
   exitCode = 0;
   for (const suite of suites) {
     console.log(`

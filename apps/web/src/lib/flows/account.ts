@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { rawDb } from "@/lib/db";
 import { dbFor } from "@/lib/org/scoped-db";
+import { cancelCompanyPurchases } from "@/lib/billing/service";
 import { logActivity } from "@/lib/activity";
 import { checkPassword, hashPassword, verifyPassword } from "@/lib/security/password";
 import { hit, limitKey, retryMessage } from "@/lib/security/rate-limit";
@@ -123,13 +124,23 @@ export async function closeCompany(admin: { id: string; orgId: string }, passwor
   const membership = await rawDb.membership.findUnique({ where: { userId_organizationId: { userId: admin.id, organizationId: admin.orgId } } });
   if (membership?.role !== "ADMIN") return { ok: false, error: "Only a company administrator can close the company." };
 
+  // Stop the money first: after this nobody in the company can sign in to cancel a plan themselves.
+  const billing = await cancelCompanyPurchases(admin.orgId).catch(() => ({ cancelled: 0, failed: ["unknown"] }));
+
   await rawDb.$transaction([
     rawDb.organization.update({ where: { id: admin.orgId }, data: { status: "CLOSED" } }),
     rawDb.authToken.updateMany({ where: { organizationId: admin.orgId, usedAt: null, revokedAt: null }, data: { revokedAt: new Date() } }),
     // everyone in the company is signed out
     rawDb.user.updateMany({ where: { memberships: { some: { organizationId: admin.orgId } } }, data: { sessionVersion: { increment: 1 } } }),
   ]);
-  await logActivity({ userId: admin.id, organizationId: admin.orgId, action: "COMPANY_CLOSED", module: "COMPANY", entityId: admin.orgId });
+  await logActivity({
+    userId: admin.id,
+    organizationId: admin.orgId,
+    action: "COMPANY_CLOSED",
+    module: "COMPANY",
+    entityId: admin.orgId,
+    details: { plansCancelled: billing.cancelled, plansNotCancelled: billing.failed },
+  });
   return { ok: true };
 }
 

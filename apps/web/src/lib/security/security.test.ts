@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { MIN_PASSWORD_LENGTH, checkPassword, hashPassword, verifyPassword } from "./password";
 import { hashToken, newToken } from "./tokens";
 import { clientIp, limitKey, retryMessage } from "./rate-limit";
+import { safeCallbackPath } from "./redirect";
 import { esc, inviteMail, passwordResetMail, verifyEmailMail } from "../email/templates";
 import { COUNTRY_DEFAULTS, RESERVED_SLUGS, STARTER_CATEGORIES, slugify, uniqueSlug } from "../org/starter-data";
 import { acceptInviteSchema, inviteSchema, signUpSchema } from "../flows/schemas";
@@ -36,7 +37,7 @@ async function main() {
   // ---- rate limit helpers
   assert.equal(limitKey("login:email", "A@x.test"), limitKey("login:email", " a@x.test "), "case and spaces do not create a second bucket");
   assert.ok(!limitKey("login:email", "a@x.test").includes("a@x.test"), "addresses are not stored");
-  assert.equal(clientIp({ get: (n: string) => (n === "x-forwarded-for" ? "203.0.113.9, 10.0.0.1" : null) }), "203.0.113.9");
+  assert.equal(clientIp({ get: (n: string) => (n === "x-forwarded-for" ? "203.0.113.9, 10.0.0.1" : null) }), "10.0.0.1", "one trusted proxy: the LAST entry is the one it appended");
   assert.equal(clientIp({ get: () => null }), "unknown");
   assert.match(retryMessage(30), /a minute/);
   assert.match(retryMessage(600), /10 minutes/);
@@ -75,6 +76,27 @@ async function main() {
   assert.equal(inviteSchema.safeParse({ email: "b@x.test", role: "OWNER", projectIds: [] }).success, false, "only ADMIN or STAFF can be invited");
   assert.ok(inviteSchema.safeParse({ email: "B@X.test", role: "STAFF" }).success);
   assert.equal(acceptInviteSchema.safeParse({ token: "short" }).success, false);
+
+  // ---- sign-in redirect: only paths inside the app
+  assert.equal(safeCallbackPath("/dashboard"), "/dashboard");
+  assert.equal(safeCallbackPath("/invoices?status=PAID&page=2"), "/invoices?status=PAID&page=2");
+  const ctl = String.fromCharCode(0);
+  for (const bad of ["https://evil.example", "//evil.example", "/" + String.fromCharCode(92) + "evil.example", "javascript:alert(1)", "evil.example", "", null, undefined, "/ok" + String.fromCharCode(10) + "x", "/a" + ctl + "b", "/" + "a".repeat(2100)]) {
+    assert.equal(safeCallbackPath(bad as string | null), "/", String(bad));
+  }
+
+  // ---- client address: never the first (client-supplied) X-Forwarded-For entry
+  const hdr = (o: Record<string, string>) => ({ get: (k: string) => o[k.toLowerCase()] ?? null });
+  delete process.env.TRUSTED_PROXY_HOPS;
+  assert.equal(clientIp(hdr({ "x-forwarded-for": "6.6.6.6, 203.0.113.9" })), "203.0.113.9", "the proxy appended the real address last");
+  assert.equal(clientIp(hdr({ "x-forwarded-for": "203.0.113.9" })), "203.0.113.9");
+  assert.equal(clientIp(hdr({ "cf-connecting-ip": "198.51.100.7", "x-forwarded-for": "6.6.6.6, 203.0.113.9" })), "198.51.100.7", "Cloudflare's header wins");
+  process.env.TRUSTED_PROXY_HOPS = "2";
+  assert.equal(clientIp(hdr({ "x-forwarded-for": "6.6.6.6, 198.51.100.1, 10.0.0.1" })), "198.51.100.1");
+  process.env.TRUSTED_PROXY_HOPS = "0";
+  assert.equal(clientIp(hdr({ "x-forwarded-for": "6.6.6.6", "x-real-ip": "192.0.2.1" })), "192.0.2.1", "no proxy: ignore X-Forwarded-For");
+  assert.equal(clientIp(hdr({})), "unknown");
+  delete process.env.TRUSTED_PROXY_HOPS;
 
   console.log("security: all checks passed");
 }

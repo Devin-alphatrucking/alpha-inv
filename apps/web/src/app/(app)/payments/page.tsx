@@ -8,6 +8,8 @@ import { invoiceAccessWhere } from "@/lib/invoices/access";
 import { PaymentDeleteButton } from "./payment-delete-button";
 import { getProjectScope } from "@/lib/projects/scope";
 import { getFormat } from "@/lib/brand/brand";
+import { companyTimeZone } from "@/lib/invoices/company-tz";
+import { todayIn } from "@/lib/invoices/status";
 
 export default async function PaymentsPage() {
   const { session, db, user } = await pageOrg();
@@ -18,11 +20,13 @@ export default async function PaymentsPage() {
   const scopedAccess = projectScope.selectedProjectId
     ? { AND: [access, { projectId: projectScope.selectedProjectId }] }
     : access;
-  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  // Payment dates are calendar dates stored at midnight UTC, so "this month" starts on the 1st in the COMPANY's time zone.
+  const monthStart = new Date(`${todayIn(await companyTimeZone(user.orgId)).slice(0, 7)}-01T00:00:00.000Z`);
+  const paymentWhere = { invoice: { is: scopedAccess } };
 
-  const [payments, payableInvoices] = await Promise.all([
+  const [payments, payableInvoices, totals, monthTotals] = await Promise.all([
     db.payment.findMany({
-      where: { invoice: { is: scopedAccess } },
+      where: paymentWhere,
       include: { invoice: { include: { vendor: true, category: true, project: true } } },
       orderBy: [{ paidOn: "desc" }, { createdAt: "desc" }],
       take: 200,
@@ -34,12 +38,13 @@ export default async function PaymentsPage() {
       },
       select: { total: true, payments: { select: { amount: true, paidOn: true } } },
     }),
+    // Totals come from the database, not from the 200 rows shown below.
+    db.payment.aggregate({ where: paymentWhere, _sum: { amount: true }, _count: true }),
+    db.payment.aggregate({ where: { ...paymentWhere, paidOn: { gte: monthStart } }, _sum: { amount: true } }),
   ]);
 
-  const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-  const paidThisMonth = payments
-    .filter((p) => p.paidOn >= monthStart)
-    .reduce((sum, p) => sum + Number(p.amount), 0);
+  const totalPaid = Number(totals._sum.amount ?? 0);
+  const paidThisMonth = Number(monthTotals._sum.amount ?? 0);
   const outstanding = payableInvoices.reduce((sum, invoice) => {
     const paid = invoice.payments.reduce((value, p) => value + Number(p.amount), 0);
     return sum + Math.max(0, Number(invoice.total) - paid);
@@ -65,7 +70,7 @@ export default async function PaymentsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Payment history</CardTitle>
-          <CardDescription>{payments.length} transaction(s), newest first</CardDescription>
+          <CardDescription>{totals._count > payments.length ? `Latest ${payments.length} of ${totals._count} transactions` : `${payments.length} transaction(s)`}, newest first</CardDescription>
         </CardHeader>
         <CardContent>
           {payments.length === 0 ? (

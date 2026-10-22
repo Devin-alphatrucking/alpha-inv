@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test:unit": "tsx src/lib/org/default-membership.test.ts && tsx src/lib/org/scoped-db.test.ts && tsx src/lib/brand/brand.test.ts && tsx src/lib/security/security.test.ts && tsx src/lib/plans/plans.test.ts && tsx src/lib/billing/billing.test.ts && tsx src/lib/mobile/mobile.test.ts"
+    "test:unit": "tsx src/lib/org/default-membership.test.ts && tsx src/lib/org/scoped-db.test.ts && tsx src/lib/brand/brand.test.ts && tsx src/lib/security/security.test.ts && tsx src/lib/plans/plans.test.ts && tsx src/lib/billing/billing.test.ts && tsx src/lib/mobile/mobile.test.ts && tsx src/lib/invoices/status.test.ts"
   },
   "dependencies": {
     "@alpha/db": "*",

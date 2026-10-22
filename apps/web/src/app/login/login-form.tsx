@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { safeCallbackPath } from "@/lib/security/redirect";
 
 export function LoginForm({ signupEnabled }: { signupEnabled: boolean }) {
   const searchParams = useSearchParams();
@@ -49,8 +50,7 @@ export function LoginForm({ signupEnabled }: { signupEnabled: boolean }) {
       }
 
       // Full navigation so the session cookie is picked up on tunnel hosts.
-      const callbackUrl = searchParams.get("callbackUrl") || "/";
-      window.location.assign(callbackUrl);
+      window.location.assign(safeCallbackPath(searchParams.get("callbackUrl")));
     } catch {
       toast.error("Sign-in failed. Try again.");
     } finally {

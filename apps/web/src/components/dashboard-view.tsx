@@ -51,6 +51,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useFormat } from "@/components/format-provider";
+import { todayIn } from "@/lib/invoices/status";
 
 export type MonthSpendPoint = {
   month: string;
@@ -99,10 +100,18 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
   OVERDUE: "destructive",
 };
 
-function todayInput(offsetDays = 0) {
-  const d = new Date();
-  d.setDate(d.getDate() - offsetDays);
-  return d.toISOString().slice(0, 10);
+/** Calendar-date helpers in the COMPANY's time zone (not the browser's, not UTC), as YYYY-MM-DD. */
+function todayInput(timeZone: string, offsetDays = 0) {
+  const [y, m, d] = todayIn(timeZone).split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d - offsetDays)).toISOString().slice(0, 10);
+}
+
+/** First and last day of the month that is `monthsBack` months before the current one. */
+function monthRange(timeZone: string, monthsBack: number) {
+  const [y, m] = todayIn(timeZone).split("-").map(Number);
+  const start = new Date(Date.UTC(y, m - 1 - monthsBack, 1));
+  const end = new Date(Date.UTC(y, m - monthsBack, 0));
+  return { from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
 }
 
 export function DashboardView({
@@ -187,36 +196,26 @@ export function DashboardView({
     startTransition(() => router.push(qs ? `${pathname}?${qs}` : pathname));
   }
 
-  function applyPreset(days: number) {
-    const toDate = todayInput();
-    const fromDate = todayInput(days);
+  const timeZone = fmt.format.timeZone;
+
+  function applyRange(fromDate: string, toDate: string) {
     setFromVal(fromDate);
     setToVal(toDate);
     applyFilters({ from: fromDate, to: toDate });
+  }
+
+  function applyPreset(days: number) {
+    applyRange(todayInput(timeZone, days), todayInput(timeZone));
   }
 
   function applyThisMonth() {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const fromDate = `${start.getFullYear()}-${pad(start.getMonth() + 1)}-01`;
-    const toDate = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`;
-    setFromVal(fromDate);
-    setToVal(toDate);
-    applyFilters({ from: fromDate, to: toDate });
+    const r = monthRange(timeZone, 0);
+    applyRange(r.from, r.to);
   }
 
   function applyLastMonth() {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const end = new Date(now.getFullYear(), now.getMonth(), 0);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const fromDate = `${start.getFullYear()}-${pad(start.getMonth() + 1)}-01`;
-    const toDate = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`;
-    setFromVal(fromDate);
-    setToVal(toDate);
-    applyFilters({ from: fromDate, to: toDate });
+    const r = monthRange(timeZone, 1);
+    applyRange(r.from, r.to);
   }
 
   function clearDates() {
@@ -404,7 +403,7 @@ export function DashboardView({
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 min-[1400px]:grid-cols-6">
         {kpis.map((kpi) => {
           const Icon = kpi.icon;
           return (

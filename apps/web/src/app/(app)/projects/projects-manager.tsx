@@ -353,18 +353,17 @@ export function ProjectActions({
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [, startDelete] = useTransition();
 
-  function performDelete() {
-    startDelete(async () => {
-      try {
-        await deleteProject(project.id);
-        toast.success(`Project "${project.name}" deleted`);
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Delete failed");
-        throw err;
-      }
-    });
+  // The confirm dialog awaits this and keeps itself open when it throws, so the person sees the reason and can cancel.
+  // (Throwing from inside a transition instead would send the error to the page's error boundary.)
+  async function performDelete() {
+    try {
+      await deleteProject(project.id);
+      toast.success(`Project "${project.name}" deleted`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Delete failed");
+      throw err;
+    }
   }
 
   return (

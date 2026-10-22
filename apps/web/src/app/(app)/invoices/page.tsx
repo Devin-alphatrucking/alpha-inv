@@ -49,7 +49,21 @@ type SearchParams = Promise<{
   status?: string;
   from?: string;
   to?: string;
+  page?: string;
 }>;
+
+const PAGE_SIZE = 50;
+
+/** The same filters, another page. */
+function pageHref(params: Record<string, string | undefined>, page: number) {
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) if (v && k !== "page" && k !== "confirmed" && k !== "updated") sp.set(k, v);
+  if (page > 1) sp.set("page", String(page));
+  const q = sp.toString();
+  return q ? `/invoices?${q}` : "/invoices";
+}
+const VALID_STATUS = new Set(["PROCESSING", "NEEDS_REVIEW", "UNPAID", "PARTIALLY_PAID", "PAID", "OVERDUE"]);
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 export default async function InvoicesPage({
   searchParams,
@@ -73,15 +87,10 @@ export default async function InvoicesPage({
   }
   if (params.vendorId) andFilters.push({ vendorId: params.vendorId });
   if (params.categoryId) andFilters.push({ categoryId: params.categoryId });
-  if (params.status) {
+  // Filters come from the address bar: anything invalid is ignored instead of crashing the page.
+  if (params.status && VALID_STATUS.has(params.status)) {
     andFilters.push({
-      status: params.status as
-        | "PROCESSING"
-        | "NEEDS_REVIEW"
-        | "UNPAID"
-        | "PARTIALLY_PAID"
-        | "PAID"
-        | "OVERDUE",
+      status: params.status as "PROCESSING" | "NEEDS_REVIEW" | "UNPAID" | "PARTIALLY_PAID" | "PAID" | "OVERDUE",
     });
   }
   if (params.q?.trim()) {
@@ -93,14 +102,13 @@ export default async function InvoicesPage({
       ],
     });
   }
-  if (params.from) {
-    andFilters.push({ invoiceDate: { gte: new Date(params.from) } });
+  if (params.from && DATE_ONLY.test(params.from)) {
+    andFilters.push({ invoiceDate: { gte: new Date(`${params.from}T00:00:00.000Z`) } });
   }
-  if (params.to) {
-    const end = new Date(params.to);
-    end.setHours(23, 59, 59, 999);
-    andFilters.push({ invoiceDate: { lte: end } });
+  if (params.to && DATE_ONLY.test(params.to)) {
+    andFilters.push({ invoiceDate: { lte: new Date(`${params.to}T23:59:59.999Z`) } });
   }
+  const page = Math.max(1, Math.min(100000, Number.parseInt(params.page ?? "1", 10) || 1));
 
   const where: Prisma.InvoiceWhereInput = {
     AND: [
@@ -109,7 +117,8 @@ export default async function InvoicesPage({
     ],
   };
 
-  const [invoices, vendors, categories] = await Promise.all([
+  const [totalCount, invoices, vendors, categories] = await Promise.all([
+    db.invoice.count({ where }),
     db.invoice.findMany({
       where,
       include: {
@@ -118,8 +127,9 @@ export default async function InvoicesPage({
         category: true,
         payments: { select: { amount: true } },
       },
-      orderBy: [{ status: "asc" }, { invoiceDate: "desc" }],
-      take: 100,
+      orderBy: [{ invoiceDate: "desc" }, { createdAt: "desc" }],
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
     }),
     db.vendor.findMany({
       orderBy: { name: "asc" },
@@ -174,7 +184,7 @@ export default async function InvoicesPage({
         <CardHeader>
           <CardTitle>{isStaff ? "Your invoices" : "All invoices"}</CardTitle>
           <CardDescription>
-            {invoices.length} shown · newest first
+            {totalCount === 0 ? "0 invoices" : `${(page - 1) * PAGE_SIZE + 1}-${(page - 1) * PAGE_SIZE + invoices.length} of ${totalCount}`} · newest first
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -279,12 +289,12 @@ export default async function InvoicesPage({
                       <TableHead>Invoice #</TableHead>
                       <TableHead>Vendor</TableHead>
                       <TableHead>Project</TableHead>
-                      <TableHead>Category</TableHead>
+                      <TableHead className="hidden 2xl:table-cell">Category</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead className="text-right">Total</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Paid at</TableHead>
-                      <TableHead>File</TableHead>
+                      <TableHead className="hidden 2xl:table-cell">Paid at</TableHead>
+                      <TableHead className="hidden 2xl:table-cell">File</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -310,7 +320,7 @@ export default async function InvoicesPage({
                           </TableCell>
                           <TableCell>{invoice.vendor.name}</TableCell>
                           <TableCell>{invoice.project.name}</TableCell>
-                          <TableCell>
+                          <TableCell className="hidden 2xl:table-cell">
                             {invoice.category?.name ?? "—"}
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
@@ -335,12 +345,12 @@ export default async function InvoicesPage({
                               {invoice.status.replace("_", " ")}
                             </Badge>
                           </TableCell>
-                          <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                          <TableCell className="hidden whitespace-nowrap text-xs text-muted-foreground 2xl:table-cell">
                             {invoice.paidAt
                               ? fmt.dateTimeShort(invoice.paidAt)
                               : "—"}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden 2xl:table-cell">
                             <InvoiceFilePreview
                               invoiceId={invoice.id}
                               fileUrl={invoice.fileUrl}
@@ -396,6 +406,19 @@ export default async function InvoicesPage({
                 </Table>
               </div>
             </>
+          )}
+          {totalCount > PAGE_SIZE && (
+            <nav aria-label="Pages" className="mt-4 flex items-center justify-between gap-3 border-t pt-4 text-sm">
+              <span className="text-muted-foreground">Page {page} of {Math.ceil(totalCount / PAGE_SIZE)}</span>
+              <div className="flex gap-2">
+                {page > 1 && (
+                  <Button variant="outline" size="sm" nativeButton={false} render={<Link href={pageHref(params, page - 1)} />}>Previous</Button>
+                )}
+                {page * PAGE_SIZE < totalCount && (
+                  <Button variant="outline" size="sm" nativeButton={false} render={<Link href={pageHref(params, page + 1)} />}>Next</Button>
+                )}
+              </div>
+            </nav>
           )}
         </CardContent>
       </Card>

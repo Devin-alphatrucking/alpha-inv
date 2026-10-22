@@ -6,8 +6,13 @@ import { PROJECT_SCOPE_COOKIE } from "@/lib/projects/scope";
 
 export async function POST(request: Request) {
   const user = await requireUser();
-  const body = (await request.json()) as { projectId?: string | null };
-  const projectId = body.projectId?.trim() || null;
+  let body: { projectId?: unknown } = {};
+  try {
+    body = ((await request.json()) ?? {}) as { projectId?: unknown };
+  } catch {
+    return NextResponse.json({ error: "Request body must be JSON." }, { status: 400 });
+  }
+  const projectId = typeof body.projectId === "string" ? body.projectId.trim() || null : null;
 
   if (!projectId && user.role !== "ADMIN") {
     return NextResponse.json(

@@ -31,6 +31,7 @@ export type ActivityAction =
   | "PAYMENT_DELETED"
   | "CATEGORY_CREATED"
   | "VENDOR_CREATED"
+  | "VENDOR_DELETED"
   | "COMPANY_UPDATED"
   | "COMPANY_CLOSED"
   | "USER_SIGNED_UP"

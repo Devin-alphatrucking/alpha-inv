@@ -1,22 +1,25 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { Prisma } from "@alpha/db";
 import { scoped } from "@/lib/org/context";
 import { assertProjectAccess } from "@/lib/projects/access";
 import { AppError } from "@/lib/errors";
-import { requirePermission, requireUser } from "@/lib/permissions";
+import { hasPermission, requirePermission, requireUser } from "@/lib/permissions";
+import { computeStatus, round2 } from "@/lib/invoices/status";
+import { lockInvoice } from "@/lib/invoices/lock";
+import { companyTimeZone } from "@/lib/invoices/company-tz";
 import { logActivity } from "@/lib/activity";
 
 const lineItemSchema = z.object({
   id: z.string().optional(),
   description: z.string().min(1),
-  quantity: z.coerce.number().positive(),
+  // Credit notes and discount lines have negative amounts, so only "a real number" is required.
+  quantity: z.coerce.number().refine(Number.isFinite, "Quantity must be a number"),
   unit: z.string().min(1),
-  rateExclGst: z.coerce.number().nonnegative(),
-  gstPercent: z.coerce.number().nonnegative().default(0),
+  rateExclGst: z.coerce.number().refine(Number.isFinite, "Rate must be a number"),
+  gstPercent: z.coerce.number().min(0).max(100).default(0),
   createMaterial: z.boolean().optional(),
 });
 
@@ -42,7 +45,8 @@ const confirmSchema = z.object({
   igst: z.coerce.number().nonnegative(),
   customTaxes: z.array(customTaxSchema).optional(),
   total: z.coerce.number().nonnegative(),
-  lineItems: z.array(lineItemSchema).min(1),
+  // An invoice read by the AI can have no item lines at all; it can still be confirmed on its totals.
+  lineItems: z.array(lineItemSchema).max(500),
 });
 
 export type ConfirmInvoiceInput = z.infer<typeof confirmSchema>;
@@ -188,47 +192,36 @@ export async function confirmInvoiceReview(raw: ConfirmInvoiceInput) {
   let vendorId = parsed.vendorId ?? null;
   const trimmedName = parsed.vendorName.trim();
   const trimmedGstin = parsed.vendorGstin?.trim() || null;
+  // Renaming a vendor or changing its GSTIN changes every invoice of that vendor in the company, so only people who may manage vendors can.
+  // Everyone else can pick an existing vendor or add a new one.
+  const canManageVendors = hasPermission(session.role, "vendor:manage");
+
+  if (vendorId) {
+    const known = await db.vendor.findUnique({ where: { id: vendorId }, select: { id: true } });
+    if (!known) throw new AppError("VALIDATION_001", "Selected vendor was not found.");
+  }
 
   if (trimmedGstin) {
-    const existingByGstin = await db.vendor.findFirst({
-      where: { gstin: trimmedGstin },
-    });
+    const existingByGstin = await db.vendor.findFirst({ where: { gstin: trimmedGstin } });
     if (existingByGstin) {
       vendorId = existingByGstin.id;
-      if (existingByGstin.name !== trimmedName && trimmedName) {
-        await db.vendor.update({
-          where: { id: existingByGstin.id },
-          data: { name: trimmedName },
-        });
+      if (canManageVendors && existingByGstin.name !== trimmedName && trimmedName) {
+        await db.vendor.update({ where: { id: existingByGstin.id }, data: { name: trimmedName } });
       }
     } else if (vendorId) {
-      await db.vendor.update({
-        where: { id: vendorId },
-        data: {
-          name: trimmedName,
-          gstin: trimmedGstin,
-        },
-      });
+      if (canManageVendors) {
+        await db.vendor.update({ where: { id: vendorId }, data: { name: trimmedName, gstin: trimmedGstin } });
+      }
     } else {
-      const vendor = await createVendorInline({
-        name: trimmedName,
-        gstin: trimmedGstin,
-      });
+      const vendor = await createVendorInline({ name: trimmedName, gstin: trimmedGstin });
       vendorId = vendor.id;
     }
   } else if (vendorId) {
-    await db.vendor.update({
-      where: { id: vendorId },
-      data: {
-        name: trimmedName,
-        gstin: null,
-      },
-    });
+    if (canManageVendors) {
+      await db.vendor.update({ where: { id: vendorId }, data: { name: trimmedName, gstin: null } });
+    }
   } else {
-    const vendor = await createVendorInline({
-      name: trimmedName,
-      gstin: null,
-    });
+    const vendor = await createVendorInline({ name: trimmedName, gstin: null });
     vendorId = vendor.id;
   }
 
@@ -245,7 +238,15 @@ export async function confirmInvoiceReview(raw: ConfirmInvoiceInput) {
     );
   }
 
+  const timeZone = await companyTimeZone(session.orgId);
+
   await db.$transaction(async (tx) => {
+    // One confirmation at a time per invoice: a second tab or a retry waits here instead of doubling the line items.
+    await lockInvoice(tx, invoice.id);
+    const current = await tx.invoice.findUniqueOrThrow({ where: { id: invoice.id }, select: { status: true, paidAt: true, extractionRaw: true } });
+    const livePayments = await tx.payment.findMany({ where: { invoiceId: invoice.id }, select: { amount: true, paidOn: true } });
+    const isDraftNow = current.status === "NEEDS_REVIEW" || current.status === "PROCESSING";
+
     await tx.invoiceLineItem.deleteMany({ where: { invoiceId: invoice.id } });
 
     const materialMap = new Map<string, string>();
@@ -285,12 +286,8 @@ export async function confirmInvoiceReview(raw: ConfirmInvoiceInput) {
         item.createMaterial && parsed.categoryId
           ? (materialMap.get(key) ?? null)
           : null;
-      const gstAmount =
-        Math.round(
-          ((item.quantity * item.rateExclGst * item.gstPercent) / 100) * 100
-        ) / 100;
-      const lineTotal =
-        Math.round((item.quantity * item.rateExclGst + gstAmount) * 100) / 100;
+      const gstAmount = round2((item.quantity * item.rateExclGst * item.gstPercent) / 100);
+      const lineTotal = round2(item.quantity * item.rateExclGst + gstAmount);
 
       return {
         organizationId: session.orgId,
@@ -308,21 +305,12 @@ export async function confirmInvoiceReview(raw: ConfirmInvoiceInput) {
 
     await tx.invoiceLineItem.createMany({ data: lineItemsData });
 
-    const paidAmount = invoice.payments.reduce(
-      (sum, payment) => sum + Number(payment.amount),
-      0
-    );
-    const nextStatus = wasDraft
-      ? "UNPAID"
-      : paidAmount >= parsed.total - 0.01
-        ? "PAID"
-        : paidAmount > 0
-          ? "PARTIALLY_PAID"
-          : parsed.dueDate && new Date(parsed.dueDate) < new Date()
-            ? "OVERDUE"
-            : "UNPAID";
+    const paidAmount = livePayments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+    // Same rule everywhere (payments, overdue sweep, mobile): see lib/invoices/status.ts. A draft starts unpaid, or overdue if its due date has already passed.
+    const nextStatus = computeStatus({ total: parsed.total, paid: isDraftNow ? 0 : paidAmount, dueDate: parsed.dueDate ? new Date(parsed.dueDate) : null, timeZone });
+    const latestPaidOn = livePayments.reduce<Date | null>((m, p) => (!m || p.paidOn > m ? p.paidOn : m), null);
 
-    const currentRaw = (invoice.extractionRaw as Prisma.JsonObject) || {};
+    const currentRaw = (current.extractionRaw as Prisma.JsonObject) || {};
     const updatedRaw = {
       ...currentRaw,
       customTaxes: parsed.customTaxes ?? [],
@@ -344,10 +332,7 @@ export async function confirmInvoiceReview(raw: ConfirmInvoiceInput) {
         total: d(parsed.total),
         extractionRaw: updatedRaw,
         status: nextStatus,
-        paidAt:
-          nextStatus === "PAID"
-            ? invoice.paidAt ?? invoice.payments[0]?.paidOn ?? new Date()
-            : null,
+        paidAt: nextStatus === "PAID" ? (latestPaidOn ?? current.paidAt ?? new Date()) : null,
         reviewedById: session.id,
         reviewedAt: new Date(),
       },

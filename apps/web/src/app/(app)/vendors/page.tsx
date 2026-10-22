@@ -15,8 +15,8 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { createVendor } from "./actions";
+import { ActionForm } from "@/components/action-form";
 
 export default async function VendorsPage() {
   const { db } = await pageOrg();
@@ -39,7 +39,7 @@ export default async function VendorsPage() {
           <CardTitle>Add vendor</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={createVendor} className="grid gap-4 sm:grid-cols-2">
+          <ActionForm action={createVendor} submitLabel="Add vendor" successMessage="Vendor added" className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label htmlFor="name">Name</Label>
               <Input id="name" name="name" required />
@@ -56,10 +56,7 @@ export default async function VendorsPage() {
               <Label htmlFor="address">Address</Label>
               <Input id="address" name="address" />
             </div>
-            <div className="sm:col-span-2">
-              <Button type="submit">Add vendor</Button>
-            </div>
-          </form>
+          </ActionForm>
         </CardContent>
       </Card>
 

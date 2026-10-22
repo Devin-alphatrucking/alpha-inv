@@ -51,8 +51,16 @@ export function retryMessage(seconds: number) {
   return mins <= 1 ? "Too many attempts. Please wait a minute and try again." : `Too many attempts. Please try again in about ${mins} minutes.`;
 }
 
-/** The caller's IP as reported by the proxy in front of the app. Only trust this behind a proxy you control. */
+/**
+ * The caller's IP. A client can put anything at the START of X-Forwarded-For, and proxies APPEND the address they saw, so the
+ * first entry is not trustworthy. We count TRUSTED_PROXY_HOPS (default 1: one proxy such as Cloudflare or a load balancer) from the
+ * END of the list instead. Cloudflare's own header wins when present. Set TRUSTED_PROXY_HOPS=0 when the app faces the internet directly.
+ */
 export function clientIp(headers: { get(name: string): string | null }): string {
-  const forwarded = headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwarded || headers.get("x-real-ip")?.trim() || "unknown";
+  const cf = headers.get("cf-connecting-ip")?.trim();
+  if (cf) return cf;
+  const hops = Number(process.env.TRUSTED_PROXY_HOPS ?? 1);
+  const list = (headers.get("x-forwarded-for") ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  if (list.length && Number.isInteger(hops) && hops >= 1) return list[Math.max(0, list.length - hops)] ?? "unknown";
+  return headers.get("x-real-ip")?.trim() || "unknown";
 }

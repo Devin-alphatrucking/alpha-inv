@@ -692,6 +692,7 @@ model MobileSession {
   ip                  String?
   createdAt           DateTime  @default(now())
   lastUsedAt          DateTime  @default(now())
+  refreshedAt         DateTime? // when the refresh token last rotated (the 'two refreshes at once' grace window counts from here)
   refreshExpiresAt    DateTime
   absoluteExpiresAt   DateTime
   revokedAt           DateTime?

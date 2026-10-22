@@ -30,7 +30,7 @@ export type Brand = {
   accentColor: string | null;
   supportEmail: string | null;
   supportUrl: string | null;
-  format: { currency: string; locale: string; timezone: string } & Record<string, unknown>;
+  format: { currency: string; locale: string; timeZone: string } & Record<string, unknown>;
 };
 
 export type PlanSummary = {

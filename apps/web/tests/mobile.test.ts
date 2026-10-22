@@ -186,7 +186,7 @@ async function main() {
     const r = must(await login(a.email));
     const next = must(await m.refreshMobile(r.tokens.refreshToken, { ip: ip() }));
     // make the rotation older than the grace window
-    await q(`UPDATE "MobileSession" SET "lastUsedAt" = (now() AT TIME ZONE 'UTC') - interval '10 minutes' WHERE "refreshHash"=$1`, [(await import("@/lib/mobile/token")).hashRefresh(next.tokens.refreshToken)]);
+    await q(`UPDATE "MobileSession" SET "lastUsedAt" = (now() AT TIME ZONE 'UTC') - interval '10 minutes', "refreshedAt" = (now() AT TIME ZONE 'UTC') - interval '10 minutes' WHERE "refreshHash"=$1`, [(await import("@/lib/mobile/token")).hashRefresh(next.tokens.refreshToken)]);
     const stolen = await m.refreshMobile(r.tokens.refreshToken, { ip: ip() });
     assert.equal(stolen.ok === false && stolen.code, "invalid_refresh");
     assert.equal(await m.authenticateBearer(next.tokens.accessToken), null, "the legitimate session is ended too");

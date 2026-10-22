@@ -1,26 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 import { scoped } from "@/lib/org/context";
 import { AppError } from "@/lib/errors";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
-import {
-  assertInvoiceAccess,
-  isPayableStatus,
-} from "@/lib/invoices/access";
+import { assertInvoiceAccess } from "@/lib/invoices/access";
 import { deleteInvoiceFiles } from "@/lib/azure/blob";
-import { getFormat } from "@/lib/brand/brand";
-
-const paymentSchema = z.object({
-  invoiceId: z.string().min(1),
-  amount: z.coerce.number().positive(),
-  paidOn: z.string().min(1),
-  mode: z.string().trim().max(50).optional(),
-  reference: z.string().trim().max(100).optional(),
-  notes: z.string().trim().max(500).optional(),
-});
+import { computeStatus } from "@/lib/invoices/status";
+import { lockInvoice } from "@/lib/invoices/lock";
+import { recordPayment } from "@/lib/invoices/payments";
+import { companyTimeZone } from "@/lib/invoices/company-tz";
 
 export async function recordInvoicePayment(input: {
   invoiceId: string;
@@ -31,96 +21,16 @@ export async function recordInvoicePayment(input: {
   notes?: string;
 }) {
   const user = await requirePermission("payment:create");
-  const db = scoped(user);
-
-  const parsed = paymentSchema.safeParse(input);
-  if (!parsed.success) {
-    throw new AppError(
-      "VALIDATION_001",
-      "Payment details are invalid."
-    );
-  }
-
-  const invoice = await assertInvoiceAccess(parsed.data.invoiceId, user);
-
-  if (!isPayableStatus(invoice.status)) {
-    throw new AppError(
-      "PAYMENT_001",
-      "Only confirmed invoices can be marked paid or unpaid. Finish review first."
-    );
-  }
-
-  const paidOn = new Date(parsed.data.paidOn);
-  if (Number.isNaN(paidOn.getTime())) {
-    throw new AppError("VALIDATION_001", "Invalid payment date");
-  }
-
-  const aggregate = await db.payment.aggregate({
-    where: { invoiceId: invoice.id },
-    _sum: { amount: true },
-  });
-  const alreadyPaid = Number(aggregate._sum.amount ?? 0);
-  const invoiceTotal = Number(invoice.total);
-  const remaining = Math.max(0, invoiceTotal - alreadyPaid);
-  if (parsed.data.amount > remaining + 0.01) {
-    throw new AppError(
-      "PAYMENT_001",
-      `Payment cannot exceed the remaining balance of ${(await getFormat()).money(remaining, 2)}`
-    );
-  }
-
-  const newPaidTotal = alreadyPaid + parsed.data.amount;
-  const fullyPaid = newPaidTotal >= invoiceTotal - 0.01;
-
-  const payment = await db.$transaction(async (tx) => {
-    const created = await tx.payment.create({
-      data: {
-        organizationId: user.orgId,
-        invoiceId: invoice.id,
-        amount: parsed.data.amount,
-        paidOn,
-        mode: parsed.data.mode || null,
-        reference: parsed.data.reference || null,
-        notes: parsed.data.notes || null,
-        paidById: user.id,
-      },
-    });
-    await tx.invoice.update({
-      where: { id: invoice.id },
-      data: {
-        status: fullyPaid ? "PAID" : "PARTIALLY_PAID",
-        paidAt: fullyPaid ? paidOn : null,
-      },
-    });
-    return created;
-  });
-
-  await logActivity({
-    userId: user.id,
-    organizationId: user.orgId,
-    action: "PAYMENT_CREATED",
-    module: "PAYMENT",
-    entityId: invoice.id,
-    details: {
-      paymentId: payment.id,
-      amount: parsed.data.amount,
-      fullyPaid,
-    },
-  });
+  const r = await recordPayment(user, input);
 
   revalidatePath("/invoices");
   revalidatePath("/payments");
   revalidatePath("/dashboard");
   revalidatePath("/projects");
-  revalidatePath(`/invoices/${invoice.id}/review`);
-  revalidatePath(`/projects/${invoice.projectId}`);
+  revalidatePath(`/invoices/${r.invoiceId}/review`);
+  revalidatePath(`/projects/${r.projectId}`);
 
-  return {
-    paymentId: payment.id,
-    status: fullyPaid ? "PAID" : "PARTIALLY_PAID",
-    paidAmount: newPaidTotal,
-    balance: Math.max(0, invoiceTotal - newPaidTotal),
-  };
+  return { paymentId: r.paymentId, status: r.status, paidAmount: r.paidAmount, balance: r.balance };
 }
 
 export async function deleteInvoicePayment(input: {
@@ -136,25 +46,17 @@ export async function deleteInvoicePayment(input: {
   });
   if (!payment) throw new AppError("NOT_FOUND_001", "Payment not found");
 
+  const timeZone = await companyTimeZone(user.orgId);
   await db.$transaction(async (tx) => {
+    await lockInvoice(tx, invoice.id);
     await tx.payment.delete({ where: { id: payment.id } });
-    const remainingPayments = await tx.payment.aggregate({
-      where: { invoiceId: invoice.id },
-      _sum: { amount: true },
-    });
+    const live = await tx.invoice.findUniqueOrThrow({ where: { id: invoice.id }, select: { total: true, dueDate: true } });
+    const remainingPayments = await tx.payment.aggregate({ where: { invoiceId: invoice.id }, _sum: { amount: true }, _max: { paidOn: true } });
     const paid = Number(remainingPayments._sum.amount ?? 0);
-    const total = Number(invoice.total);
-    const status =
-      paid >= total - 0.01
-        ? "PAID"
-        : paid > 0
-          ? "PARTIALLY_PAID"
-          : invoice.dueDate && invoice.dueDate < new Date()
-            ? "OVERDUE"
-            : "UNPAID";
+    const status = computeStatus({ total: Number(live.total), paid, dueDate: live.dueDate, timeZone });
     await tx.invoice.update({
       where: { id: invoice.id },
-      data: { status, paidAt: status === "PAID" ? invoice.paidAt : null },
+      data: { status, paidAt: status === "PAID" ? remainingPayments._max.paidOn : null },
     });
   });
 
@@ -203,6 +105,15 @@ export async function deleteInvoice(invoiceId: string) {
         "PERMISSION_001",
         "You do not have permission to delete this invoice"
       );
+    }
+  }
+
+  // Deleting an invoice also deletes its payments. Removing a payment is an administrator action, so staff cannot get around that
+  // by deleting an invoice that has money recorded against it.
+  if (user.role !== "ADMIN") {
+    const recorded = await db.payment.count({ where: { invoiceId } });
+    if (recorded > 0) {
+      throw new AppError("PERMISSION_001", "This invoice has payments recorded. Ask an administrator to delete it.");
     }
   }
 

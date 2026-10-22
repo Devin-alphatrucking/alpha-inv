@@ -7,6 +7,8 @@ import { rawDb } from "@/lib/db";
 import { scoped } from "@/lib/org/context";
 import { deleteInvoiceFiles } from "@/lib/azure/blob";
 import { revalidatePath } from "next/cache";
+import { hit, limitKey, retryMessage } from "@/lib/security/rate-limit";
+import { logActivity } from "@/lib/activity";
 import { requireAdmin } from "@/lib/permissions";
 import { setCompanyPageLimit } from "@/lib/usage/pages";
 import { assertCompanyPageCap, getEntitlements } from "@/lib/plans/entitlements";
@@ -32,6 +34,10 @@ export async function resetApplicationData(input: {
   if (!parsed.success) {
     return { ok: false, error: "Enter your password and the exact confirmation phrase." };
   }
+
+  // Guessing the password through this screen is limited like the sign-in is.
+  const attempts = await hit(limitKey("reset-data:user", admin.id), 5, 3600);
+  if (!attempts.allowed) return { ok: false, error: retryMessage(attempts.retryAfterSeconds) };
 
   const account = await rawDb.user.findUnique({
     where: { id: admin.id },
@@ -75,6 +81,11 @@ export async function resetApplicationData(input: {
   if (onlyHereIds.length > 0) {
     await rawDb.user.deleteMany({ where: { id: { in: onlyHereIds } } });
   }
+
+  // Open invitations were sent for the old data (projects that no longer exist): cancel them.
+  await rawDb.authToken.updateMany({ where: { organizationId: admin.orgId, type: "INVITE", usedAt: null, revokedAt: null }, data: { revokedAt: new Date() } });
+  // The activity log was just emptied: leave one entry saying who did it and when.
+  await logActivity({ userId: admin.id, organizationId: admin.orgId, action: "COMPANY_UPDATED", module: "COMPANY", entityId: admin.orgId, details: { reset: true, projectsRemoved: true } });
 
   (await cookies()).delete(PROJECT_SCOPE_COOKIE);
   const failures = await deleteInvoiceFiles(invoiceFiles.map((file) => file.fileUrl));

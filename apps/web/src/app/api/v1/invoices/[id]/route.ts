@@ -2,12 +2,14 @@ import { AppError } from "@/lib/errors";
 import { json, requireMobile, route } from "@/lib/mobile/http";
 import { dbFor } from "@/lib/org/scoped-db";
 import { invoiceAccessWhere } from "@/lib/invoices/access";
+import { syncOverdue } from "@/lib/invoices/overdue";
 
 export const runtime = "nodejs";
 
 export const GET = route<{ params: Promise<{ id: string }> }>("/api/v1/invoices/[id]", async (req, ctx) => {
   const me = await requireMobile(req);
   const { id } = await ctx.params;
+  await syncOverdue(me.orgId);
   const invoice = await dbFor(me.orgId).invoice.findFirst({
     where: { id, ...invoiceAccessWhere(me) },
     select: {

@@ -37,7 +37,13 @@ export function ResetDataPanel() {
   function resetData() {
     if (!ready) return;
     startTransition(async () => {
-      const result = await resetApplicationData({ password, confirmation });
+      let result: Awaited<ReturnType<typeof resetApplicationData>>;
+      try {
+        result = await resetApplicationData({ password, confirmation });
+      } catch {
+        toast.error("Could not reset the data. Nothing was changed. Please try again.");
+        return;
+      }
       if (!result.ok) {
         toast.error(result.error);
         return;
