@@ -4,7 +4,7 @@
   "private": true,
   "description": "Invoice & billing monorepo: web app, shared database package (API, admin and mobile apps join here).",
   "workspaces": [
-    "apps/*",
+    "apps/web",
     "packages/*"
   ],
   "scripts": {
