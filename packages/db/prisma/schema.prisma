@@ -47,6 +47,7 @@ model User {
   memberships        Membership[]
   authTokens         AuthToken[]
   supportTickets     SupportTicket[]
+  mobileSessions     MobileSession[]
 }
 
 // ---------------------------------------------------------------------------
@@ -669,4 +670,34 @@ model BillingEvent {
 
   @@index([receivedAt])
   @@index([organizationId])
+}
+
+// ---------------------------------------------------------------------------
+// Mobile apps (Phase 7). One row per signed-in device. The app holds a short-lived access token and a
+// long-lived refresh token; the database keeps only the SHA-256 of the refresh token. Every refresh issues
+// a new one; presenting an OLD one means it was copied, so the whole session is revoked.
+// Not an RLS table: it is read and written only by server code that checks the person first.
+// ---------------------------------------------------------------------------
+
+model MobileSession {
+  id                  String    @id @default(cuid())
+  userId              String
+  organizationId      String
+  refreshHash         String    @unique
+  previousRefreshHash String?
+  sessionVersion      Int // the person's User.sessionVersion when this started; a later "sign out everywhere" kills it
+  deviceName          String?
+  platform            String? // ios | android
+  appVersion          String?
+  ip                  String?
+  createdAt           DateTime  @default(now())
+  lastUsedAt          DateTime  @default(now())
+  refreshExpiresAt    DateTime
+  absoluteExpiresAt   DateTime
+  revokedAt           DateTime?
+  revokedReason       String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
 }

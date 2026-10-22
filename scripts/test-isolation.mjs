@@ -70,7 +70,7 @@ try {
   console.log("Created app_runtime role (ordinary role, no BYPASSRLS)");
 
   const emailFile = path.join(os.tmpdir(), `outbox-${dbName}.jsonl`);
-  const suites = (process.env.ISOLATION_SUITES || "tests/isolation.test.ts,tests/auth-flows.test.ts,tests/plans.test.ts,tests/billing.test.ts,tests/master.test.ts").split(",");
+  const suites = (process.env.ISOLATION_SUITES || "tests/isolation.test.ts,tests/auth-flows.test.ts,tests/plans.test.ts,tests/billing.test.ts,tests/master.test.ts,tests/mobile.test.ts").split(",");
   exitCode = 0;
   for (const suite of suites) {
     console.log(`
@@ -82,7 +82,7 @@ try {
         // ISOLATION_APP_AS_OWNER=1 is a self-check: with RLS bypassed, the database-layer tests MUST fail.
         DATABASE_URL: process.env.ISOLATION_APP_AS_OWNER ? ownerUrl : appUrl,
         TEST_OWNER_DATABASE_URL: ownerUrl,
-        AUTH_SECRET: "test",
+        AUTH_SECRET: "isolation-suite-secret-value",
         APP_ENCRYPTION_KEY: randomBytes(32).toString("base64"),
         // emails are written to a file the tests read (never really sent)
         EMAIL_TRANSPORT: "file",

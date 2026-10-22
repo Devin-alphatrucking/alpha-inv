@@ -18,6 +18,8 @@ const PUBLIC_PATHS = [
   "/api/branding/logo",
   "/api/billing/razorpay/webhook",
   "/api/billing/reconcile",
+  "/api/v1/auth/login",
+  "/api/v1/auth/refresh",
 ];
 
 const BRAND_COOKIE = "brand-c";
@@ -57,6 +59,12 @@ export default auth((req) => {
 
   if (isPublic) {
     return nextWithBrand(req);
+  }
+
+  // The mobile apps authenticate with a bearer token, which the route handlers verify themselves
+  // (requireUser): let those API calls through to them instead of asking for a cookie.
+  if (pathname.startsWith("/api/") && /^Bearer\s/i.test(req.headers.get("authorization") ?? "")) {
+    return NextResponse.next();
   }
 
   if (!req.auth) {
