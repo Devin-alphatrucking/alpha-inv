@@ -10,6 +10,7 @@ import { getProjectScope } from "@/lib/projects/scope";
 import { getFormat } from "@/lib/brand/brand";
 import { companyTimeZone } from "@/lib/invoices/company-tz";
 import { todayIn } from "@/lib/invoices/status";
+import { paymentModeLabel } from "@/lib/invoices/payment-mode";
 
 export default async function PaymentsPage() {
   const { session, db, user } = await pageOrg();
@@ -111,7 +112,7 @@ export default async function PaymentsPage() {
                           {fmt.date(payment.paidOn)}
                         </span>
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                          {payment.mode ?? "Other"}
+                          {paymentModeLabel(payment.mode)}
                         </Badge>
                       </div>
                       {session.user.role === "ADMIN" && (
@@ -133,7 +134,7 @@ export default async function PaymentsPage() {
                         <TableCell><Link className="font-medium underline-offset-4 hover:underline" href={`/invoices/${payment.invoiceId}/review`}>{payment.invoice.invoiceNumber}</Link></TableCell>
                         <TableCell>{payment.invoice.vendor.name}</TableCell>
                         <TableCell>{payment.invoice.category?.name ?? "—"}</TableCell>
-                        <TableCell><Badge variant="outline">{payment.mode ?? "Other"}</Badge></TableCell>
+                        <TableCell><Badge variant="outline">{paymentModeLabel(payment.mode)}</Badge></TableCell>
                         <TableCell className="text-muted-foreground">{payment.reference ?? "—"}</TableCell>
                         <TableCell className="text-right font-medium tabular-nums">{formatCurrency(Number(payment.amount))}</TableCell>
                         <TableCell className="text-right">{session.user.role === "ADMIN" && <PaymentDeleteButton invoiceId={payment.invoiceId} paymentId={payment.id} />}</TableCell>

@@ -1,3 +1,4 @@
+import { InvoiceComments } from "../invoice-comments";
 import { notFound, redirect } from "next/navigation";
 import { pageOrg } from "@/lib/org/page";
 import { ReviewForm } from "./review-form";
@@ -9,6 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getFormat } from "@/lib/brand/brand";
+import { invoiceAccessWhere } from "@/lib/invoices/access";
+import { loadRateBaselines } from "@/lib/invoices/rate-baseline";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -16,7 +19,7 @@ type PageProps = {
 
 export default async function InvoiceReviewPage({ params }: PageProps) {
   const { id } = await params;
-  const { session, db } = await pageOrg();
+  const { session, db, user } = await pageOrg();
   const fmt = await getFormat();
   const formatCurrency = (value: number, maxFraction = 0) => fmt.money(value, maxFraction);
 
@@ -55,6 +58,11 @@ export default async function InvoiceReviewPage({ params }: PageProps) {
         })
       : db.project.findMany({ orderBy: { name: "asc" } }),
   ]);
+
+  // What the company usually pays for each item, to warn when a rate here is much higher. Staff are judged only against invoices they can see.
+  const rateBaselines = Object.fromEntries(
+    await loadRateBaselines(db, invoice.id, invoice.lineItems, invoiceAccessWhere(user)),
+  );
 
   const raw = invoice.extractionRaw as
     | {
@@ -130,7 +138,12 @@ export default async function InvoiceReviewPage({ params }: PageProps) {
         }))}
         projects={projects.map((p) => ({ id: p.id, name: p.name }))}
         possibleDuplicate={possibleDuplicate}
+        rateBaselines={rateBaselines}
       />
+
+      <div className="mx-auto w-full max-w-5xl">
+        <InvoiceComments invoiceId={invoice.id} user={user} />
+      </div>
 
       {invoice.payments.length > 0 && (
         <Card>

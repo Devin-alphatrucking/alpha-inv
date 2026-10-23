@@ -37,6 +37,7 @@ model User {
   totpSecretEnc   String?
   totpEnabledAt   DateTime?
   totpLastStep    Int? // the last 30-second step accepted, so one code cannot be used twice
+  emailDigest     Boolean   @default(true) // wants the daily email of overdue and due-soon invoices (administrators only receive it)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -45,6 +46,7 @@ model User {
   uploadedInvoices   Invoice[]           @relation("UploadedBy")
   reviewedInvoices   Invoice[]           @relation("ReviewedBy")
   auditLogs          AuditLog[]
+  invoiceComments    InvoiceComment[]
   payments           Payment[]           @relation("PaidBy")
   projectNotes       ProjectNote[]
   activityLogs       ActivityLog[]
@@ -82,7 +84,9 @@ model Project {
   azureEndpoint    String?
   azureKeyEnc      String?
   azureKeyHint     String? // last 4 chars, display only
-  monthlyPageLimit Int     @default(500) // AI pages per calendar month (IST)
+  monthlyPageLimit Int      @default(500) // AI pages per calendar month (IST)
+  // Spending limit for the project (the total of its confirmed invoices is compared with it). Empty = no budget.
+  budget           Decimal? @db.Decimal(14, 2)
 
   invoices    Invoice[]
   assignments ProjectAssignment[]
@@ -225,6 +229,7 @@ model Invoice {
   lineItems  InvoiceLineItem[]
   payments   Payment[]
   auditLogs  AuditLog[]
+  comments   InvoiceComment[]
 
   @@unique([vendorId, invoiceNumber])
   @@index([projectId])
@@ -286,6 +291,22 @@ model Payment {
 // ---------------------------------------------------------------------------
 // Audit trail — tracks manual edits made to AI-extracted fields.
 // ---------------------------------------------------------------------------
+
+// A short note on an invoice ("query raised with the vendor"). Anyone who can see the invoice can read and add; the author or an administrator can remove.
+model InvoiceComment {
+  id             String   @id @default(cuid())
+  organizationId String // company that owns this row
+  invoiceId      String
+  userId         String? // kept as a note from a "former member" if the person is removed
+  body           String
+  createdAt      DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId, createdAt])
+  @@index([organizationId])
+}
 
 model AuditLog {
   id             String   @id @default(cuid())
@@ -427,6 +448,7 @@ model Organization {
   supportEmail String?
   supportUrl   String?
   appModel     String  @default("A") // A shared app | B branded (ours) | C branded (client's accounts)
+  digestSentOn String? // YYYY-MM-DD (company time zone) of the last daily digest, so it goes out once a day
 
   logo             OrganizationLogo?
   authTokens       AuthToken[]

@@ -21,6 +21,7 @@ import { FolderKanban } from "lucide-react";
 import { projectAccessWhere } from "@/lib/projects/access";
 import { getUsageSummary } from "@/lib/usage/pages";
 import { ProjectsManager, ProjectActions, type AssignableUser } from "./projects-manager";
+import { BudgetMeter } from "@/components/budget-meter";
 import { getFormat } from "@/lib/brand/brand";
 import { getEntitlements } from "@/lib/plans/entitlements";
 import { checkAddProject } from "@/lib/plans/rules";
@@ -97,6 +98,8 @@ export default async function ProjectsPage() {
       total,
       paid,
       pending: Math.max(0, pending),
+      budget: project.budget ? Number(project.budget) : null,
+      spent: total,
     };
   });
 
@@ -178,6 +181,11 @@ export default async function ProjectsPage() {
                     <p className="mt-2 text-xs text-muted-foreground">
                       AI pages this month: {project.pagesUsed} / {project.monthlyPageLimit}
                     </p>
+                    {project.budget ? (
+                      <div className="mt-3">
+                        <BudgetMeter spent={project.spent} budget={project.budget} money={(n) => formatCurrency(n)} />
+                      </div>
+                    ) : null}
                     <div className="mt-3 grid grid-cols-3 gap-2 text-center">
                       <div className="rounded-lg bg-muted/50 p-2">
                         <p className="text-[10px] text-muted-foreground">Invoiced</p>
@@ -234,6 +242,11 @@ export default async function ProjectsPage() {
                         >
                           {project.name}
                         </Link>
+                        {project.budget ? (
+                          <div className="mt-1.5 max-w-60 font-normal">
+                            <BudgetMeter spent={project.spent} budget={project.budget} money={(n) => formatCurrency(n)} />
+                          </div>
+                        ) : null}
                       </TableCell>
                       <TableCell>
                         <Badge variant={statusVariant(project.status)}>

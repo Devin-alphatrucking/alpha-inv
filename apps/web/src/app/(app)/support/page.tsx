@@ -19,7 +19,7 @@ const STATUS: Record<string, { label: string; variant: "default" | "secondary" |
 };
 
 export default async function SupportPage({ searchParams }: Props) {
-  const { session, orgId } = await pageOrg();
+  const { session, orgId } = await pageOrg({ allowLocked: true });
   const { topic } = await searchParams;
   const fmt = await getFormat();
   const [org, e, tickets] = await Promise.all([

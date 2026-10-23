@@ -11,6 +11,9 @@ import {
   type RecentInvoice,
 } from "@/components/dashboard-view";
 import { getFormat } from "@/lib/brand/brand";
+import { AttentionPanel } from "@/components/attention-panel";
+import { loadAttention } from "@/lib/invoices/attention";
+import { loadBudgetAlerts } from "@/lib/projects/budget-alerts";
 
 /** Invoice dates are calendar dates stored at midnight UTC, so months are counted in UTC. Labels use mid-month noon so no time zone can shift them to the neighbouring month. */
 const monthKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
@@ -53,6 +56,10 @@ export default async function DashboardPage({
     : session.user.role === "STAFF"
       ? { projectId: { in: projectScope.projects.map((p) => p.id) } }
       : {};
+
+  const attention = await loadAttention(db, projectFilter, fmt.format.timeZone);
+  // Budgets are the administrators' planning numbers: staff do not see budget alerts.
+  const budgetAlerts = session.user.role === "ADMIN" ? await loadBudgetAlerts(db, projectScope.selectedProjectId ? { id: projectScope.selectedProjectId } : {}) : [];
 
   const now = new Date();
   const defaultMonth = new Intl.DateTimeFormat("en-CA", {
@@ -252,6 +259,8 @@ export default async function DashboardPage({
             : "Overview of construction purchase invoices and spend across all projects."}
         </p>
       </div>
+
+      <AttentionPanel summary={attention.summary} drafts={attention.drafts} money={(minor) => fmt.money(minor / 100, 2)} date={(d) => fmt.date(d)} budgets={budgetAlerts} />
 
       <DashboardView
         role={session.user.role}

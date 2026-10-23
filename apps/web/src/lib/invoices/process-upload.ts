@@ -1,4 +1,5 @@
 import { Prisma } from "@alpha/db";
+import { rawDb } from "@/lib/db";
 import { dbFor } from "@/lib/org/scoped-db";
 import {
   extractInvoice,
@@ -34,24 +35,26 @@ function halfTax(totalTax: number | undefined) {
   return { sgst: half, cgst: half, igst: 0 };
 }
 
-type Db = ReturnType<typeof dbFor>;
-
-async function resolveVendor(db: Db, orgId: string, extracted: ExtractedInvoice) {
+/**
+ * The supplier on an invoice: matched by GSTIN, then by name, else created. Done one at a time per company (a short
+ * lock), because a batch upload reads several invoices at once and two from a NEW supplier would otherwise each create it
+ * (a GSTIN clash, or two vendors with the same name when there is no GSTIN).
+ */
+export async function resolveVendor(orgId: string, extracted: Pick<ExtractedInvoice, "vendorGstin" | "vendorName">) {
   const gstin = extracted.vendorGstin?.trim().toUpperCase() || undefined;
   const name = (extracted.vendorName?.trim() || "UNKNOWN VENDOR").toUpperCase();
 
-  if (gstin) {
-    const byGstin = await db.vendor.findFirst({ where: { gstin } });
-    if (byGstin) return byGstin;
-  }
+  return rawDb.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT set_config('app.org_id', ${orgId}, true)`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"vendor:" + orgId}))`;
 
-  const byName = await db.vendor.findFirst({
-    where: { name: { equals: name, mode: "insensitive" } },
-  });
-  if (byName) return byName;
-
-  return db.vendor.create({
-    data: { name, gstin: gstin ?? null, organizationId: orgId },
+    if (gstin) {
+      const byGstin = await tx.vendor.findFirst({ where: { organizationId: orgId, gstin } });
+      if (byGstin) return byGstin;
+    }
+    const byName = await tx.vendor.findFirst({ where: { organizationId: orgId, name: { equals: name, mode: "insensitive" } } });
+    if (byName) return byName;
+    return tx.vendor.create({ data: { name, gstin: gstin ?? null, organizationId: orgId } });
   });
 }
 
@@ -78,10 +81,10 @@ export async function processInvoiceUpload(params: {
   const db = dbFor(orgId);
 
   if (!ALLOWED_TYPES.has(file.type)) {
-    throw new Error("Only PDF, JPG, or PNG files are supported.");
+    throw new AppError("VALIDATION_001", "Only PDF, JPG, or PNG files are supported.");
   }
   if (file.size > MAX_BYTES) {
-    throw new Error("File must be 20MB or smaller.");
+    throw new AppError("VALIDATION_001", "File must be 20MB or smaller.");
   }
 
   const resolvedCategoryId: string | null = categoryId?.trim() || null;
@@ -90,10 +93,10 @@ export async function processInvoiceUpload(params: {
       where: { id: resolvedCategoryId },
     });
     if (!category) {
-      throw new Error("Selected category was not found. Pick another category.");
+      throw new AppError("VALIDATION_001", "Selected category was not found. Pick another category.");
     }
   } else {
-    throw new Error("Please select a category before extracting.");
+    throw new AppError("VALIDATION_001", "Please select a category before extracting.");
   }
 
   // Cheap checks first: access, then identical-file, then page quota. Nothing
@@ -144,10 +147,10 @@ export async function processInvoiceUpload(params: {
     // Our/Azure-side failure: give the pages back and drop the orphan file.
     await refundPages(orgId, reservation.eventId, "OCR_FAILED");
     await deleteInvoiceFiles([fileUrl]).catch(() => undefined);
-    throw new Error(
-      error instanceof Error
-        ? `Document Intelligence failed: ${error.message}`
-        : "Document Intelligence failed."
+    // Shown to the person (a plain Error would only say "Internal server error"). The pages were given back above.
+    throw new AppError(
+      "INVOICE_001",
+      `The AI could not read this file${error instanceof Error && error.message ? ` (${error.message.slice(0, 160)})` : ""}. No AI pages were used.`
     );
   }
 
@@ -158,7 +161,7 @@ export async function processInvoiceUpload(params: {
   // From here on a failure (duplicate number, two uploads racing for the same vendor, a database error) must not leave the stored file behind.
   // The AI pages stay counted: Azure already did the work.
   const invoice = await (async () => {
-    const vendor = await resolveVendor(db, orgId, extracted);
+    const vendor = await resolveVendor(orgId, extracted);
 
     const invoiceNumber = (
       extracted.invoiceNumber?.trim() || `DRAFT-${Date.now()}`
@@ -184,7 +187,8 @@ export async function processInvoiceUpload(params: {
         select: { id: true, invoiceNumber: true },
       });
       if (existing) {
-        throw new Error(
+        throw new AppError(
+          "VALIDATION_001",
           `Invoice #${invoiceNumber} already exists for vendor "${vendor.name}". Duplicate invoice cannot be uploaded. (${actualPages} AI page(s) were used reading it.)`
         );
       }

@@ -20,7 +20,12 @@ export default async function CompaniesPage({ searchParams }: { searchParams: SP
 
   return (
     <>
-      <PageTitle title="Companies">Search every company, then open one to see and change its plan, people and billing.</PageTitle>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <PageTitle title="Companies">Search every company, then open one to see and change its plan, people and billing.</PageTitle>
+        <Link href="/master/companies/new" className="inline-flex h-9 items-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+          Set up a company
+        </Link>
+      </div>
 
       <FilterBar action="/master/companies">
         <div className="grid gap-1.5">

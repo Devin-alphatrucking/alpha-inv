@@ -33,6 +33,7 @@ import { InvoiceFilePreview } from "@/components/invoice-file-preview";
 import { InvoicePaymentControls } from "@/app/(app)/invoices/invoice-payment-controls";
 import { InvoiceDeleteButton } from "@/app/(app)/invoices/invoice-delete-button";
 import { useFormat } from "@/components/format-provider";
+import { lineKey, rateAlert, type RateBaseline } from "@/lib/invoices/rate-alerts";
 
 export type ReviewVendor = { id: string; name: string; gstin: string | null };
 export type ReviewCategory = { id: string; name: string; unit: string | null };
@@ -82,6 +83,8 @@ type Props = {
   categories: ReviewCategory[];
   projects: ReviewProject[];
   possibleDuplicate: boolean;
+  /** What the company usually pays per item (keyed by lineKey), for the "rate is higher than usual" warnings. */
+  rateBaselines: Record<string, RateBaseline>;
 };
 
 function toDateInput(iso: string | null) {
@@ -95,6 +98,7 @@ export function ReviewForm({
   categories: initialCategories,
   projects,
   possibleDuplicate,
+  rateBaselines,
 }: Props) {
   const fmt = useFormat();
   const router = useRouter();
@@ -216,6 +220,17 @@ export function ReviewForm({
     () => lineItems.filter((li) => (li.confidence ?? 1) < 0.7).length,
     [lineItems]
   );
+
+  // Judged live, so a corrected rate clears its warning at once.
+  const alertFor = (li: { description: string; unit: string; rateExclGst: number }) => {
+    const baseline = rateBaselines[lineKey(li.description, li.unit)];
+    const alert = rateAlert(li.rateExclGst, baseline);
+    return alert && baseline ? { alert, baseline } : null;
+  };
+  const rateAlertCount = lineItems.filter((li) => {
+    const found = alertFor(li);
+    return found !== null && found.alert.level !== "low";
+  }).length;
 
   function updateLine(
     index: number,
@@ -383,6 +398,12 @@ export function ReviewForm({
             </Badge>
           )}
           <Badge variant="secondary">{invoice.status.replace("_", " ")}</Badge>
+          {rateAlertCount > 0 && (
+            <Badge variant="outline" className="gap-1 border-red-500/50 text-red-600">
+              <AlertTriangle className="size-3" />
+              {rateAlertCount} rate{rateAlertCount === 1 ? "" : "s"} above usual
+            </Badge>
+          )}
           {lowConfidenceCount > 0 && (
             <Badge variant="outline" className="gap-1 text-amber-700">
               <AlertTriangle className="size-3" />
@@ -596,6 +617,7 @@ export function ReviewForm({
                   }
                   className="uppercase"
                 />
+                <RateNote found={alertFor(li)} money={(n) => fmt.money(n, 2)} />
                 <div className="grid grid-cols-2 gap-2">
                   <Input
                     type="number"
@@ -686,6 +708,7 @@ export function ReviewForm({
                           </Badge>
                         )}
                       </div>
+                      <RateNote found={alertFor(li)} money={(n) => fmt.money(n, 2)} />
                     </td>
                     <td className="py-2 pr-2 w-24">
                       <Input
@@ -981,5 +1004,25 @@ export function ReviewForm({
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/** The warning line under an item whose rate is far from what the company usually pays. */
+function RateNote({ found, money }: { found: { alert: NonNullable<ReturnType<typeof rateAlert>>; baseline: RateBaseline } | null; money: (n: number) => string }) {
+  if (!found) return null;
+  const { alert, baseline } = found;
+  const high = alert.level !== "low";
+  const tone = alert.level === "very-high" ? "text-red-600" : alert.level === "high" ? "text-amber-600" : "text-sky-600";
+  return (
+    <p className={`mt-1 flex items-start gap-1 text-xs ${tone}`} role="note">
+      <AlertTriangle className="mt-0.5 size-3 shrink-0" aria-hidden />
+      <span>
+        <strong>
+          {Math.abs(Math.round(alert.percent))}% {high ? "above" : "below"} your usual rate
+        </strong>{" "}
+        of {money(alert.usual)} ({baseline.count} earlier purchases; last {money(baseline.lastRate)} from {baseline.lastVendor} on {baseline.lastDate}).
+        {high ? " Check the rate, quantity and unit before you save." : " Check that the unit and quantity are right."}
+      </span>
+    </p>
   );
 }

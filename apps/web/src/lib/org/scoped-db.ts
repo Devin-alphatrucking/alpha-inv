@@ -37,6 +37,7 @@ export const COMPANY_SCOPED_MODELS: ReadonlySet<string> = new Set([
   "Vendor",
   "Invoice",
   "InvoiceLineItem",
+  "InvoiceComment",
   "Payment",
   "ProjectNote",
   "ProjectAssignment",

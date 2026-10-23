@@ -116,6 +116,7 @@ export default async function UploadInvoicePage() {
               categories={categories}
               projects={projectScope.projects}
               initialProjectId={projectScope.selectedProjectId}
+              reviewHref={isStaff ? "/invoices" : "/invoices?status=NEEDS_REVIEW"}
             />
           )}
         </CardContent>

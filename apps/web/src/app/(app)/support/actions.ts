@@ -6,7 +6,7 @@ import { createTicket } from "@/lib/flows/support";
 
 // The person and the company come from the signed session, never from the browser.
 export async function createTicketAction(input: { subject: string; message: string }) {
-  const user = await requireUser();
+  const user = await requireUser({ allowLocked: true });
   const result = await createTicket({ id: user.id, name: user.name || user.email || "A customer", email: user.email || "", orgId: user.orgId }, input);
   if (result.ok) revalidatePath("/support");
   return result;

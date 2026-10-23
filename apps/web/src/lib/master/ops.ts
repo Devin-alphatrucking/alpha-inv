@@ -5,6 +5,7 @@ import { logActivity, type ActivityAction } from "@/lib/activity";
 import { recomputeSubscription, reconcile, withBillingLock } from "@/lib/billing/service";
 import { parseOverrides } from "@/lib/plans/rules";
 import { platformTx } from "./db";
+import { clearLockCache } from "@/lib/plans/lock";
 import type { PlatformAdmin } from "./guard";
 
 /**
@@ -54,6 +55,7 @@ export async function setProjectPlans(admin: PlatformAdmin, orgId: string, count
       });
     }
   });
+  clearLockCache(org.id);
   await audit(admin, org.id, "MASTER_GRANTED_PLANS", { reason: why, count: n.data, before });
 }
 
@@ -73,6 +75,7 @@ export async function extendTrial(admin: PlatformAdmin, orgId: string, days: unk
     });
     if (sub.billing === "RAZORPAY") await recomputeSubscription(tx, org.id);
   });
+  clearLockCache(org.id);
   await audit(admin, org.id, "MASTER_EXTENDED_TRIAL", { reason: why, days: d.data, trialEndsAt: trialEndsAt.toISOString() });
 }
 

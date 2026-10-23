@@ -9,7 +9,7 @@ import { changePassword, closeCompany, deleteAccount, listMyCompanies, signOutEv
 // Every action works on the SIGNED-IN person only: the user id and company come from the session, never from the browser.
 
 export async function changePasswordAction(current: string, next: string) {
-  const user = await requireUser();
+  const user = await requireUser({ allowLocked: true });
   const result = await changePassword(user.id, current, next);
   // Keep THIS session working (other devices are signed out by the version bump).
   if (result.ok) await unstable_update({ refreshSv: true, serverProof: serverUpdateProof() } as never);
@@ -17,13 +17,13 @@ export async function changePasswordAction(current: string, next: string) {
 }
 
 export async function signOutEverywhereAction() {
-  const user = await requireUser();
+  const user = await requireUser({ allowLocked: true });
   await signOutEverywhere(user.id);
   await signOut({ redirectTo: "/login" });
 }
 
 export async function deleteAccountAction(password: string) {
-  const user = await requireUser();
+  const user = await requireUser({ allowLocked: true });
   const result = await deleteAccount(user.id, password);
   if (!result.ok) return result;
   await signOut({ redirectTo: "/login" });
@@ -31,7 +31,7 @@ export async function deleteAccountAction(password: string) {
 }
 
 export async function closeCompanyAction(password: string) {
-  const admin = await requireAdmin();
+  const admin = await requireAdmin({ allowLocked: true });
   const result = await closeCompany({ id: admin.id, orgId: admin.orgId }, password);
   if (!result.ok) return result;
   await signOut({ redirectTo: "/login" });
@@ -39,7 +39,7 @@ export async function closeCompanyAction(password: string) {
 }
 
 export async function switchCompanyAction(orgId: string) {
-  const user = await requireUser();
+  const user = await requireUser({ allowLocked: true });
   const mine = await listMyCompanies(user.id);
   if (!mine.some((c) => c.id === orgId)) return { ok: false as const, error: "You do not belong to that company." };
   await unstable_update({ switchOrgId: orgId } as never);

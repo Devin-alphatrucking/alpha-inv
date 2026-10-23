@@ -12,6 +12,7 @@ export const ERROR_CODES = {
   PAYMENT_001: { status: 400, message: "Payment operation failed." },
   PROJECT_001: { status: 400, message: "Project operation failed." },
   PLAN_001: { status: 403, message: "Your plan does not allow this." },
+  PLAN_LOCKED: { status: 402, message: "Your data is locked until a plan is active." },
   QUOTA_001: { status: 429, message: "Monthly AI page limit reached." },
   CONFIG_001: { status: 400, message: "Project configuration is incomplete." },
   DATABASE_001: { status: 500, message: "Database error." },

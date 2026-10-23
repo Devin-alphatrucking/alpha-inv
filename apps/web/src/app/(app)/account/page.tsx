@@ -4,15 +4,16 @@ import { listMyCompanies } from "@/lib/flows/account";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AccountPanels } from "./account-panels";
 import { TwoFactorPanel } from "./two-factor-panel";
+import { EmailPreferences } from "./email-preferences";
 import { twoFactorStatus } from "@/lib/flows/two-factor";
 
 export const metadata = { title: "My account" };
 
 export default async function AccountPage() {
-  const { session, orgId } = await pageOrg();
+  const { session, orgId } = await pageOrg({ allowLocked: true });
   const tf = await twoFactorStatus(session.user.id);
   const [user, companies, org] = await Promise.all([
-    rawDb.user.findUniqueOrThrow({ where: { id: session.user.id }, select: { name: true, email: true, emailVerifiedAt: true } }),
+    rawDb.user.findUniqueOrThrow({ where: { id: session.user.id }, select: { name: true, email: true, emailVerifiedAt: true, emailDigest: true } }),
     listMyCompanies(session.user.id),
     rawDb.organization.findUniqueOrThrow({ where: { id: orgId }, select: { name: true, displayName: true } }),
   ]);
@@ -45,6 +46,8 @@ export default async function AccountPage() {
           </p>
         </CardContent>
       </Card>
+
+      {session.user.role === "ADMIN" && <EmailPreferences initial={user.emailDigest} />}
 
       <TwoFactorPanel enabled={tf.enabled} recoveryLeft={tf.recoveryLeft} isOperator={tf.isOperator} />
 

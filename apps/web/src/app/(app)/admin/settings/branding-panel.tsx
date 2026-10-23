@@ -144,7 +144,7 @@ export function BrandingPanel({ initial }: { initial: BrandingValues }) {
               </Button>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">PNG, JPEG or WebP, up to 300 KB. A wide logo on a transparent background works best.</p>
+          <p className="text-xs text-muted-foreground">PNG, JPEG or WebP, up to 300 KB. A wide logo on a transparent background works best. Check it is readable on BOTH white and dark backgrounds: the app follows each person&apos;s light or dark setting, and white-only artwork disappears on white.</p>
         </div>
 
         <div className="flex flex-wrap gap-6">

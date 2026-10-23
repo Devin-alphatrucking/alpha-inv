@@ -27,7 +27,7 @@ const STATE_LABEL: Record<string, { label: string; variant: "default" | "seconda
 };
 
 export default async function PlanPage() {
-  const { session, db, orgId } = await pageOrg();
+  const { session, db, orgId } = await pageOrg({ allowLocked: true });
   if (session.user.role !== "ADMIN") redirect("/invoices/upload");
 
   const fmt = await getFormat();

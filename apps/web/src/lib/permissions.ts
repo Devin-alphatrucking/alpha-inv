@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { authenticateBearer } from "@/lib/mobile/sessions";
 import { bearerFrom } from "@/lib/mobile/token";
+import { assertNotLocked } from "@/lib/plans/lock";
 import { auth } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
 
@@ -84,7 +85,14 @@ export type SessionUser = {
  * role/amount/id/company coming from the client — all of them are read from
  * the signed session. A session without a company is treated as signed out.
  */
-export async function requireUser(): Promise<SessionUser> {
+export async function requireUser(opts: { allowLocked?: boolean } = {}): Promise<SessionUser> {
+  const user = await resolveUser();
+  // After the free trial (or when a plan ended or stayed unpaid) company data is locked. Only a few things stay open: pass allowLocked for those.
+  if (!opts.allowLocked) await assertNotLocked(user.orgId);
+  return user;
+}
+
+async function resolveUser(): Promise<SessionUser> {
   // The mobile apps send "Authorization: Bearer <token>" instead of a cookie. A browser never adds that header on its own
   // to a cross-site request, so accepting it here does not open the cookie flow to forged requests.
   const bearer = await bearerFromRequest();
@@ -124,8 +132,8 @@ export async function requirePermission(
   return user;
 }
 
-export async function requireAdmin(): Promise<SessionUser> {
-  const user = await requireUser();
+export async function requireAdmin(opts: { allowLocked?: boolean } = {}): Promise<SessionUser> {
+  const user = await requireUser(opts);
   if (user.role !== "ADMIN") {
     throw new AppError("PERMISSION_001");
   }

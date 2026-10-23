@@ -4,9 +4,10 @@ import { revalidatePath } from "next/cache";
 import { isAppError } from "@/lib/errors";
 import { requirePlatformAdmin } from "@/lib/master/guard";
 import { editPlan, extendTrial, reconcileNow, setCompanyStatus, setLimits, setProjectPlans, setTicketStatus } from "@/lib/master/ops";
+import { createCompanyByHand, resetTwoStep } from "@/lib/master/setup-ops";
 
 // Every action re-checks, in the database, that the caller is a platform operator. Nothing here trusts the browser.
-export type MasterResult = { ok: true; message: string } | { ok: false; error: string };
+export type MasterResult = { ok: true; message: string; href?: string } | { ok: false; error: string };
 type Form = Record<string, string>;
 
 const num = (v: string | undefined) => (v === undefined || v.trim() === "" ? NaN : Number(v));
@@ -52,6 +53,32 @@ export async function editPlanAction(code: string, f: Form) {
       f.reason,
     ),
   );
+}
+
+/** Sets a company up by hand. On success the console moves on to the new company's page. */
+export async function createCompanyAction(f: Form): Promise<MasterResult> {
+  try {
+    const admin = await requirePlatformAdmin();
+    const r = await createCompanyByHand(
+      admin,
+      { companyName: f.companyName, country: f.country, adminName: f.adminName, adminEmail: f.adminEmail, mode: f.mode, days: num(f.days), quantity: num(f.quantity) },
+      f.reason,
+    );
+    revalidatePath("/master", "layout");
+    return {
+      ok: true,
+      message: r.emailed ? "Company created. The administrator has been emailed a link to choose their password." : "Company created, but the email could not be sent. Ask the administrator to use Forgot password on the sign-in page.",
+      href: `/master/companies/${r.orgId}`,
+    };
+  } catch (error) {
+    if (isAppError(error)) return { ok: false, error: error.message };
+    console.error("[master create company]", error instanceof Error ? error.message : error);
+    return { ok: false, error: "Something went wrong. Nothing was created." };
+  }
+}
+
+export async function resetTwoStepAction(orgId: string, userId: string, f: Form) {
+  return run("/master", "Two-step sign-in turned off. The person was signed out everywhere and told by email.", async () => resetTwoStep(await requirePlatformAdmin(), orgId, userId, f.reason, f.identity === "on"));
 }
 
 export async function setTicketStatusAction(ticketId: string, status: string) {

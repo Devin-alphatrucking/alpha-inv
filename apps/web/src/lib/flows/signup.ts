@@ -7,7 +7,8 @@ import { isEmailConfigured, sendMailQuietly } from "@/lib/email/transport";
 import { accountExistsMail, verifyEmailMail } from "@/lib/email/templates";
 import { absoluteUrl } from "@/lib/app-url";
 import { PRODUCT_NAME } from "@/lib/brand/product";
-import { COUNTRY_DEFAULTS, STARTER_CATEGORIES, uniqueSlug } from "@/lib/org/starter-data";
+import { uniqueSlug } from "@/lib/org/starter-data";
+import { provisionCompany } from "@/lib/org/provision";
 import { trialDays } from "@/lib/plans/entitlements";
 import { firstIssue, signUpSchema, type FlowResult } from "@/lib/flows/schemas";
 
@@ -45,7 +46,6 @@ export async function signUp(raw: unknown, ctx: { ip: string }): Promise<FlowRes
   }
 
   const passwordHash = await hashPassword(v.password);
-  const defaults = COUNTRY_DEFAULTS[v.country];
   const slug = await uniqueSlug(v.companyName, async (s) => Boolean(await rawDb.organization.findUnique({ where: { slug: s }, select: { id: true } })));
 
   let created: Awaited<ReturnType<typeof createCompanyAndAdmin>>;
@@ -58,40 +58,9 @@ export async function signUp(raw: unknown, ctx: { ip: string }): Promise<FlowRes
   }
 
   async function createCompanyAndAdmin() {
-  return rawDb.$transaction(async (tx) => {
-    const org = await tx.organization.create({
-      data: { name: v.companyName, slug, status: "TRIAL", country: v.country, currency: defaults.currency, timezone: defaults.timezone },
-    });
-    const user = await tx.user.create({
-      data: {
-        name: v.name,
-        email: v.email,
-        passwordHash,
-        role: "ADMIN",
-        termsAcceptedAt: new Date(),
-        memberships: { create: { organizationId: org.id, role: "ADMIN" } },
-      },
-    });
-    // A free trial of ONE project plan (same limits as the plan: 1 project, its users and AI pages).
-    const plan = await tx.plan.findUnique({ where: { code: "PROJECT" } });
-    if (!plan || !plan.active) throw new Error("The default plan (PROJECT) is missing. Run the database migrations.");
-    await tx.subscription.create({
-      data: {
-        organizationId: org.id,
-        planId: plan.id,
-        quantity: 1,
-        status: "TRIALING",
-        trialEndsAt: new Date(Date.now() + trialDays() * 86_400_000),
-        provider: "manual",
-      },
-    });
-    // The company tables are protected by Row-Level Security: say which company we are writing for.
-    await tx.$executeRaw`SELECT set_config('app.org_id', ${org.id}, true)`;
-    await tx.category.createMany({ data: STARTER_CATEGORIES.map((c) => ({ organizationId: org.id, name: c.name, unit: c.unit })) });
-    const project = await tx.project.create({ data: { organizationId: org.id, name: "My first project" } });
-    await tx.projectAssignment.create({ data: { organizationId: org.id, userId: user.id, projectId: project.id } });
-    return { org, user };
-  });
+    return rawDb.$transaction((tx) =>
+      provisionCompany(tx, { companyName: v.companyName, slug, country: v.country, adminName: v.name, adminEmail: v.email, passwordHash, termsAccepted: true, mode: { kind: "trial", days: trialDays() } }),
+    );
   }
 
   const token = await issueToken({ type: "EMAIL_VERIFY", email: v.email, userId: created.user.id });

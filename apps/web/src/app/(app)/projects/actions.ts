@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { assertProjectAccess } from "@/lib/projects/access";
 import { scoped } from "@/lib/org/context";
+import { parseBudgetInput } from "@/lib/projects/budget";
 import { assertUsersInOrg } from "@/lib/org/members";
 import { encryptSecret } from "@/lib/crypto";
 import { validateAzureEndpoint } from "@/lib/azure/project-credentials";
@@ -18,6 +19,8 @@ const projectSchema = z.object({
   address: z.string().trim().optional(),
   status: z.enum(["ACTIVE", "COMPLETED", "ARCHIVED"]).default("ACTIVE"),
   userIds: z.array(z.string()).default([]),
+  // Spending limit. Undefined = leave as it is; blank or 0 = no budget.
+  budget: z.union([z.string(), z.number()]).nullish(),
   // AI settings (admin only). Blank key = keep the saved one.
   azureEndpoint: z.string().trim().optional(),
   azureKey: z.string().trim().optional(),
@@ -69,6 +72,7 @@ function normalizeStatus(status: string | undefined): ProjectStatusValue {
 }
 
 type AiInput = {
+  budget?: string | number | null;
   azureEndpoint?: string;
   azureKey?: string;
   clearAzureKey?: boolean;
@@ -88,6 +92,8 @@ export async function createProject(input: {
   const parsed = projectSchema.parse(input);
   const status = normalizeStatus(parsed.status);
   const ai = aiFields(parsed);
+  const budget = parseBudgetInput(parsed.budget);
+  if (!budget.ok) throw new AppError("VALIDATION_001", budget.error);
   await assertUsersInOrg(admin.orgId, parsed.userIds);
 
   const created = await db.$transaction(async (tx) => {
@@ -102,6 +108,7 @@ export async function createProject(input: {
       data: {
         ...ai.data,
         monthlyPageLimit: pages,
+        budget: budget.value,
         organizationId: admin.orgId,
         name: parsed.name,
         description: parsed.description || null,
@@ -158,6 +165,8 @@ export async function updateProject(input: {
   const parsed = projectSchema.parse(input);
   const status = normalizeStatus(parsed.status);
   const ai = aiFields(parsed);
+  const budget = parseBudgetInput(parsed.budget);
+  if (!budget.ok) throw new AppError("VALIDATION_001", budget.error);
   await assertUsersInOrg(admin.orgId, parsed.userIds);
 
   const existing = await db.project.findUnique({ where: { id: projectId } });
@@ -179,6 +188,7 @@ export async function updateProject(input: {
         description: parsed.description || null,
         address: parsed.address || null,
         status,
+        ...(parsed.budget !== undefined ? { budget: budget.value } : {}),
       },
     });
     await tx.projectAssignment.deleteMany({ where: { projectId } });
@@ -204,11 +214,13 @@ export async function updateProject(input: {
       userIds: parsed.userIds,
       azureKeyChanged: ai.keyChanged,
       monthlyPageLimit: parsed.monthlyPageLimit,
+      budget: parsed.budget !== undefined ? budget.value : undefined,
     },
   });
 
   revalidatePath("/projects");
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/dashboard");
   revalidatePath("/invoices/upload");
 }
 

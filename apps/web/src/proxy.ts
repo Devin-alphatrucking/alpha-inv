@@ -8,6 +8,9 @@ import {
 // Brand endpoints are public on purpose: the sign-in screens need the company's
 // name, colours and logo before anyone is signed in.
 const PUBLIC_PATHS = [
+  "/pricing",
+  "/robots.txt",
+  "/sitemap.xml",
   "/login",
   "/signup",
   "/verify-email",
@@ -18,6 +21,7 @@ const PUBLIC_PATHS = [
   "/api/branding/logo",
   "/api/billing/razorpay/webhook",
   "/api/billing/reconcile",
+  "/api/jobs/digest",
   "/api/v1/auth/login",
   "/api/v1/auth/refresh",
 ];
@@ -55,7 +59,8 @@ function nextWithBrand(req: NextRequest) {
 export default auth((req) => {
   const { nextUrl } = req;
   const pathname = nextUrl.pathname;
-  const isPublic = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
+  // "/" is the public landing page (it sends signed-in people to their dashboard); every other public page is listed above.
+  const isPublic = pathname === "/" || PUBLIC_PATHS.some((path) => pathname.startsWith(path));
 
   if (isPublic) {
     return nextWithBrand(req);

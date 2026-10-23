@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { reconcileAction, setTicketStatusAction, type MasterResult } from "./actions";
+import { reconcileAction, resetTwoStepAction, setTicketStatusAction, type MasterResult } from "./actions";
 
 const NAV = [
   { href: "/master", label: "Overview", exact: true },
@@ -43,7 +43,19 @@ export function MasterNav() {
   );
 }
 
-export type Field = { name: string; label: string; type?: "number" | "text"; defaultValue?: string | number | null; placeholder?: string; hint?: string; min?: number; max?: number };
+export type Field = {
+  name: string;
+  label: string;
+  type?: "number" | "text" | "email" | "select" | "checkbox";
+  defaultValue?: string | number | null;
+  placeholder?: string;
+  hint?: string;
+  min?: number;
+  max?: number;
+  required?: boolean;
+  /** For a select: the choices. */
+  options?: { value: string; label: string }[];
+};
 
 /**
  * One small form for every master change: some fields, a REQUIRED reason, one button. Shows the result right under the button.
@@ -79,7 +91,8 @@ export function ActionForm({
       setResult(r);
       if (r.ok) {
         form.reset();
-        router.refresh();
+        if (r.href) router.push(r.href);
+        else router.refresh();
       }
     });
   }
@@ -87,15 +100,35 @@ export function ActionForm({
   return (
     <form onSubmit={onSubmit} className="grid gap-3">
       <div className="grid gap-3 sm:grid-cols-2">
-        {fields.map((f) => (
-          <div key={f.name} className="grid gap-1.5">
-            <Label htmlFor={`f-${f.name}`} className="text-xs text-muted-foreground">
-              {f.label}
-            </Label>
-            <Input id={`f-${f.name}`} name={f.name} type={f.type ?? "text"} inputMode={f.type === "number" ? "numeric" : undefined} min={f.min} max={f.max} defaultValue={f.defaultValue ?? ""} placeholder={f.placeholder} />
-            {f.hint && <p className="text-xs text-muted-foreground">{f.hint}</p>}
-          </div>
-        ))}
+        {fields.map((f) =>
+          f.type === "checkbox" ? (
+            <label key={f.name} htmlFor={`f-${f.name}`} className="flex items-start gap-2 text-sm sm:col-span-2">
+              <input id={`f-${f.name}`} name={f.name} type="checkbox" required={f.required} className="mt-1 size-4" />
+              <span>
+                {f.label}
+                {f.hint && <span className="mt-0.5 block text-xs text-muted-foreground">{f.hint}</span>}
+              </span>
+            </label>
+          ) : (
+            <div key={f.name} className="grid gap-1.5">
+              <Label htmlFor={`f-${f.name}`} className="text-xs text-muted-foreground">
+                {f.label}
+              </Label>
+              {f.type === "select" ? (
+                <select id={`f-${f.name}`} name={f.name} required={f.required} defaultValue={f.defaultValue ?? ""} className="h-10 rounded-xl border border-input bg-background px-3 text-sm">
+                  {f.options?.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <Input id={`f-${f.name}`} name={f.name} type={f.type ?? "text"} inputMode={f.type === "number" ? "numeric" : undefined} min={f.min} max={f.max} required={f.required} defaultValue={f.defaultValue ?? ""} placeholder={f.placeholder} />
+              )}
+              {f.hint && <p className="text-xs text-muted-foreground">{f.hint}</p>}
+            </div>
+          ),
+        )}
       </div>
       <div className="grid gap-1.5">
         <Label htmlFor="f-reason" className="text-xs text-muted-foreground">
@@ -170,6 +203,40 @@ export function ReconcileButton({ orgId, label = "Re-check with Razorpay" }: { o
         {label}
       </Button>
       {result && <span role="status" className={cn("text-sm", result.ok ? "text-emerald-600" : "text-red-600")}>{result.ok ? result.message : result.error}</span>}
+    </div>
+  );
+}
+
+/**
+ * "Reset two-step" beside a person who has it on. Opens a small form: confirm you checked who they are, write the reason, go.
+ * The person is signed out everywhere and emailed; the reset is logged against the company.
+ */
+export function ResetTwoStepControl({ orgId, userId, name }: { orgId: string; userId: string; name: string }) {
+  const [open, setOpen] = useState(false);
+  const action = resetTwoStepAction.bind(null, orgId, userId);
+  if (!open) {
+    return (
+      <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)} aria-label={`Reset two-step sign-in for ${name}`}>
+        Reset two-step
+      </Button>
+    );
+  }
+  return (
+    <div className="mt-2 w-full rounded-lg border bg-muted/30 p-3">
+      <p className="mb-2 text-xs text-muted-foreground">
+        Turns off two-step sign-in for {name}, signs them out everywhere and emails them. They can turn it on again from their Account page.
+      </p>
+      <ActionForm
+        action={action}
+        submit="Turn off two-step"
+        destructive
+        confirmText={`Turn off two-step sign-in for ${name}?`}
+        reasonLabel="Reason and how you checked who they are (kept in the audit log)"
+        fields={[{ name: "identity", label: "I have checked that this really is " + name + " (not someone pretending).", type: "checkbox", required: true }]}
+      />
+      <Button type="button" size="sm" variant="ghost" className="mt-2" onClick={() => setOpen(false)}>
+        Cancel
+      </Button>
     </div>
   );
 }

@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, Upload } from "lucide-react";
+import { FileText, MessageSquare, Upload } from "lucide-react";
 import type { Prisma } from "@alpha/db";
 import { invoiceAccessWhere } from "@/lib/invoices/access";
 import { InvoiceFilters } from "./invoice-filters";
@@ -126,6 +126,7 @@ export default async function InvoicesPage({
         project: true,
         category: true,
         payments: { select: { amount: true } },
+        _count: { select: { comments: true } },
       },
       orderBy: [{ invoiceDate: "desc" }, { createdAt: "desc" }],
       skip: (page - 1) * PAGE_SIZE,
@@ -216,13 +217,16 @@ export default async function InvoicesPage({
                     className="rounded-xl border bg-card p-4 shadow-sm"
                   >
                     <Link
-                      href={`/invoices/${invoice.id}/review`}
+                      href={invoice.status === "NEEDS_REVIEW" || invoice.status === "PROCESSING" ? `/invoices/${invoice.id}/review` : `/invoices/${invoice.id}`}
                       className="block"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <p className="truncate font-medium">
                             {invoice.invoiceNumber}
+                            {invoice._count.comments > 0 && (
+                              <span className="ml-1.5 inline-flex items-center gap-0.5 align-middle text-xs font-normal text-muted-foreground" title={`${invoice._count.comments} comment${invoice._count.comments === 1 ? "" : "s"}`}><MessageSquare className="size-3" aria-hidden />{invoice._count.comments}</span>
+                            )}
                           </p>
                           <p className="truncate text-sm text-muted-foreground">
                             {invoice.vendor.name}
@@ -312,11 +316,14 @@ export default async function InvoicesPage({
                         >
                           <TableCell className="font-medium">
                             <Link
-                              href={`/invoices/${invoice.id}/review`}
+                              href={invoice.status === "NEEDS_REVIEW" || invoice.status === "PROCESSING" ? `/invoices/${invoice.id}/review` : `/invoices/${invoice.id}`}
                               className="hover:underline font-semibold"
                             >
                               {invoice.invoiceNumber}
                             </Link>
+                            {invoice._count.comments > 0 && (
+                              <span className="ml-1.5 inline-flex items-center gap-0.5 align-middle text-xs font-normal text-muted-foreground" title={`${invoice._count.comments} comment${invoice._count.comments === 1 ? "" : "s"}`}><MessageSquare className="size-3" aria-hidden />{invoice._count.comments}</span>
+                            )}
                           </TableCell>
                           <TableCell>{invoice.vendor.name}</TableCell>
                           <TableCell>{invoice.project.name}</TableCell>

@@ -9,6 +9,8 @@ import { AppError } from "@/lib/errors";
 import { hasPermission, requirePermission, requireUser } from "@/lib/permissions";
 import { computeStatus, round2 } from "@/lib/invoices/status";
 import { lockInvoice } from "@/lib/invoices/lock";
+import { lineKey, storedDeviation } from "@/lib/invoices/rate-alerts";
+import { loadRateBaselines } from "@/lib/invoices/rate-baseline";
 import { companyTimeZone } from "@/lib/invoices/company-tz";
 import { logActivity } from "@/lib/activity";
 
@@ -239,6 +241,8 @@ export async function confirmInvoiceReview(raw: ConfirmInvoiceInput) {
   }
 
   const timeZone = await companyTimeZone(session.orgId);
+  // How far each rate is from what the company usually pays (the whole company's history, whoever confirms), saved with the line.
+  const baselines = await loadRateBaselines(db, invoice.id, parsed.lineItems);
 
   await db.$transaction(async (tx) => {
     // One confirmation at a time per invoice: a second tab or a retry waits here instead of doubling the line items.
@@ -300,6 +304,10 @@ export async function confirmInvoiceReview(raw: ConfirmInvoiceInput) {
         gstPercent: d(item.gstPercent),
         gstAmount: d(gstAmount),
         lineTotal: d(lineTotal),
+        rateDeviationPercent: (() => {
+          const pct = storedDeviation(item.rateExclGst, baselines.get(lineKey(upperDesc, item.unit)));
+          return pct === null ? null : d(pct);
+        })(),
       };
     });
 

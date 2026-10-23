@@ -13,6 +13,7 @@ import {
   Settings,
   CreditCard,
   LifeBuoy,
+  Receipt,
   type LucideIcon,
 } from "lucide-react";
 
@@ -37,6 +38,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/invoices", label: "Invoices", icon: FileText, adminOnly: true },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/payments", label: "Payments", icon: Wallet, adminOnly: true },
+  { href: "/reports/gst", label: "GST report", icon: Receipt, adminOnly: true },
   { href: "/materials", label: "Rate Sheet", icon: Boxes, adminOnly: true },
   { href: "/vendors", label: "Vendors", icon: Building2, adminOnly: true },
   { href: "/categories", label: "Categories", icon: Tags, adminOnly: true },
@@ -68,6 +70,8 @@ export const STAFF_ALLOWED_PREFIXES = [
 
 export const ADMIN_ONLY_PREFIXES = [
   "/payments",
+  "/reports",
+  "/api/reports",
   "/vendors",
   "/categories",
   "/materials",

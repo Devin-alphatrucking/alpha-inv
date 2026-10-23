@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { projectAccessWhere } from "@/lib/projects/access";
 import { ProjectNoteForm } from "./note-form";
+import { BudgetMeter } from "@/components/budget-meter";
 import { getFormat } from "@/lib/brand/brand";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -138,6 +139,18 @@ export default async function ProjectDetailPage({ params }: PageProps) {
           </CardHeader>
         </Card>
       </div>
+
+      {project.budget ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Budget</CardDescription>
+            <CardTitle className="text-base font-medium">How much of the {formatCurrency(Number(project.budget))} budget is used</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BudgetMeter spent={total} budget={Number(project.budget)} money={(n) => formatCurrency(n)} />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">

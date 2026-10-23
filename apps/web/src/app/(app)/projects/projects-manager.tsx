@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { parseBudgetInput } from "@/lib/projects/budget";
 import { createProject, updateProject, deleteProject } from "./actions";
 
 export type AssignableUser = {
@@ -46,6 +47,10 @@ export type ProjectRow = {
   azureKeyHint?: string | null;
   monthlyPageLimit?: number;
   pagesUsed?: number;
+  /** Spending limit as a plain number, or null for none. */
+  budget?: number | null;
+  /** Total of the project's confirmed invoices. */
+  spent?: number;
 };
 
 type FormState = {
@@ -58,6 +63,7 @@ type FormState = {
   azureKey: string;
   clearAzureKey: boolean;
   monthlyPageLimit: string;
+  budget: string;
 };
 
 const emptyForm: FormState = {
@@ -70,6 +76,7 @@ const emptyForm: FormState = {
   azureKey: "",
   clearAzureKey: false,
   monthlyPageLimit: "500",
+  budget: "",
 };
 
 function ProjectFormDialog({
@@ -95,6 +102,7 @@ function ProjectFormDialog({
           azureKey: "",
           clearAzureKey: false,
           monthlyPageLimit: String(editing.monthlyPageLimit ?? 500),
+          budget: editing.budget ? String(editing.budget) : "",
         }
       : emptyForm
   );
@@ -113,6 +121,11 @@ function ProjectFormDialog({
     const limit = Number(form.monthlyPageLimit);
     if (!Number.isInteger(limit) || limit < 0) {
       toast.error("Monthly page limit must be a whole number (0 or more).");
+      return;
+    }
+    const budget = parseBudgetInput(form.budget);
+    if (!budget.ok) {
+      toast.error(budget.error);
       return;
     }
     const payload = {
@@ -173,6 +186,19 @@ function ProjectFormDialog({
               value={form.description}
               onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
             />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="project-budget">Budget (optional)</Label>
+            <Input
+              id="project-budget"
+              inputMode="decimal"
+              placeholder="For example 2500000"
+              value={form.budget}
+              onChange={(e) => setForm((prev) => ({ ...prev, budget: e.target.value }))}
+            />
+            <p className="text-xs text-muted-foreground">
+              The most you plan to spend on this project. You are warned at 80% and again at 100%, on the dashboard and in the daily email. Leave empty for no budget.
+            </p>
           </div>
           <div className="grid gap-2">
             <Label>Status</Label>

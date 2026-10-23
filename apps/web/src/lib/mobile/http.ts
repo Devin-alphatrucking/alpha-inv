@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { AppError, handleError, isAppError, newRequestId } from "@/lib/errors";
 import { authenticateBearer, type MobileUser } from "./sessions";
 import { bearerFrom } from "./token";
+import { assertNotLocked } from "@/lib/plans/lock";
 
 /** Shared plumbing for /api/v1: JSON in and out, one error shape, no caching. */
 
@@ -23,10 +24,12 @@ export async function readJson(req: Request): Promise<unknown> {
 }
 
 /** The signed-in person for this request (bearer token), including the session id. */
-export async function requireMobile(req: Request): Promise<MobileUser> {
+export async function requireMobile(req: Request, opts: { allowLocked?: boolean } = {}): Promise<MobileUser> {
   const token = bearerFrom(req.headers.get("authorization"));
   const user = token ? await authenticateBearer(token) : null;
   if (!user) throw new AppError("AUTH_001", "Please sign in again.");
+  // Locked company (trial over, plan ended or unpaid): only /me, company switching and sign-out keep working, so the app can show the Choose-a-plan message.
+  if (!opts.allowLocked) await assertNotLocked(user.orgId);
   return user;
 }
 

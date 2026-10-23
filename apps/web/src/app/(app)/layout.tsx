@@ -7,15 +7,18 @@ import { listMyCompanies } from "@/lib/flows/account";
 import { getEntitlements } from "@/lib/plans/entitlements";
 import { getProjectScope } from "@/lib/projects/scope";
 import { currentPlatformAdmin } from "@/lib/master/guard";
+import { companyLock } from "@/lib/plans/lock";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { session, user } = await pageOrg();
+  const { session, user } = await pageOrg({ allowLocked: true });
 
-  const projectScope = await getProjectScope(user);
+  const locked = (await companyLock(user.orgId)).locked;
+  // A locked company's data stays hidden everywhere, including the project list in the header.
+  const projectScope = locked ? { projects: [], selectedProjectId: null } : await getProjectScope(user);
   const brand = await getBrand();
   const fmt = await getFormat();
   const companies = await listMyCompanies(session.user.id);
@@ -26,7 +29,7 @@ export default async function AppLayout({
     <FormatProvider format={brand.format}>
     <AppShell
       brand={{ name: brand.name, logoUrl: brand.logoUrl }}
-      banner={<PlanBanner e={entitlements} isAdmin={session.user.role === "ADMIN"} format={(d) => fmt.date(d)} />}
+      banner={locked ? undefined : <PlanBanner e={entitlements} isAdmin={session.user.role === "ADMIN"} format={(d) => fmt.date(d)} />}
       companies={companies}
       currentOrgId={user.orgId}
       role={session.user.role}
@@ -35,6 +38,7 @@ export default async function AppLayout({
       projects={projectScope.projects}
       selectedProjectId={projectScope.selectedProjectId}
       isPlatformAdmin={isPlatformAdmin}
+      locked={locked}
     >
       {children}
     </AppShell>

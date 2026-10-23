@@ -3,6 +3,7 @@
 import { Download, LogOut, Settings, ShieldCheck, UserRound } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { AppNav } from "@/components/app-nav";
+import { LockedNav } from "@/components/locked-nav";
 import { MobileBottomBar } from "@/components/mobile-bottom-bar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -36,10 +37,12 @@ type AppShellProps = {
   selectedProjectId: string | null;
   /** Our own team only: shows a link to the master console. */
   isPlatformAdmin?: boolean;
+  /** Trial over, plan ended or unpaid: only the Choose-a-plan screens are reachable and no company data is shown in the header. */
+  locked?: boolean;
   children: React.ReactNode;
 };
 
-export function AppShell({ brand, banner, companies, currentOrgId, role, name, email, projects, selectedProjectId, isPlatformAdmin, children }: AppShellProps) {
+export function AppShell({ brand, banner, companies, currentOrgId, role, name, email, projects, selectedProjectId, isPlatformAdmin, locked, children }: AppShellProps) {
   const initials = name
     .split(" ")
     .map((part) => part[0])
@@ -56,7 +59,7 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
           <p className="mt-1 text-xs text-muted-foreground">Invoice &amp; Billing</p>
         </div>
         <div className="flex-1 overflow-y-auto p-3">
-          <AppNav role={role} />
+          {locked ? <LockedNav role={role} variant="side" /> : <AppNav role={role} />}
         </div>
       </aside>
 
@@ -70,16 +73,14 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
               <BrandLogo name={brand.name} logoUrl={brand.logoUrl} className="h-5" />
             </div>
             <div className="min-w-0 flex-1 md:max-w-xs">
-              <ProjectSwitcher
-                role={role}
-                projects={projects}
-                selectedProjectId={selectedProjectId}
-              />
+              {!locked && (
+                <ProjectSwitcher role={role} projects={projects} selectedProjectId={selectedProjectId} />
+              )}
             </div>
           </div>
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
-            {role === "ADMIN" && (
+            {role === "ADMIN" && !locked && (
               <div className="hidden xl:block">
                 <ExportDataButton label="Download all data" />
               </div>
@@ -131,7 +132,7 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
                       Master console
                     </DropdownMenuItem>
                   )}
-                  {role === "ADMIN" && (
+                  {role === "ADMIN" && !locked && (
                     <>
                       <DropdownMenuItem
                         render={<a href="/api/admin/export?dataset=all&format=xlsx" download />}
@@ -187,7 +188,7 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
       </div>
 
       {/* Mobile Bottom Navigation Bar (visible only on mobile) */}
-      <MobileBottomBar role={role} name={name} email={email} />
+      {locked ? <LockedNav role={role} variant="bar" /> : <MobileBottomBar role={role} name={name} email={email} />}
     </div>
   );
 }

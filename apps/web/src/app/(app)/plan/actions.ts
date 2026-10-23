@@ -16,7 +16,7 @@ function fail(error: unknown): { ok: false; error: string } {
 
 export async function startCheckoutAction(): Promise<Result<{ checkout: CheckoutStart & { name: string; email: string } }>> {
   try {
-    const user = await requireAdmin();
+    const user = await requireAdmin({ allowLocked: true });
     const checkout = await startPurchase(user);
     return { ok: true, checkout: { ...checkout, name: user.name ?? "", email: user.email ?? "" } };
   } catch (error) {
@@ -26,7 +26,7 @@ export async function startCheckoutAction(): Promise<Result<{ checkout: Checkout
 
 export async function confirmCheckoutAction(input: { paymentId: string; subscriptionId: string; signature: string }): Promise<Result<{ status: string }>> {
   try {
-    const user = await requireAdmin();
+    const user = await requireAdmin({ allowLocked: true });
     const r = await confirmCheckout(user, {
       paymentId: String(input.paymentId ?? ""),
       subscriptionId: String(input.subscriptionId ?? ""),
@@ -41,7 +41,7 @@ export async function confirmCheckoutAction(input: { paymentId: string; subscrip
 
 export async function cancelPurchaseAction(purchaseId: string): Promise<Result<{ atCycleEnd: boolean }>> {
   try {
-    const user = await requireAdmin();
+    const user = await requireAdmin({ allowLocked: true });
     const r = await cancelPurchase(user, String(purchaseId ?? ""));
     revalidatePath("/plan");
     return { ok: true, atCycleEnd: r.atCycleEnd };

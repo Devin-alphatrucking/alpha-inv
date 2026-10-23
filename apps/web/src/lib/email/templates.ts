@@ -58,6 +58,37 @@ export function passwordResetMail(to: string, d: { name: string; link: string; b
   };
 }
 
+/** A company set up for someone by our team: the link lets them choose their own password (and confirms their address). */
+export function welcomeMail(to: string, d: { name: string; company: string; link: string; days: number; brand: MailBrand }): Mail {
+  return {
+    to,
+    subject: `Your ${d.brand.name} account for ${d.company} is ready`,
+    text: `Hi ${d.name},
+
+We have set up ${d.company} on ${d.brand.name} for you, with you as the administrator.
+Choose your password to get started (the link works for ${d.days} days):
+${d.link}
+
+If you were not expecting this, ignore this email.`,
+    html: layout(d.brand, "Your account is ready", P(`Hi ${esc(d.name)},`) + P(`We have set up <strong>${esc(d.company)}</strong> on ${esc(d.brand.name)} for you, with you as the administrator.`) + P(`Choose your password to get started. The link works for ${d.days} days.`), { label: "Choose my password", url: d.link }, "If you were not expecting this, ignore this email."),
+  };
+}
+
+/** Said to the person whenever our team turns off their two-step sign-in, so a wrongful reset cannot go unnoticed. */
+export function twoStepResetMail(to: string, d: { name: string; brand: MailBrand }): Mail {
+  return {
+    to,
+    subject: `Two-step sign-in was turned off on your ${d.brand.name} account`,
+    text: `Hi ${d.name},
+
+Our support team turned off two-step sign-in on your account after you asked for help, and signed you out everywhere.
+Sign in with your password, then turn two-step sign-in on again from your Account page.
+
+If you did not ask for this, change your password immediately and contact support.`,
+    html: layout(d.brand, "Two-step sign-in was turned off", P(`Hi ${esc(d.name)},`) + P("Our support team turned off two-step sign-in on your account after you asked for help, and signed you out everywhere.") + P("Sign in with your password, then turn two-step sign-in on again from your Account page.") + P("<strong>If you did not ask for this</strong>, change your password immediately and contact support.")),
+  };
+}
+
 export function passwordChangedMail(to: string, d: { name: string; brand: MailBrand }): Mail {
   return {
     to,
@@ -124,6 +155,85 @@ export function supportConfirmationMail(to: string, d: { name: string; reference
       P(`Hi ${esc(d.name)},`) +
         P(`We received your support request <strong>&ldquo;${esc(d.subject)}&rdquo;</strong>.`) +
         P(`Your reference is <strong>${esc(d.reference)}</strong>. Reply to this email if you want to add anything: it goes straight to our team.`)
+    ),
+  };
+}
+
+export type DigestItem = { vendor: string; number: string; project: string; balance: string; when: string };
+export type DigestSection = { count: number; amount: string; items: DigestItem[] };
+export type DigestBudget = { name: string; percent: number; spent: string; budget: string; over: boolean };
+
+/** The morning email to administrators: what is overdue, what is due this week, and what is waiting for review. Amounts arrive already formatted. */
+function budgetHtml(budgets: DigestBudget[]) {
+  return (
+    `<p style="margin:16px 0 0;font-weight:700;color:#b45309">Budget alerts</p>` +
+    `<table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;margin:6px 0 16px">` +
+    budgets
+      .map(
+        (b) =>
+          `<tr><td style="padding:6px 0;border-top:1px solid #e5e7eb"><strong>${esc(b.name)}</strong><br><span style="color:#6b7280;font-size:12px">${esc(b.spent)} of ${esc(b.budget)}</span></td><td align="right" style="padding:6px 0;border-top:1px solid #e5e7eb;white-space:nowrap;color:${b.over ? "#b91c1c" : "#b45309"}"><strong>${Math.round(b.percent)}%${b.over ? " (over)" : ""}</strong></td></tr>`,
+      )
+      .join("") +
+    `</table>`
+  );
+}
+
+export function digestMail(
+  to: string,
+  d: { name: string; company: string; overdue: DigestSection; dueSoon: DigestSection; drafts: number; budgets?: DigestBudget[]; link: string; brand: MailBrand },
+): Mail {
+  const parts: string[] = [];
+  if (d.overdue.count) parts.push(`${d.overdue.amount} overdue`);
+  if (d.dueSoon.count) parts.push(`${d.dueSoon.amount} due this week`);
+  const budgets = d.budgets ?? [];
+  const over = budgets.filter((b) => b.over).length;
+  if (over) parts.push(`${over} project${over === 1 ? "" : "s"} over budget`);
+  else if (budgets.length) parts.push(`${budgets.length} project${budgets.length === 1 ? "" : "s"} near budget`);
+  if (!parts.length && d.drafts) parts.push(`${d.drafts} waiting for review`);
+
+  const plural = (n: number) => `${n} invoice${n === 1 ? "" : "s"}`;
+  const listText = (title: string, sec: DigestSection) =>
+    sec.count
+      ? `${title}: ${plural(sec.count)}, ${sec.amount}\n` + sec.items.map((i) => `  - ${i.vendor} ${i.number} (${i.project}): ${i.balance}, ${i.when}`).join("\n") + (sec.count > sec.items.length ? `\n  ...and ${sec.count - sec.items.length} more` : "") + "\n\n"
+      : "";
+  const text =
+    `Hi ${d.name},\n\nYour daily summary for ${d.company}:\n\n` +
+    listText("Overdue", d.overdue) +
+    listText("Due in the next 7 days", d.dueSoon) +
+    (budgets.length ? `Budget alerts:\n` + budgets.map((b) => `  - ${b.name}: ${b.spent} of ${b.budget} (${Math.round(b.percent)}%${b.over ? ", over budget" : ""})`).join("\n") + "\n\n" : "") +
+    (d.drafts ? `Waiting for review: ${d.drafts}\n\n` : "") +
+    `Open your dashboard: ${d.link}\n\nYou get this email each morning when something needs attention. Turn it off on your Account page.`;
+
+  const rows = (items: DigestItem[], total: number) =>
+    `<table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;margin:6px 0 16px">` +
+    items
+      .map(
+        (i) =>
+          `<tr><td style="padding:6px 0;border-top:1px solid #e5e7eb"><strong>${esc(i.vendor)}</strong><br><span style="color:#6b7280;font-size:12px">${esc(i.number)} · ${esc(i.project)} · ${esc(i.when)}</span></td><td align="right" style="padding:6px 0;border-top:1px solid #e5e7eb;white-space:nowrap"><strong>${esc(i.balance)}</strong></td></tr>`,
+      )
+      .join("") +
+    (total > items.length ? `<tr><td colspan="2" style="padding:6px 0;border-top:1px solid #e5e7eb;color:#6b7280;font-size:12px">...and ${total - items.length} more. Open your dashboard to see them all.</td></tr>` : "") +
+    `</table>`;
+  const section = (title: string, color: string, sec: DigestSection) =>
+    sec.count
+      ? `<p style="margin:16px 0 0;font-weight:700;color:${color}">${esc(title)}: ${esc(sec.amount)} <span style="font-weight:400;color:#6b7280">(${plural(sec.count)})</span></p>${rows(sec.items, sec.count)}`
+      : "";
+
+  return {
+    to,
+    subject: `${d.company}: ${parts.join(", ") || "daily summary"}`,
+    text,
+    html: layout(
+      d.brand,
+      "Your daily summary",
+      P(`Hi ${esc(d.name)},`) +
+        P(`Here is what needs attention for <strong>${esc(d.company)}</strong> today.`) +
+        section("Overdue", "#b91c1c", d.overdue) +
+        section("Due in the next 7 days", "#b45309", d.dueSoon) +
+        (budgets.length ? budgetHtml(budgets) : "") +
+        (d.drafts ? P(`<strong>${d.drafts}</strong> invoice${d.drafts === 1 ? " is" : "s are"} waiting for review.`) : ""),
+      { label: "Open my dashboard", url: d.link },
+      "You get this email each morning when something needs attention. Turn it off on your Account page.",
     ),
   };
 }

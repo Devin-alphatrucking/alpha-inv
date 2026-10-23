@@ -27,6 +27,8 @@ export type ActivityAction =
   | "INVOICE_CREATED"
   | "INVOICE_UPDATED"
   | "INVOICE_DELETED"
+  | "INVOICE_COMMENT_ADDED"
+  | "INVOICE_COMMENT_DELETED"
   | "PAYMENT_CREATED"
   | "PAYMENT_DELETED"
   | "CATEGORY_CREATED"
@@ -59,7 +61,10 @@ export type ActivityAction =
   | "MASTER_SET_COMPANY_STATUS"
   | "MASTER_EDITED_PLAN"
   | "MASTER_TICKET_STATUS"
-  | "MASTER_RECONCILED";
+  | "MASTER_RECONCILED"
+  | "MASTER_CREATED_COMPANY"
+  | "MASTER_RESET_TWO_STEP"
+  | "MASTER_EXPORTED_COMPANY";
 
 /**
  * Appends a system-wide activity log entry. Best-effort: failures are

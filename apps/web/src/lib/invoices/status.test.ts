@@ -1,5 +1,6 @@
 // Run with: npm run test:unit (from the repo root)
 import assert from "node:assert/strict";
+import { paymentModeLabel } from "./payment-mode";
 import { computeStatus, isPastDue, remainingMinor, round2, todayIn, toMinor } from "./status";
 
 const d = (s: string) => new Date(`${s}T00:00:00Z`);
@@ -47,5 +48,13 @@ assert.equal(computeStatus({ ...base, total: 0, paid: 0 }), "PAID", "a zero invo
 assert.equal(remainingMinor(1000, 250.5), 74950);
 assert.equal(remainingMinor(1000, 1000), 0);
 assert.equal(remainingMinor(1000, 1500), 0);
+
+// ---- payment mode labels
+assert.equal(paymentModeLabel("BANK_TRANSFER"), "Bank transfer");
+assert.equal(paymentModeLabel("Bank transfer"), "Bank transfer");
+assert.equal(paymentModeLabel("NEFT"), "NEFT");
+assert.equal(paymentModeLabel("UPI"), "UPI");
+assert.equal(paymentModeLabel(null), "Other");
+assert.equal(paymentModeLabel("  "), "Other");
 
 console.log("invoice status: all checks passed");

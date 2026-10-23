@@ -74,4 +74,11 @@ for (const bad of [
   assert.equal(brandingSchema.safeParse({ ...base, ...bad }).success, false, JSON.stringify(bad));
 }
 
+// ---- calendar dates (invoice, due, payment) stay on their own day in every time zone
+const ny = makeFormatters({ currency: "USD", locale: "en-US", timeZone: "America/New_York" });
+assert.equal(ny.date(new Date("2026-10-23T00:00:00.000Z")), "10/23/2026", "midnight UTC is a calendar date: not moved to the 22nd");
+assert.equal(ny.date(new Date("2026-10-23T02:00:00.000Z")), "10/22/2026", "a real moment in time uses the company's zone");
+const kolkata = makeFormatters(DEFAULT_FORMAT);
+assert.equal(kolkata.date(new Date("2026-10-23T00:00:00.000Z")), "23/10/2026");
+
 console.log("brand: all checks passed");

@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { createCategoryInline } from "@/app/(app)/invoices/[id]/review/actions";
+import { BulkQueue } from "./bulk-queue";
 
 const ACCEPT = "application/pdf,image/png,image/jpeg,image/jpg";
 const ACCEPT_IMAGES = "image/png,image/jpeg,image/jpg";
@@ -57,10 +58,13 @@ export function UploadDropzone({
   categories: initialCategories,
   projects,
   initialProjectId,
+  reviewHref,
 }: {
   categories: UploadCategory[];
   projects: UploadProject[];
   initialProjectId: string | null;
+  /** Where the batch screen sends people to check what was read. */
+  reviewHref: string;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -78,6 +82,9 @@ export function UploadDropzone({
   const [stage, setStage] = useState<Stage>("idle");
   const [error, setError] = useState<string | null>(null);
   const dragDepth = useRef(0);
+  // Two or more files switch to the batch screen; one file keeps the single-invoice flow below.
+  const [batch, setBatch] = useState<File[] | null>(null);
+  const [batchBusy, setBatchBusy] = useState(false);
 
   const categoryItems = useMemo(
     () => categories.map((c) => ({ value: c.id, label: c.name })),
@@ -118,6 +125,15 @@ export function UploadDropzone({
     setStage("idle");
   }, []);
 
+  function pickFiles(list: File[]) {
+    if (list.length > 1) {
+      setError(null);
+      setFile(null);
+      setPreviewUrl(null);
+      setBatch(list);
+    } else pickFile(list[0] ?? null);
+  }
+
   function onDragEnter(e: React.DragEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -145,8 +161,7 @@ export function UploadDropzone({
     e.stopPropagation();
     dragDepth.current = 0;
     setDragging(false);
-    const dropped = e.dataTransfer.files?.[0] ?? null;
-    pickFile(dropped);
+    pickFiles(Array.from(e.dataTransfer.files ?? []));
   }
 
   function handleCreateCategory() {
@@ -255,7 +270,7 @@ export function UploadDropzone({
             value={projectId || null}
             onValueChange={(value) => setProjectId(value ?? "")}
             items={projects.map((project) => ({ value: project.id, label: project.name }))}
-            disabled={busy || projects.length === 0}
+            disabled={busy || batchBusy || projects.length === 0}
           >
             <SelectTrigger id="upload-project" size="lg" className="w-full">
               <SelectValue placeholder="Select project…" />
@@ -280,7 +295,7 @@ export function UploadDropzone({
             value={categoryId || null}
             onValueChange={(value) => setCategoryId(value ?? "")}
             items={categoryItems}
-            disabled={busy || !hasCategories}
+            disabled={busy || batchBusy || !hasCategories}
           >
             <SelectTrigger
               id="upload-category"
@@ -327,7 +342,7 @@ export function UploadDropzone({
             <Input
               id="new-category"
               value={newCategoryName}
-              disabled={busy || creatingCategory}
+              disabled={busy || batchBusy || creatingCategory}
               placeholder="e.g. Tile Adhesive"
               className="h-11 flex-1 rounded-xl"
               onChange={(e) => setNewCategoryName(e.target.value)}
@@ -342,7 +357,7 @@ export function UploadDropzone({
               type="button"
               variant="outline"
               className="h-11 shrink-0 gap-1.5 rounded-xl px-4 font-medium"
-              disabled={busy || creatingCategory || !newCategoryName.trim()}
+              disabled={busy || batchBusy || creatingCategory || !newCategoryName.trim()}
               onClick={handleCreateCategory}
             >
               {creatingCategory ? (
@@ -356,6 +371,17 @@ export function UploadDropzone({
         </div>
       </section>
 
+      {batch ? (
+        <BulkQueue
+          initialFiles={batch}
+          projectId={projectId}
+          categoryId={categoryId}
+          reviewHref={reviewHref}
+          onBusyChange={setBatchBusy}
+          onExit={() => setBatch(null)}
+        />
+      ) : (
+        <>
       <div
         role="button"
         tabIndex={0}
@@ -485,10 +511,10 @@ export function UploadDropzone({
             </div>
             <div className="space-y-1 px-1">
               <p className="text-base font-semibold tracking-tight sm:text-lg">
-                {dragging ? "Drop to upload" : "Drag & drop your invoice"}
+                {dragging ? "Drop to upload" : "Drag & drop your invoices"}
               </p>
               <p className="text-xs text-muted-foreground sm:text-sm">
-                Supports PDF, JPG, PNG up to 20MB
+                Supports PDF, JPG, PNG up to 20MB. Pick several to read them in one go.
               </p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
@@ -528,8 +554,12 @@ export function UploadDropzone({
           type="file"
           accept={ACCEPT}
           className="hidden"
+          multiple
           disabled={busy}
-          onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
+          onChange={(e) => {
+            pickFiles(Array.from(e.target.files ?? []));
+            e.target.value = "";
+          }}
         />
         <input
           ref={cameraRef}
@@ -585,6 +615,8 @@ export function UploadDropzone({
           )}
         </Button>
       </div>
+        </>
+      )}
     </div>
   );
 }

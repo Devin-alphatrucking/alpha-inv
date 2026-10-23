@@ -79,7 +79,11 @@ export function makeFormatters(f: OrgFormat) {
       }).format(value);
     },
     date(v: Date | string | number) {
-      return toDate(v).toLocaleDateString(f.locale, { timeZone: f.timeZone });
+      const d = toDate(v);
+      // Invoice, due and payment dates are calendar dates stored at exactly midnight UTC. Shown in a time zone west of UTC they would move to
+      // the day before, so a value at exactly 00:00:00.000 UTC is shown as the calendar date it is. Real moments in time use the company's zone.
+      const calendarDate = d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0 && d.getUTCMilliseconds() === 0;
+      return d.toLocaleDateString(f.locale, { timeZone: calendarDate ? "UTC" : f.timeZone });
     },
     dateTime(v: Date | string | number) {
       return toDate(v).toLocaleString(f.locale, { timeZone: f.timeZone });

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { pageOrg } from "@/lib/org/page";
 import {
   Card,
@@ -80,7 +81,9 @@ export default async function VendorsPage() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <p className="font-semibold text-sm text-foreground">
-                        {vendor.name}
+                        <Link href={`/vendors/${vendor.id}`} className="underline-offset-4 hover:underline">
+                          {vendor.name}
+                        </Link>
                       </p>
                       <span className="text-xs text-muted-foreground shrink-0">
                         {vendor._count.invoices} invoice(s)
@@ -114,7 +117,11 @@ export default async function VendorsPage() {
                   <TableBody>
                     {vendors.map((vendor) => (
                       <TableRow key={vendor.id}>
-                        <TableCell className="font-medium">{vendor.name}</TableCell>
+                        <TableCell className="font-medium">
+                          <Link href={`/vendors/${vendor.id}`} className="underline-offset-4 hover:underline">
+                            {vendor.name}
+                          </Link>
+                        </TableCell>
                         <TableCell>{vendor.gstin ?? "—"}</TableCell>
                         <TableCell>{vendor.contact ?? "—"}</TableCell>
                         <TableCell className="text-right">

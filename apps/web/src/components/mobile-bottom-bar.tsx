@@ -21,6 +21,7 @@ import {
   ChevronRight,
   Settings,
   Download,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -58,6 +59,7 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
   const isMoreActive = [
     "/materials",
     "/vendors",
+    "/reports",
     "/categories",
     "/users",
     "/projects",
@@ -76,6 +78,12 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
       label: "Projects",
       description: "Sites, teams & spend per project",
       icon: FolderKanban,
+    },
+    {
+      href: "/reports/gst",
+      label: "GST report",
+      description: "Tax by month and supplier, CSV",
+      icon: Receipt,
     },
     {
       href: "/materials",

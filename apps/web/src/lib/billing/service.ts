@@ -13,6 +13,7 @@ import {
 } from "./rules";
 import { cancelSubscription, createPlan, createSubscription, fetchSubscription, razorpayConfig } from "./razorpay";
 import { verifyCheckoutSignature } from "./signature";
+import { clearLockCache } from "@/lib/plans/lock";
 
 /**
  * Billing service. Razorpay is the source of truth for money; this code keeps the company's Subscription row
@@ -58,6 +59,7 @@ export async function recomputeSubscription(tx: Tx, orgId: string, now: Date = n
   }
 
   const d = derive(purchases, { extraQuantity, trialEndsAt: sub.trialEndsAt, graceDays: graceDays(), now });
+  clearLockCache(orgId); // the plan may have just become active (or ended): show it at once
   return tx.subscription.update({
     where: { organizationId: orgId },
     data: {

@@ -1,0 +1,27 @@
+import { timingSafeEqual } from "node:crypto";
+import { NextResponse } from "next/server";
+import { sendDailyDigests } from "@/lib/flows/digest";
+
+// Called by a scheduler (for example once an hour), not by a person: protected by JOBS_SECRET sent as "Authorization: Bearer <secret>".
+// With no secret configured it is switched off. Safe to call as often as you like: each company gets one email a day.
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const maxDuration = 300;
+
+function allowed(req: Request) {
+  const secret = process.env.JOBS_SECRET?.trim();
+  if (!secret || secret.length < 16) return false;
+  const given = Buffer.from((req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, ""), "utf8");
+  const want = Buffer.from(secret, "utf8");
+  return given.length === want.length && timingSafeEqual(given, want);
+}
+
+export async function POST(req: Request) {
+  if (!allowed(req)) return NextResponse.json({ error: "Not allowed." }, { status: 401 });
+  try {
+    return NextResponse.json({ ok: true, ...(await sendDailyDigests()) });
+  } catch (error) {
+    console.error("[digest job]", error instanceof Error ? error.message : error);
+    return NextResponse.json({ ok: false, error: "The digest run failed." }, { status: 500 });
+  }
+}

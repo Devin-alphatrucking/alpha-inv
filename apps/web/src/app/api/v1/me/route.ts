@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 
 /** Who is signed in, which company they are working in (with its branding), what the company's plan allows and how much is used. */
 export const GET = route("/api/v1/me", async (req) => {
-  const me = await requireMobile(req);
+  const me = await requireMobile(req, { allowLocked: true });
   const [brand, companies, e] = await Promise.all([loadBrandById(me.orgId), listMyCompanies(me.id), getEntitlements(me.orgId)]);
   return json({
     user: { id: me.id, name: me.name, email: me.email, role: me.role },

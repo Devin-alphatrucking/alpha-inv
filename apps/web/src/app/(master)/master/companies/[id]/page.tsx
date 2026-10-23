@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { UsageMeter } from "@/components/usage-meter";
 import { CompanyStatusBadge, PageTitle, StateBadge, fmtDate, fmtDateTime, money } from "../../master-ui";
-import { ActionForm, ReconcileButton } from "../../master-client";
+import { ActionForm, ReconcileButton, ResetTwoStepControl } from "../../master-client";
 import { extendTrialAction, setCompanyStatusAction, setLimitsAction, setProjectPlansAction } from "../../actions";
 
 export const metadata = { title: "Company | Master console" };
@@ -155,23 +155,54 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Export this company&apos;s data</CardTitle>
+          <CardDescription>
+            For when the company asks for a copy of its data or is leaving. Everything the company can export itself (invoices, line items, payments, suppliers, people, comments, logs), as an Excel workbook or a JSON backup. Needs a reason and is written to the audit log.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form method="post" action="/api/master/export" className="flex flex-wrap items-end gap-3">
+            <input type="hidden" name="orgId" value={org.id} />
+            <div className="grid gap-1.5">
+              <label htmlFor="export-format" className="text-xs text-muted-foreground">Format</label>
+              <select id="export-format" name="format" defaultValue="xlsx" className="h-10 rounded-xl border border-input bg-background px-3 text-sm">
+                <option value="xlsx">Excel workbook</option>
+                <option value="json">JSON backup</option>
+              </select>
+            </div>
+            <div className="grid min-w-64 flex-1 gap-1.5">
+              <label htmlFor="export-reason" className="text-xs text-muted-foreground">Reason (kept in the audit log)</label>
+              <input id="export-reason" name="reason" required minLength={3} maxLength={300} placeholder="For example: customer asked for a copy by email" className="h-10 rounded-xl border border-input bg-background px-3 text-sm" />
+            </div>
+            <button type="submit" className="h-10 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">Download</button>
+          </form>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">People ({members.length})</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-1.5 text-sm">
-            {members.map((m) => (
-              <p key={m.id} className="flex items-center justify-between gap-2">
-                <span className="truncate">
-                  {m.user.deletedAt ? <span className="text-muted-foreground">(deleted account)</span> : `${m.user.name} · ${m.user.email}`}
-                </span>
-                <span className="flex shrink-0 gap-1">
-                  {!m.user.emailVerifiedAt && !m.user.deletedAt && <Badge variant="outline">unverified</Badge>}
-                  <Badge variant={m.role === "ADMIN" ? "default" : "secondary"}>{m.role}</Badge>
-                </span>
-              </p>
-            ))}
+            {members.map((m) => {
+              const canReset = Boolean(m.user.totpEnabledAt) && !m.user.deletedAt && !m.user.isPlatformAdmin && m.userId !== admin.id;
+              return (
+                <div key={m.id} className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="min-w-0 truncate">
+                    {m.user.deletedAt ? <span className="text-muted-foreground">(deleted account)</span> : `${m.user.name} · ${m.user.email}`}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1">
+                    {!m.user.emailVerifiedAt && !m.user.deletedAt && <Badge variant="outline">unverified</Badge>}
+                    {m.user.totpEnabledAt && !m.user.deletedAt && <Badge variant="outline">two-step on</Badge>}
+                    <Badge variant={m.role === "ADMIN" ? "default" : "secondary"}>{m.role}</Badge>
+                    {canReset && <ResetTwoStepControl orgId={org.id} userId={m.userId} name={m.user.name} />}
+                  </span>
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
 
