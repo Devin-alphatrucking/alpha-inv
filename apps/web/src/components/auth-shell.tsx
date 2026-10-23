@@ -1,4 +1,5 @@
 import { BrandLogo } from "@/components/brand-logo";
+import { AuthBackdrop } from "@/components/auth-backdrop";
 import { getBrand } from "@/lib/brand/brand";
 
 /** Centered card used by sign-up, password reset, verification and invitation pages. */
@@ -16,10 +17,7 @@ export async function AuthShell({
   const brand = await getBrand();
   return (
     <div className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-10 sm:px-6">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_oklch(0.95_0.02_75),_transparent_55%),linear-gradient(to_bottom,_oklch(0.98_0.005_75),_oklch(0.96_0.01_240))]"
-      />
+      <AuthBackdrop />
       <div className="relative w-full max-w-[420px]">
         <div className="mb-6 text-center">
           <div className="mb-3 flex justify-center">

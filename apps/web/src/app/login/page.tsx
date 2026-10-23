@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { LoginForm } from "./login-form";
+import { AuthBackdrop } from "@/components/auth-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
 import { getBrand } from "@/lib/brand/brand";
 import { isEmailConfigured } from "@/lib/email/transport";
@@ -9,10 +10,7 @@ export default async function LoginPage() {
   const signupEnabled = process.env.SIGNUP_ENABLED !== "false" && isEmailConfigured();
   return (
     <div className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-10 sm:px-6">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_oklch(0.95_0.02_75),_transparent_55%),linear-gradient(to_bottom,_oklch(0.98_0.005_75),_oklch(0.96_0.01_240))]"
-      />
+      <AuthBackdrop />
       <div className="relative w-full max-w-[400px]">
         <div className="mb-8 text-center sm:mb-10">
           {brand.logoUrl ? (
