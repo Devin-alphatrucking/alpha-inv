@@ -3,11 +3,14 @@ import { pageOrg } from "@/lib/org/page";
 import { listMyCompanies } from "@/lib/flows/account";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AccountPanels } from "./account-panels";
+import { TwoFactorPanel } from "./two-factor-panel";
+import { twoFactorStatus } from "@/lib/flows/two-factor";
 
 export const metadata = { title: "My account" };
 
 export default async function AccountPage() {
   const { session, orgId } = await pageOrg();
+  const tf = await twoFactorStatus(session.user.id);
   const [user, companies, org] = await Promise.all([
     rawDb.user.findUniqueOrThrow({ where: { id: session.user.id }, select: { name: true, email: true, emailVerifiedAt: true } }),
     listMyCompanies(session.user.id),
@@ -42,6 +45,8 @@ export default async function AccountPage() {
           </p>
         </CardContent>
       </Card>
+
+      <TwoFactorPanel enabled={tf.enabled} recoveryLeft={tf.recoveryLeft} isOperator={tf.isOperator} />
 
       <AccountPanels
         companies={companies}

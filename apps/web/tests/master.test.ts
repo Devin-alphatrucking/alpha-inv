@@ -72,7 +72,7 @@ async function main() {
   const ops1 = await makeCompany("Vendor Ops", "ops@vendor-ops.test"); // our own team's company
   const a = await makeCompany("Alpha Master", "admin@alpha-master.test");
   const b = await makeCompany("Beta Master", "admin@beta-master.test");
-  const admin = { id: ops1.user.id, email: ops1.user.email, name: ops1.user.name };
+  const admin = { id: ops1.user.id, email: ops1.user.email, name: ops1.user.name, twoStep: true };
 
   const t1 = await createTicket({ ...a.user, name: "Alpha Admin" }, { subject: "Alpha cannot upload", message: "Uploads fail with an error since yesterday." });
   const t2 = await createTicket({ ...b.user, name: "Beta Admin" }, { subject: "Beta billing question", message: "Where do I download my receipts?" });

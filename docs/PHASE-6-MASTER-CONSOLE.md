@@ -9,7 +9,7 @@ Only people flagged as platform operators. The flag is set with a command, never
 - `npm run master -- add <email>` (the account must exist and have a verified email; the person is signed out everywhere and signs in again)
 - `npm run master -- remove <email>` (takes effect at once) and `npm run master -- list`
 
-The check runs in the database on EVERY request (not from the session token). Everyone else, including company administrators, sees a plain 404, so the console's existence is not revealed. The operator should also be an ADMIN of some company (our own), because the app signs people in to a company.
+Operators must also have two-step sign-in on (see PHASE-9-TWO-STEP-SIGN-IN.md); without it the console stays locked. The check runs in the database on EVERY request (not from the session token). Everyone else, including company administrators, sees a plain 404, so the console's existence is not revealed. The operator should also be an ADMIN of some company (our own), because the app signs people in to a company.
 
 ## 2. How it reads across companies without weakening isolation
 
@@ -31,4 +31,4 @@ Free or total project plans, trial extension, extra projects/people/AI pages for
 
 ## 5. Not built yet
 
-Two-step sign-in for operators (strongly recommended before more than one person has access), impersonating a customer to reproduce a problem, deleting or exporting a company on request, bulk actions, charts over time, alert emails (failed payments, error spikes), operator-to-customer messaging inside the app.
+Impersonating a customer to reproduce a problem, deleting or exporting a company on request, bulk actions, charts over time, alert emails (failed payments, error spikes), operator-to-customer messaging inside the app.

@@ -13,7 +13,7 @@ import type { FlowResult } from "@/lib/flows/schemas";
 const mailBrand = { name: PRODUCT_NAME };
 
 /** Password checks on a signed-in account are rate limited too (someone with a stolen session must not be able to guess the password). */
-async function confirmPassword(userId: string, password: string) {
+export async function confirmPassword(userId: string, password: string) {
   const limit = await hit(limitKey("account-password", userId), 10, 900);
   if (!limit.allowed) return { ok: false as const, error: retryMessage(limit.retryAfterSeconds) };
   const user = await rawDb.user.findUnique({ where: { id: userId } });

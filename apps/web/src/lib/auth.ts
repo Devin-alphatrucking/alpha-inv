@@ -7,6 +7,7 @@ import { rawDb } from "@/lib/db";
 import { logActivity } from "@/lib/activity";
 import { pickDefaultMembership, isOrgAllowedToSignIn } from "@/lib/org/default-membership";
 import { verifyPassword } from "@/lib/security/password";
+import { checkSecondFactor } from "@/lib/flows/two-factor";
 import { clientIp, hitAll, limitKey } from "@/lib/security/rate-limit";
 
 const credentialsSchema = z.object({
@@ -17,6 +18,13 @@ const credentialsSchema = z.object({
 /** Shown by the sign-in form as "confirm your email first". Only raised after the password was right. */
 class EmailNotVerified extends CredentialsSignin {
   code = "email_not_verified";
+}
+/** Password was right and the account uses two-step sign-in: the form must ask for the code. Only raised AFTER the password check. */
+class TotpRequired extends CredentialsSignin {
+  code = "totp_required";
+}
+class TotpInvalid extends CredentialsSignin {
+  code = "totp_invalid";
 }
 class TooManyAttempts extends CredentialsSignin {
   code = "rate_limited";
@@ -70,6 +78,7 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        totp: { label: "Code", type: "text" },
       },
       authorize: async (rawCredentials, request) => {
         const parsed = credentialsSchema.safeParse(rawCredentials);
@@ -93,6 +102,14 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
 
         // The address must be confirmed. Said only after the password was right, so this cannot reveal who has an account.
         if (!user.emailVerifiedAt) throw new EmailNotVerified();
+
+        // Second step, when the person turned it on. A wrong or reused code is as final as a wrong password.
+        if (user.totpEnabledAt) {
+          const code = typeof rawCredentials?.totp === "string" ? rawCredentials.totp.trim() : "";
+          if (!code) throw new TotpRequired();
+          const second = await checkSecondFactor(user.id, code);
+          if (!second.ok) throw second.reason === "rate_limited" ? new TooManyAttempts() : new TotpInvalid();
+        }
 
         // No usable company (none, or suspended/closed) means no sign-in.
         const membership = await loadDefaultMembership(user.id);

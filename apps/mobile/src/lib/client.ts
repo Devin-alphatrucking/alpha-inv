@@ -212,7 +212,7 @@ export function createClient(opts: ClientOptions) {
     /** True when a refresh token is saved (the app opens straight to its screens and confirms with /me). */
     hasSession: async () => (await opts.store.get()) !== null,
 
-    async signIn(email: string, password: string, device: { deviceName?: string; platform?: "ios" | "android"; appVersion?: string } = {}) {
+    async signIn(email: string, password: string, device: { deviceName?: string; platform?: "ios" | "android"; appVersion?: string; totp?: string } = {}) {
       const body = await request<{ tokens: Tokens }>("/api/v1/auth/login", { json: { email: email.trim(), password, ...device }, auth: false });
       await saveTokens(body.tokens);
     },

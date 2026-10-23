@@ -12,6 +12,9 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Two-step sign-in: after the password is accepted the server asks for the code from the authenticator app.
+  const [needsCode, setNeedsCode] = useState(false);
+  const [code, setCode] = useState("");
   const passwordRef = useRef<React.ComponentRef<typeof TextInput>>(null);
 
   async function submit() {
@@ -20,9 +23,18 @@ export default function Login() {
     setBusy(true);
     setError(null);
     try {
-      await signIn(email, password);
+      await signIn(email, password, code.trim() || undefined);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Could not sign in. Please try again.");
+      if (e instanceof ApiError && e.code === "totp_required") {
+        setNeedsCode(true);
+        setError(null);
+      } else {
+        if (e instanceof ApiError && e.code === "totp_invalid") {
+          setNeedsCode(true);
+          setCode("");
+        }
+        setError(e instanceof ApiError ? e.message : "Could not sign in. Please try again.");
+      }
       setBusy(false);
     }
   }
@@ -60,6 +72,20 @@ export default function Login() {
             onSubmitEditing={submit}
             error={error}
           />
+          {needsCode ? (
+            <Field
+              label="Code from your authenticator app"
+              value={code}
+              onChangeText={setCode}
+              keyboardType="number-pad"
+              textContentType="oneTimeCode"
+              autoComplete="one-time-code"
+              autoFocus
+              returnKeyType="go"
+              onSubmitEditing={submit}
+              placeholder="123456 (or a recovery code)"
+            />
+          ) : null}
           <Button label="Sign in" onPress={submit} busy={busy} />
           <Text style={{ color: t.muted, fontSize: 13, textAlign: "center" }}>
             No account yet, or forgot your password? Use the website to create a company or reset it.

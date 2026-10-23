@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test:unit": "tsx src/lib/org/default-membership.test.ts && tsx src/lib/org/scoped-db.test.ts && tsx src/lib/brand/brand.test.ts && tsx src/lib/security/security.test.ts && tsx src/lib/plans/plans.test.ts && tsx src/lib/billing/billing.test.ts && tsx src/lib/mobile/mobile.test.ts && tsx src/lib/invoices/status.test.ts"
+    "test:unit": "tsx src/lib/org/default-membership.test.ts && tsx src/lib/org/scoped-db.test.ts && tsx src/lib/brand/brand.test.ts && tsx src/lib/security/security.test.ts && tsx src/lib/plans/plans.test.ts && tsx src/lib/billing/billing.test.ts && tsx src/lib/mobile/mobile.test.ts && tsx src/lib/invoices/status.test.ts && tsx src/lib/security/totp.test.ts"
   },
   "dependencies": {
     "@alpha/db": "*",
@@ -17,6 +17,7 @@
     "@azure/storage-blob": "^12.33.0",
     "@base-ui/react": "^1.6.0",
     "@hookform/resolvers": "^5.4.0",
+    "@types/qrcode": "^1.5.6",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -28,6 +29,7 @@
     "next-themes": "^0.4.6",
     "nodemailer": "^8.0.11",
     "pdf-lib": "^1.17.1",
+    "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.82.0",

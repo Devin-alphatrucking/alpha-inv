@@ -17,6 +17,9 @@ export function LoginForm({ signupEnabled }: { signupEnabled: boolean }) {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
+  // After the password is right, an account with two-step sign-in asks for the code in a second step.
+  const [needsCode, setNeedsCode] = useState(false);
+  const [code, setCode] = useState("");
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,15 +35,23 @@ export function LoginForm({ signupEnabled }: { signupEnabled: boolean }) {
       const result = await signIn("credentials", {
         email: email.trim(),
         password,
+        totp: code.trim(),
         redirect: false,
       });
 
       if (result?.error) {
-        const code = (result as { code?: string }).code;
-        if (code === "email_not_verified") {
+        const errorCode = (result as { code?: string }).code;
+        if (errorCode === "totp_required") {
+          setNeedsCode(true);
+          toast.message("Enter the 6-digit code from your authenticator app.");
+        } else if (errorCode === "totp_invalid") {
+          setNeedsCode(true);
+          setCode("");
+          toast.error("That code is not right or was already used. Wait for the next one, or use a recovery code.");
+        } else if (errorCode === "email_not_verified") {
           setNeedsVerification(true);
           toast.error("Please confirm your email first.");
-        } else if (code === "rate_limited") {
+        } else if (errorCode === "rate_limited") {
           toast.error("Too many attempts. Please wait a few minutes and try again.");
         } else {
           setNeedsVerification(false);
@@ -109,6 +120,26 @@ export function LoginForm({ signupEnabled }: { signupEnabled: boolean }) {
             </Link>
           </div>
         </div>
+
+        {needsCode && (
+          <div className="grid gap-2">
+            <Label htmlFor="totp" className="text-sm font-medium">
+              Code from your authenticator app
+            </Label>
+            <Input
+              id="totp"
+              name="totp"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoFocus
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="123456"
+              className="h-11 text-base tracking-widest md:h-10 md:text-sm"
+            />
+            <p className="text-xs text-muted-foreground">Lost your phone? Type one of your recovery codes instead.</p>
+          </div>
+        )}
 
         {needsVerification && (
           <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">

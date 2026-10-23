@@ -29,7 +29,7 @@ async function main() {
     // Signing out everywhere makes the change take effect at once.
     await db.user.update({ where: { id: user.id }, data: { sessionVersion: { increment: 1 } } });
     await db.activityLog.create({ data: { userId: user.id, action: command === "add" ? "MASTER_OPERATOR_ADDED" : "MASTER_OPERATOR_REMOVED", module: "MASTER", entityId: user.id, details: { by: "operator command", email } } });
-    console.log(command === "add" ? `${email} can now open /master. They were signed out everywhere and must sign in again.` : `${email} can no longer open /master.`);
+    console.log(command === "add" ? `${email} can now open /master. They were signed out everywhere and must sign in again. The console stays locked until they turn on two-step sign-in on their Account page.` : `${email} can no longer open /master.`);
   } else {
     console.log("Usage: npm run master -- list | add <email> | remove <email>");
     process.exitCode = 2;

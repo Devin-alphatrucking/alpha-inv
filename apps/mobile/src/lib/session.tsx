@@ -22,7 +22,7 @@ type Session = {
   client: ApiClient;
   /** Shown on the login screen when the session ended on its own ("You were signed out"). */
   notice: string | null;
-  signIn(email: string, password: string): Promise<void>;
+  signIn(email: string, password: string, totp?: string): Promise<void>;
   signOut(): Promise<void>;
   reload(): Promise<void>;
   switchCompany(companyId: string): Promise<void>;
@@ -78,9 +78,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       me,
       client,
       notice,
-      async signIn(email, password) {
+      async signIn(email, password, totp) {
         setNotice(null);
-        await client.signIn(email, password, { deviceName: Constants.deviceName ?? undefined, platform: Platform.OS === "ios" ? "ios" : "android", appVersion: Constants.expoConfig?.version });
+        await client.signIn(email, password, { deviceName: Constants.deviceName ?? undefined, platform: Platform.OS === "ios" ? "ios" : "android", appVersion: Constants.expoConfig?.version, ...(totp ? { totp } : {}) });
         await reload();
       },
       async signOut() {

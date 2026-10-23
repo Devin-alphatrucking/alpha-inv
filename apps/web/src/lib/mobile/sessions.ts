@@ -3,6 +3,7 @@ import { rawDb } from "@/lib/db";
 import { logActivity } from "@/lib/activity";
 import { hitAll, limitKey, retryMessage } from "@/lib/security/rate-limit";
 import { verifyPassword } from "@/lib/security/password";
+import { checkSecondFactor } from "@/lib/flows/two-factor";
 import { isOrgAllowedToSignIn, pickDefaultMembership } from "@/lib/org/default-membership";
 import { hashRefresh, newRefreshToken, signAccessToken, verifyAccessToken } from "./token";
 
@@ -34,6 +35,7 @@ const loginSchema = z.object({
   deviceName: z.string().trim().max(80).optional(),
   platform: z.enum(["ios", "android"]).optional(),
   appVersion: z.string().trim().max(30).optional(),
+  totp: z.string().trim().max(20).optional(),
 });
 
 function issue(sessionId: string, refresh: { token: string }, refreshExpiresAt: Date): Tokens {
@@ -57,6 +59,15 @@ export async function loginMobile(raw: unknown, ctx: { ip: string }): Promise<Mo
   const matches = await verifyPassword(v.password, user?.passwordHash);
   if (!user || user.deletedAt || !matches) return fail(401, "invalid_credentials", "Email or password is not correct.");
   if (!user.emailVerifiedAt) return fail(403, "email_not_verified", "Confirm your email first. We sent you a link when you signed up.");
+
+  // Two-step sign-in: same rule as the website. `totp_required` is only said after the password was right.
+  if (user.totpEnabledAt) {
+    if (!v.totp) return fail(401, "totp_required", "Enter the 6-digit code from your authenticator app.");
+    const second = await checkSecondFactor(user.id, v.totp);
+    if (!second.ok) {
+      return second.reason === "rate_limited" ? fail(429, "rate_limited", "Too many tries. Please wait a few minutes.") : fail(401, "totp_invalid", "That code is not right or was already used. Wait for the next one and try again.");
+    }
+  }
 
   const memberships = await rawDb.membership.findMany({
     where: { userId: user.id },
