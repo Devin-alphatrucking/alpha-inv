@@ -101,7 +101,7 @@ Phase 1 to 10 are done (section 2). Proposed next phases, each ending with tests
 |---|---|---|
 | 11 | **Roles and permissions** (BUILT, see PHASE-11-ROLES.md) | Every later module needs the new roles; cheapest to do first and it improves Accounts too |
 | 12 | **Purchase: material requests and purchase orders** (web BUILT, see PHASE-12-PURCHASE.md) | The supplier and rate data already exists; gives the biggest new value for the office |
-| 13 | **Technical: daily report, photos, issues** (web BUILT, see PHASE-13-TECHNICAL-SITE-WORK.md; mobile screens and offline saving still to do) | Needs the mobile app to be solid; photo upload and offline saving are the hard part |
+| 13 | **Technical: daily report, photos, issues** (web BUILT, see PHASE-13-TECHNICAL-SITE-WORK.md; mobile screens built, see PHASE-8B-MOBILE-SITE-PURCHASE.md; offline saving still to do) | Needs the mobile app to be solid; photo upload and offline saving are the hard part |
 | 14 | **Delivery check and 3-way match** (BUILT, see PHASE-14-DELIVERY-AND-MATCH.md) | Connects Purchase, Technical and Accounts; needs 11 to 13 first |
 | 15 | **Reports and dashboards across modules** | Committed vs invoiced vs paid, delays, supplier performance |
 | 16 | **Real-world hardening** | Real Razorpay purchase, real Azure reading, mobile on a phone, hosting, email, rotating credentials |

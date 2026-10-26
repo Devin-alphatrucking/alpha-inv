@@ -1,36 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import { ApiError } from "@/lib/client";
 import { useSession } from "@/lib/session";
 import { space, useTheme } from "@/lib/theme";
-import { Button, Card, ErrorBox, Muted, Screen, Title } from "@/components/ui";
+import { Button, Card, Chips, ErrorBox, Muted, Screen, Title, type Option } from "@/components/ui";
 import { PlanBanner } from "@/components/plan-banner";
 
 type Picked = { uri: string; name: string; type: string };
-type Option = { id: string; name: string };
-
-function Chips({ label, options, value, onChange }: { label: string; options: Option[]; value: string; onChange: (id: string) => void }) {
-  const t = useTheme();
-  return (
-    <View style={{ gap: space.sm }}>
-      <Text style={{ fontSize: 13, fontWeight: "600", color: t.muted }}>{label}</Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
-        {options.map((o) => {
-          const on = o.id === value;
-          return (
-            <Pressable key={o.id} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(o.id)} style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: on ? t.primary : t.card, borderWidth: 1, borderColor: on ? t.primary : t.border }}>
-              <Text style={{ color: on ? t.onPrimary : t.text, fontSize: 14, fontWeight: "600" }}>{o.name}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
-
 export default function Upload() {
   const t = useTheme();
   const router = useRouter();

@@ -10,3 +10,6 @@ const LABELS: Record<string, string> = {
 };
 
 export const roleLabel = (role: string) => LABELS[role] ?? "Staff";
+
+/** Whether the signed-in person may do something (the list comes from the server in /me; the server still checks every request). */
+export const can = (permissions: string[] | undefined, permission: string) => Boolean(permissions?.includes(permission));

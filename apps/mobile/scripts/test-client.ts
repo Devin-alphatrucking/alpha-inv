@@ -178,6 +178,100 @@ async function main() {
     await c.signOut();
   });
 
+
+  // The checks below need an account that can do site work, material requests and deliveries (an engineer or manager) on a project that
+  // has a sent order. They are skipped for other accounts.
+  // One sign-in is shared by these checks (sign-in itself is rate limited).
+  let shared: Promise<{ c: ReturnType<typeof createClient>; me: Awaited<ReturnType<ReturnType<typeof createClient>["me"]>>; ok: boolean }> | null = null;
+  const modules = () =>
+    (shared ??= (async () => {
+      const c = createClient({ baseUrl: API_URL, store: memoryStore() });
+      await c.signIn(EMAIL!, PASSWORD!);
+      const me = await c.me();
+      return { c, me, ok: ["site:write", "request:write", "delivery:write"].every((p) => me.permissions.includes(p)) };
+    })());
+  const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, ...new Array(300).fill(7)]);
+  const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+
+  await check("/me lists what the role may do, so the app can hide screens that would not work", async () => {
+    const { c, me } = await modules();
+    assert.ok(Array.isArray(me.permissions) && me.permissions.length > 0);
+    assert.ok(me.permissions.every((p) => typeof p === "string"));
+  });
+
+  await check("site work from the client: overview, a daily report saved and submitted, an issue raised and moved, a photo added and opened", async () => {
+    const { c, ok } = await modules();
+    if (!ok) return console.log("      (skipped: this account cannot do site work)");
+    const overview = await c.siteOverview();
+    assert.ok(overview.projects.length > 0);
+    const projectId = overview.projects[0].id;
+
+    const saved = await c.saveSiteReport({ projectId, reportDate: yesterday, workDone: "Client test: shuttering on level 3", labourCount: "9", weather: "Clear" });
+    assert.equal(saved.report.status, "DRAFT");
+    const again = await c.siteReport(projectId, yesterday);
+    assert.equal(again.report?.workDone, "Client test: shuttering on level 3");
+    const bad = await c.saveSiteReport({ projectId, reportDate: yesterday, workDone: "" }).catch((x) => x as ApiError);
+    assert.ok(bad instanceof ApiError && bad.status === 400, "an empty report is refused with a plain message");
+    await c.submitSiteReport(saved.report.id);
+    const locked = await c.saveSiteReport({ projectId, reportDate: yesterday, workDone: "Changed after submitting" }).catch((x) => x as ApiError);
+    assert.ok(locked instanceof ApiError && /locked|submitted/i.test(locked.message), "locked after submitting");
+
+    const made = await c.raiseIssue({ projectId, title: "Client test issue", severity: "LOW" });
+    const detail = await c.siteIssue(made.id);
+    assert.ok(detail.issue.next.includes("IN_PROGRESS"));
+    await c.setIssueStatus(made.id, "IN_PROGRESS");
+    const closed = await c.setIssueStatus(made.id, "CLOSED").catch((x) => x as ApiError);
+    assert.ok(closed instanceof ApiError && closed.status === 400, "an engineer cannot close an issue");
+
+    const up = await c.uploadSitePhotos([new File([JPEG], "a.jpg", { type: "image/jpeg" })], { projectId, issueId: made.id, area: "Level 2" });
+    assert.equal(up.added, 1);
+    const listed = await c.sitePhotos({ issueId: made.id });
+    assert.equal(listed.photos.length, 1);
+    const src = await c.photoSource(listed.photos[0].id);
+    const res = await fetch(src.uri, { headers: src.headers });
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("content-type"), "image/jpeg");
+    const noAuth = await fetch(src.uri);
+    assert.equal(noAuth.status, 401, "a photo cannot be opened without the sign-in");
+    await c.deleteSitePhoto(listed.photos[0].id);
+  });
+
+  await check("material request from the client: raised, sent for approval, taken back and cancelled", async () => {
+    const { c, ok } = await modules();
+    if (!ok) return console.log("      (skipped: this account cannot raise requests)");
+    const projectId = (await c.siteOverview()).projects[0].id;
+    const made = await c.raiseRequest({ projectId, note: "client test", lines: [{ description: "Client test cement", unit: "bag", quantity: "5" }], submit: true });
+    assert.equal(made.submitted, true);
+    const one = await c.purchaseRequest(made.id);
+    assert.equal(one.request.status, "SUBMITTED");
+    assert.ok(one.request.actions.includes("withdraw"));
+    const refused = await c.raiseRequest({ projectId, lines: [] }).catch((x) => x as ApiError);
+    assert.ok(refused instanceof ApiError && refused.status === 400);
+    await c.actOnRequest(made.id, "withdraw");
+    await c.changeRequest(made.id, { note: "changed", lines: [{ description: "Client test cement", unit: "bag", quantity: "6" }] });
+    assert.equal((await c.purchaseRequest(made.id)).request.lines[0].quantity, "6");
+    await c.actOnRequest(made.id, "cancel");
+    assert.equal((await c.purchaseRequest(made.id)).request.status, "CANCELLED");
+    const listed = await c.requests({ status: "CANCELLED" });
+    assert.ok(listed.requests.some((r) => r.id === made.id));
+  });
+
+  await check("deliveries from the client: the list and the order carry no prices; a delivery is recorded and removed", async () => {
+    const { c, ok } = await modules();
+    if (!ok) return console.log("      (skipped: this account cannot record deliveries)");
+    const list = await c.deliveries(true);
+    if (list.deliveries.length === 0) return console.log("      (skipped: no order has been sent on this account)");
+    const d = (await c.delivery(list.deliveries[0].orderId)).delivery;
+    assert.equal(/rate|price|amount|total/i.test(JSON.stringify(d)), false, "no prices on the phone's delivery screen");
+    if (!d.canRecord) return console.log("      (skipped: the first order cannot take deliveries)");
+    const made = await c.recordDelivery(d.orderId, { challanNo: "CLIENT-TEST", lines: [{ orderLineId: d.lines[0].id, quantity: "1" }] });
+    assert.ok((await c.delivery(d.orderId)).delivery.receipts.some((r) => r.id === made.id));
+    const none = await c.recordDelivery(d.orderId, { lines: [] }).catch((x) => x as ApiError);
+    assert.ok(none instanceof ApiError && none.status === 400);
+    await c.deleteDelivery(made.id);
+    assert.ok(!(await c.delivery(d.orderId)).delivery.receipts.some((r) => r.id === made.id));
+  });
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed === 0 ? 0 : 1);
 }

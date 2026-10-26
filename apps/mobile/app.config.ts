@@ -35,7 +35,7 @@ const config: ExpoConfig = {
   plugins: [
     "expo-router",
     "expo-secure-store",
-    ["expo-image-picker", { cameraPermission: `Allow ${name} to use the camera to photograph invoices.`, photosPermission: `Allow ${name} to choose invoice photos from your gallery.` }],
+    ["expo-image-picker", { cameraPermission: `Allow ${name} to use the camera to photograph invoices, site work and deliveries.`, photosPermission: `Allow ${name} to choose invoice and site photos from your gallery.` }],
     "expo-document-picker",
   ],
   experiments: { typedRoutes: true },

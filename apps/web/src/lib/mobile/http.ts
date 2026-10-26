@@ -3,6 +3,7 @@ import { AppError, handleError, isAppError, newRequestId } from "@/lib/errors";
 import { authenticateBearer, type MobileUser } from "./sessions";
 import { bearerFrom } from "./token";
 import { assertNotLocked } from "@/lib/plans/lock";
+import { hasPermission, type Permission } from "@/lib/roles";
 
 /** Shared plumbing for /api/v1: JSON in and out, one error shape, no caching. */
 
@@ -32,6 +33,19 @@ export async function requireMobile(req: Request, opts: { allowLocked?: boolean 
   if (!opts.allowLocked) await assertNotLocked(user.orgId);
   return user;
 }
+
+/** 403 for someone whose role does not hold the permission. The flows check again; this gives the phone a clear answer first. */
+export function need(me: MobileUser, permission: Permission) {
+  if (!hasPermission(me.role, permission)) throw new AppError("PERMISSION_001");
+}
+
+/** A flow's answer as JSON: the result itself when it worked, otherwise 400 with the plain message and the field it is about. */
+export function flow(result: { ok: boolean; error?: string; field?: string }, status = 200) {
+  return result.ok ? json(result, status) : json({ error: result.error, code: "rejected", field: result.field ?? null }, 400);
+}
+
+/** The id of the thing asked for was not found (or is not visible to this person). */
+export const notFound = (what: string) => apiError(404, "not_found", `${what} not found.`);
 
 /** Wraps a handler so every failure leaves as the same JSON error and is logged with a request id. */
 export function route<C = unknown>(endpoint: string, fn: (req: Request, ctx: C) => Promise<Response>) {

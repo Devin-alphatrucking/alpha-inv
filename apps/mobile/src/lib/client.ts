@@ -48,6 +48,8 @@ export type PlanSummary = {
 
 export type Me = {
   user: { id: string; name: string; email: string; role: string };
+  /** What this role may do (the server checks again on every request). */
+  permissions: string[];
   company: { id: string; brand: Brand | null };
   companies: { id: string; name: string; role: string }[];
   plan: PlanSummary;
@@ -83,6 +85,48 @@ export type InvoiceDetail = InvoiceRow & {
 };
 
 export type UploadResult = { invoiceId: string; duplicateWarning?: boolean; originalInvoiceNumber?: string | null };
+
+
+// ---- Site work, material requests and deliveries
+
+export type ProjectOverview = { id: string; name: string; todayReport: "DRAFT" | "SUBMITTED" | null; openIssues: number; overdueIssues: number };
+export type SiteOverview = { today: string; projects: ProjectOverview[] };
+
+export type ReportView = {
+  id: string; projectId: string; reportDate: string; weather: string | null; workDone: string; labourCount: number | null; machinery: string | null; materialsUsed: string | null;
+  problems: string | null; safetyNote: string | null; status: "DRAFT" | "SUBMITTED"; authorName: string | null; submittedByName: string | null; canEdit: boolean; canSubmit: boolean; canReopen: boolean;
+};
+export type ReportInput = { projectId: string; reportDate: string; weather?: string; workDone: string; labourCount?: string; machinery?: string; materialsUsed?: string; problems?: string; safetyNote?: string };
+
+export type PhotoView = { id: string; projectId: string; projectName: string; takenOn: string; caption: string | null; area: string | null; uploaderName: string | null; canDelete: boolean };
+
+export type IssueState = "OPEN" | "IN_PROGRESS" | "FIXED" | "CLOSED";
+export type IssueView = {
+  id: string; projectId: string; projectName: string; title: string; description: string | null; area: string | null; severity: "LOW" | "MEDIUM" | "HIGH"; status: IssueState;
+  assigneeId: string | null; assigneeName: string | null; raisedByName: string | null; dueDate: string | null; photoCount: number; canEdit: boolean; next: IssueState[];
+};
+export type IssueCounts = { open: number; inProgress: number; fixed: number; closed: number; stillOpenHigh: number; overdue: number };
+export type IssueInput = { projectId: string; title: string; description?: string; area?: string; severity: "LOW" | "MEDIUM" | "HIGH"; dueDate?: string; assigneeId?: string };
+
+export type RequestState = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED" | "ORDERED" | "CANCELLED";
+export type RequestAction = "edit" | "submit" | "withdraw" | "approve" | "reject" | "cancel" | "order";
+export type RequestView = {
+  id: string; number: string; projectId: string; projectName: string; status: RequestState; neededBy: string | null; note: string | null; requestedByName: string | null;
+  decidedByName: string | null; decisionNote: string | null; lines: { id: string; description: string; unit: string; quantity: string }[]; actions: RequestAction[];
+};
+export type RequestInput = { projectId: string; neededBy?: string; note?: string; lines: { description: string; unit: string; quantity: string }[]; submit?: boolean };
+
+export type DeliveryRow = { orderId: string; number: string; vendorName: string; projectName: string; deliveryDate: string | null; progress: "NOT_RECEIVED" | "PARTLY" | "RECEIVED"; late: boolean };
+export type DeliveryView = {
+  orderId: string; number: string; status: "DRAFT" | "SENT" | "CANCELLED"; vendorName: string; projectId: string; projectName: string; deliveryDate: string | null;
+  lines: { id: string; description: string; unit: string; ordered: string; received: string; rejected: string; remaining: string; progress: "NONE" | "PARTLY" | "FULL" | "OVER" }[];
+  progress: "NOT_RECEIVED" | "PARTLY" | "RECEIVED"; canRecord: boolean;
+  receipts: { id: string; receivedOn: string; challanNo: string | null; note: string | null; receivedByName: string | null; photoCount: number; canDelete: boolean; lines: { description: string; unit: string; quantity: string; rejected: string; remark: string | null }[] }[];
+};
+export type ReceiptInput = { receivedOn?: string; challanNo?: string; note?: string; lines: { orderLineId: string; quantity: string; rejected?: string; remark?: string }[] };
+
+export type PhotoTarget = { projectId: string; reportId?: string; issueId?: string; receiptId?: string; area?: string; caption?: string };
+export type PhotoUploadResult = { ok: true; added: number; skipped: string[] };
 
 export type ClientOptions = {
   baseUrl: string;
@@ -249,6 +293,63 @@ export function createClient(opts: ClientOptions) {
       form.append("categoryId", categoryId);
       return request<UploadResult>("/api/invoices/upload", { form });
     },
+
+
+    // ---- Site work
+    siteOverview: () => request<SiteOverview>("/api/v1/site/overview"),
+    siteReport: (projectId: string, date: string) => request<{ report: ReportView | null; photos: PhotoView[] }>(`/api/v1/site/reports?projectId=${encodeURIComponent(projectId)}&date=${date}`),
+    saveSiteReport: (input: ReportInput) => request<{ ok: true; report: ReportView }>("/api/v1/site/reports", { method: "PUT", json: input }),
+    submitSiteReport: (id: string) => request<{ ok: true }>(`/api/v1/site/reports/${encodeURIComponent(id)}`, { json: { action: "submit" } }),
+    reopenSiteReport: (id: string) => request<{ ok: true }>(`/api/v1/site/reports/${encodeURIComponent(id)}`, { json: { action: "reopen" } }),
+
+    siteIssues: (q: { projectId?: string; status?: string } = {}) => {
+      const sp = new URLSearchParams();
+      for (const [k, v] of Object.entries(q)) if (v) sp.set(k, v);
+      const s = sp.toString();
+      return request<{ today: string; counts: IssueCounts; issues: IssueView[] }>(`/api/v1/site/issues${s ? `?${s}` : ""}`);
+    },
+    siteIssue: (id: string) => request<{ issue: IssueView; photos: PhotoView[]; people: { id: string; name: string }[] }>(`/api/v1/site/issues/${encodeURIComponent(id)}`),
+    raiseIssue: (input: IssueInput) => request<{ ok: true; id: string }>("/api/v1/site/issues", { json: input }),
+    setIssueStatus: (id: string, status: IssueState) => request<{ ok: true }>(`/api/v1/site/issues/${encodeURIComponent(id)}`, { json: { status } }),
+    sitePeople: (projectId: string) => request<{ people: { id: string; name: string }[] }>(`/api/v1/site/people?projectId=${encodeURIComponent(projectId)}`),
+
+    sitePhotos: (q: { projectId?: string; reportId?: string; issueId?: string; receiptId?: string }) => {
+      const sp = new URLSearchParams();
+      for (const [k, v] of Object.entries(q)) if (v) sp.set(k, v);
+      return request<{ photos: PhotoView[] }>(`/api/v1/site/photos?${sp.toString()}`);
+    },
+    /** Adds photos (camera or gallery) to a project, a day's report, an issue or a delivery. Up to 10 at a time. */
+    uploadSitePhotos(files: FileInput[], target: PhotoTarget) {
+      const form = new FormData();
+      for (const [k, v] of Object.entries(target)) if (v) form.append(k, v);
+      for (const file of files) form.append("file", file as unknown as Blob);
+      return request<PhotoUploadResult>("/api/v1/site/photos", { form });
+    },
+    deleteSitePhoto: (id: string) => request<{ ok: true }>(`/api/v1/site/photos/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    /** Address and sign-in header to show one site photo. */
+    async photoSource(id: string) {
+      const t = await token();
+      if (!t) throw new ApiError(401, "unauthenticated", "Please sign in again.");
+      return { uri: `${base}/api/v1/site/photos/${encodeURIComponent(id)}`, headers: { Authorization: `Bearer ${t}` } };
+    },
+
+    // ---- Material requests
+    requests: (q: { projectId?: string; status?: string } = {}) => {
+      const sp = new URLSearchParams();
+      for (const [k, v] of Object.entries(q)) if (v) sp.set(k, v);
+      const s = sp.toString();
+      return request<{ requests: RequestView[]; waitingForApproval: number; approvedToOrder: number }>(`/api/v1/purchase/requests${s ? `?${s}` : ""}`);
+    },
+    purchaseRequest: (id: string) => request<{ request: RequestView }>(`/api/v1/purchase/requests/${encodeURIComponent(id)}`),
+    raiseRequest: (input: RequestInput) => request<{ ok: true; id: string; number: string; submitted: boolean; warning?: string }>("/api/v1/purchase/requests", { json: input }),
+    changeRequest: (id: string, input: Omit<RequestInput, "projectId" | "submit">) => request<{ ok: true }>(`/api/v1/purchase/requests/${encodeURIComponent(id)}`, { method: "PUT", json: input }),
+    actOnRequest: (id: string, action: "submit" | "withdraw" | "cancel" | "approve" | "reject", note?: string) => request<{ ok: true }>(`/api/v1/purchase/requests/${encodeURIComponent(id)}`, { json: { action, note } }),
+
+    // ---- Deliveries (no prices)
+    deliveries: (all = false) => request<{ deliveries: DeliveryRow[] }>(`/api/v1/deliveries${all ? "?all=1" : ""}`),
+    delivery: (orderId: string) => request<{ delivery: DeliveryView; today: string }>(`/api/v1/deliveries/${encodeURIComponent(orderId)}`),
+    recordDelivery: (orderId: string, input: ReceiptInput) => request<{ ok: true; id: string }>(`/api/v1/deliveries/${encodeURIComponent(orderId)}`, { json: input }),
+    deleteDelivery: (receiptId: string) => request<{ ok: true }>(`/api/v1/deliveries/receipts/${encodeURIComponent(receiptId)}`, { method: "DELETE" }),
 
     /** Address and headers to show the original file (image or PDF) with the same sign-in. */
     async fileSource(fileUrl: string) {

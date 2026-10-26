@@ -95,3 +95,30 @@ export function Loading() {
     </View>
   );
 }
+
+export type Option = { id: string; name: string };
+
+/** A row of choices (project, severity, weather...). Tap one to choose it. */
+export function Chips({ label, options, value, onChange }: { label?: string; options: Option[]; value: string; onChange: (id: string) => void }) {
+  const t = useTheme();
+  return (
+    <View style={{ gap: space.sm }}>
+      {label ? <Text style={{ fontSize: 13, fontWeight: "600", color: t.muted }}>{label}</Text> : null}
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+        {options.map((o) => {
+          const on = o.id === value;
+          return (
+            <Pressable key={o.id} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(o.id)} style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: on ? t.primary : t.card, borderWidth: 1, borderColor: on ? t.primary : t.border }}>
+              <Text style={{ color: on ? t.onPrimary : t.text, fontSize: 14, fontWeight: "600" }}>{o.name}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+export function SectionTitle({ children }: { children: React.ReactNode }) {
+  const t = useTheme();
+  return <Text accessibilityRole="header" style={{ fontSize: 17, fontWeight: "700", color: t.text }}>{children}</Text>;
+}
