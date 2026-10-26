@@ -57,6 +57,7 @@ model User {
   raisedIssues       SiteIssue[]         @relation("SiteIssueRaiser")
   assignedIssues     SiteIssue[]         @relation("SiteIssueAssignee")
   materialRequests   MaterialRequest[]   @relation("RequestAuthor")
+  goodsReceipts      GoodsReceipt[]
   decidedRequests    MaterialRequest[]   @relation("RequestDecider")
   purchaseOrders     PurchaseOrder[]     @relation("OrderAuthor")
   payments           Payment[]           @relation("PaidBy")
@@ -248,6 +249,10 @@ model Invoice {
   payments   Payment[]
   auditLogs  AuditLog[]
   comments   InvoiceComment[]
+
+  // The purchase order this bill is for (checked against what was ordered and received).
+  purchaseOrderId String?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
 
   @@unique([vendorId, invoiceNumber])
   @@index([projectId])
@@ -838,6 +843,7 @@ model SitePhoto {
   projectId      String
   reportId       String?
   issueId        String?
+  receiptId      String?
   takenOn        DateTime @db.Date
   caption        String?
   area           String? // where on site: "Tower A, 3rd floor"
@@ -847,15 +853,17 @@ model SitePhoto {
   uploadedById   String?
   createdAt      DateTime @default(now())
 
-  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  report     SiteReport? @relation(fields: [reportId], references: [id], onDelete: SetNull)
-  issue      SiteIssue?  @relation(fields: [issueId], references: [id], onDelete: SetNull)
-  uploadedBy User?       @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  project    Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  report     SiteReport?   @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  issue      SiteIssue?    @relation(fields: [issueId], references: [id], onDelete: SetNull)
+  receipt    GoodsReceipt? @relation(fields: [receiptId], references: [id], onDelete: SetNull)
+  uploadedBy User?         @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
 
   @@index([projectId, takenOn])
   @@index([organizationId])
   @@index([reportId])
   @@index([issueId])
+  @@index([receiptId])
 }
 
 // A problem found on site (a snag): who raised it, who must fix it, by when, and where it stands.
@@ -984,6 +992,8 @@ model PurchaseOrder {
   request   MaterialRequest?    @relation(fields: [requestId], references: [id], onDelete: SetNull)
   createdBy User?               @relation("OrderAuthor", fields: [createdById], references: [id], onDelete: SetNull)
   lines     PurchaseOrderLine[]
+  receipts  GoodsReceipt[]
+  invoices  Invoice[]
 
   @@unique([organizationId, number])
   @@index([projectId, status])
@@ -1003,8 +1013,50 @@ model PurchaseOrderLine {
   gstPercent     Decimal @default(0) @db.Decimal(5, 2)
   materialId     String?
 
-  order PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order        PurchaseOrder      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  receiptLines GoodsReceiptLine[]
 
   @@index([orderId])
+  @@index([organizationId])
+}
+
+// ---------------------------------------------------------------------------
+// Delivery check: what actually arrived on site against a purchase order (Phase 14)
+// ---------------------------------------------------------------------------
+
+// One delivery (one truck, one challan). An order can have several: part deliveries.
+model GoodsReceipt {
+  id             String   @id @default(cuid())
+  organizationId String // company that owns this row
+  orderId        String
+  receivedOn     DateTime @db.Date
+  challanNo      String?
+  note           String?
+  receivedById   String?
+  createdAt      DateTime @default(now())
+
+  order      PurchaseOrder      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  receivedBy User?              @relation(fields: [receivedById], references: [id], onDelete: SetNull)
+  lines      GoodsReceiptLine[]
+  photos     SitePhoto[]
+
+  @@index([orderId])
+  @@index([organizationId])
+}
+
+model GoodsReceiptLine {
+  id             String  @id @default(cuid())
+  organizationId String // company that owns this row
+  receiptId      String
+  orderLineId    String
+  quantity       Decimal @db.Decimal(14, 3) // accepted
+  rejected       Decimal @default(0) @db.Decimal(14, 3) // arrived but refused (damaged, wrong item)
+  remark         String?
+
+  receipt   GoodsReceipt      @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  orderLine PurchaseOrderLine @relation(fields: [orderLineId], references: [id], onDelete: Cascade)
+
+  @@index([receiptId])
+  @@index([orderLineId])
   @@index([organizationId])
 }

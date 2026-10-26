@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ClipboardList, Plus, ShoppingCart } from "lucide-react";
+import { ClipboardList, PackageCheck, Plus, ShoppingCart } from "lucide-react";
 import { pageOrg } from "@/lib/org/page";
 import { hasPermission } from "@/lib/roles";
 import { getProjectScope } from "@/lib/projects/scope";
@@ -36,6 +36,7 @@ export default async function PurchasePage({ searchParams }: { searchParams: Pro
           <p className="text-sm text-muted-foreground">Material requests from site, approval, and purchase orders to suppliers.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {hasPermission(user.role, "delivery:view") && <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/purchase/deliveries" />}><PackageCheck className="size-4" aria-hidden /> Deliveries</Button>}
           {canOrders && <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/purchase/orders" />}><ClipboardList className="size-4" aria-hidden /> Purchase orders</Button>}
           {canWrite && raiseIn && <Button size="sm" nativeButton={false} render={<Link href={`/purchase/requests/new?project=${raiseIn}`} />}><Plus className="size-4" aria-hidden /> New request</Button>}
         </div>

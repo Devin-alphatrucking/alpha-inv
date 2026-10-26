@@ -30,7 +30,7 @@ async function shrink(file: File): Promise<File> {
 }
 
 /** Take or choose photos (on a phone this opens the camera), tag them with where on site, and add them to a project, report or issue. */
-export function PhotoUploader({ projectId, reportId, issueId, label = "Add photos" }: { projectId: string; reportId?: string; issueId?: string; label?: string }) {
+export function PhotoUploader({ projectId, reportId, issueId, receiptId, label = "Add photos" }: { projectId: string; reportId?: string; issueId?: string; receiptId?: string; label?: string }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [area, setArea] = useState("");
@@ -51,6 +51,7 @@ export function PhotoUploader({ projectId, reportId, issueId, label = "Add photo
       form.set("projectId", projectId);
       if (reportId) form.set("reportId", reportId);
       if (issueId) form.set("issueId", issueId);
+      if (receiptId) form.set("receiptId", receiptId);
       form.set("area", area);
       form.set("caption", caption);
       for (const file of await Promise.all(chosen.map(shrink))) form.append("file", file);

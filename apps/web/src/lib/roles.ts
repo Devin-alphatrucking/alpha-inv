@@ -48,13 +48,16 @@ export type Permission =
   | "request:approve"
   | "order:view"
   | "order:write"
+  | "delivery:view"
+  | "delivery:write"
   | "logs:view";
 
 const ALL: Permission[] = [
   "dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "invoice:delete", "comment:write", "payment:view", "payment:create", "payment:delete",
   "payment:plan", "project:view", "project:manage", "user:manage", "vendor:view", "vendor:manage", "category:manage", "material:view", "price:compare",
   "report:view", "budget:view", "site:view", "site:write", "site:manage",
-  "request:view", "request:write", "request:approve", "order:view", "order:write", "logs:view",
+  "request:view", "request:write", "request:approve", "order:view", "order:write",
+  "delivery:view", "delivery:write", "logs:view",
 ];
 
 const ROLE_PERMISSIONS: Record<RoleName, ReadonlySet<Permission>> = {
@@ -62,12 +65,12 @@ const ROLE_PERMISSIONS: Record<RoleName, ReadonlySet<Permission>> = {
   ACCOUNTANT: new Set<Permission>([
     "dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "invoice:delete", "comment:write", "payment:view", "payment:create", "payment:delete", "payment:plan",
     "project:view", "vendor:view", "vendor:manage", "category:manage", "material:view", "price:compare", "report:view", "budget:view", "site:view",
-    "request:view", "order:view",
+    "request:view", "order:view", "delivery:view",
   ]),
-  PURCHASE: new Set<Permission>(["dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "comment:write", "project:view", "vendor:view", "vendor:manage", "material:view", "price:compare", "site:view", "request:view", "request:write", "order:view", "order:write"]),
-  MANAGER: new Set<Permission>(["dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "comment:write", "project:view", "budget:view", "material:view", "site:view", "site:write", "site:manage", "request:view", "request:write", "request:approve", "order:view"]),
-  ENGINEER: new Set<Permission>(["dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "comment:write", "project:view", "site:view", "site:write", "request:view", "request:write"]),
-  VIEWER: new Set<Permission>(["dashboard:view", "invoice:view", "project:view", "budget:view", "site:view", "request:view", "order:view"]),
+  PURCHASE: new Set<Permission>(["dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "comment:write", "project:view", "vendor:view", "vendor:manage", "material:view", "price:compare", "site:view", "request:view", "request:write", "order:view", "order:write", "delivery:view", "delivery:write"]),
+  MANAGER: new Set<Permission>(["dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "comment:write", "project:view", "budget:view", "material:view", "site:view", "site:write", "site:manage", "request:view", "request:write", "request:approve", "order:view", "delivery:view", "delivery:write"]),
+  ENGINEER: new Set<Permission>(["dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "comment:write", "project:view", "site:view", "site:write", "request:view", "request:write", "delivery:view", "delivery:write"]),
+  VIEWER: new Set<Permission>(["dashboard:view", "invoice:view", "project:view", "budget:view", "site:view", "request:view", "order:view", "delivery:view"]),
   // The original role: upload-first, view and review their own invoices, record payments on invoices they can access.
   STAFF: new Set<Permission>(["dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "invoice:delete", "comment:write", "payment:create", "project:view"]),
 };
@@ -100,6 +103,7 @@ export const ROUTE_PERMISSIONS: { prefix: string; permission: Permission | "ADMI
   { prefix: "/materials", permission: "material:view" },
   { prefix: "/vendors", permission: "vendor:view" },
   { prefix: "/categories", permission: "category:manage" },
+  { prefix: "/purchase/deliveries", permission: "delivery:view" },
   { prefix: "/purchase/orders", permission: "order:view" },
   { prefix: "/purchase", permission: "request:view" },
   { prefix: "/site", permission: "site:view" },

@@ -23,7 +23,7 @@ export type SiteUser = ProjectUser;
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 const toDate = (s: string) => new Date(`${s}T00:00:00Z`);
-const can = (user: SiteUser, p: "site:view" | "site:write" | "site:manage") => hasPermission(user.role, p);
+const can = (user: SiteUser, p: Parameters<typeof hasPermission>[1]) => hasPermission(user.role, p);
 
 export async function visibleProject(user: SiteUser, projectId: string) {
   if (!can(user, "site:view")) return null;
@@ -164,10 +164,10 @@ async function photoViews(user: SiteUser, rows: { id: string; projectId: string;
 
 const photoSelect = { id: true, projectId: true, reportId: true, issueId: true, takenOn: true, caption: true, area: true, uploadedById: true, createdAt: true, project: { select: { name: true } }, report: { select: { status: true } }, uploadedBy: { select: { name: true } } } as const;
 
-export async function listPhotos(user: SiteUser, opts: { projectId?: string | null; reportId?: string; issueId?: string; take?: number } = {}): Promise<PhotoView[]> {
+export async function listPhotos(user: SiteUser, opts: { projectId?: string | null; reportId?: string; issueId?: string; receiptId?: string; take?: number } = {}): Promise<PhotoView[]> {
   if (!can(user, "site:view")) return [];
   const rows = await dbFor(user.orgId).sitePhoto.findMany({
-    where: { project: projectAccessWhere(user), ...(opts.projectId ? { projectId: opts.projectId } : {}), ...(opts.reportId ? { reportId: opts.reportId } : {}), ...(opts.issueId ? { issueId: opts.issueId } : {}) },
+    where: { project: projectAccessWhere(user), ...(opts.projectId ? { projectId: opts.projectId } : {}), ...(opts.reportId ? { reportId: opts.reportId } : {}), ...(opts.issueId ? { issueId: opts.issueId } : {}), ...(opts.receiptId ? { receiptId: opts.receiptId } : {}) },
     orderBy: [{ takenOn: "desc" }, { createdAt: "desc" }],
     take: Math.min(opts.take ?? 60, 300),
     select: photoSelect,
@@ -175,11 +175,11 @@ export async function listPhotos(user: SiteUser, opts: { projectId?: string | nu
   return photoViews(user, rows as never);
 }
 
-export type NewPhotos = { projectId: string; reportId?: string | null; issueId?: string | null; area?: unknown; caption?: unknown; files: { name: string; bytes: Buffer }[] };
+export type NewPhotos = { projectId: string; reportId?: string | null; issueId?: string | null; receiptId?: string | null; area?: unknown; caption?: unknown; files: { name: string; bytes: Buffer }[] };
 
 /** Adds up to 10 photos. A photo of a submitted report is refused unless the person can manage site work. */
 export async function addPhotos(user: SiteUser, input: NewPhotos): Promise<FlowResult<{ added: number; skipped: string[] }>> {
-  if (!can(user, "site:write")) return { ok: false, error: "You do not have permission to add site photos." };
+  if (!can(user, "site:write") && !(input.receiptId && can(user, "delivery:write"))) return { ok: false, error: "You do not have permission to add site photos." };
   const project = await visibleProject(user, input.projectId);
   if (!project) return { ok: false, error: "Project not found." };
   if (input.files.length === 0) return { ok: false, error: "Choose at least one photo." };
@@ -203,6 +203,12 @@ export async function addPhotos(user: SiteUser, input: NewPhotos): Promise<FlowR
     if (!iss) return { ok: false, error: "Issue not found." };
     issueId = iss.id;
   }
+  let receiptId: string | null = null;
+  if (input.receiptId) {
+    const rec = await db.goodsReceipt.findFirst({ where: { id: input.receiptId, order: { projectId: project.id } }, select: { id: true } });
+    if (!rec) return { ok: false, error: "Delivery not found." };
+    receiptId = rec.id;
+  }
   const area = cleanLabel(input.area, 120);
   const caption = cleanLabel(input.caption, 200);
 
@@ -216,7 +222,7 @@ export async function addPhotos(user: SiteUser, input: NewPhotos): Promise<FlowR
     }
     try {
       const row = await db.sitePhoto.create({
-        data: { organizationId: user.orgId, projectId: project.id, reportId, issueId, takenOn: toDate(takenOn), caption, area, fileUrl: stored.fileUrl, contentType: stored.contentType, sizeBytes: stored.sizeBytes, uploadedById: user.id },
+        data: { organizationId: user.orgId, projectId: project.id, reportId, issueId, receiptId, takenOn: toDate(takenOn), caption, area, fileUrl: stored.fileUrl, contentType: stored.contentType, sizeBytes: stored.sizeBytes, uploadedById: user.id },
         select: { id: true },
       });
       added++;
@@ -234,7 +240,7 @@ export async function deletePhoto(user: SiteUser, photoId: string): Promise<Flow
   const db = dbFor(user.orgId);
   const p = await db.sitePhoto.findFirst({ where: { id: photoId }, select: { id: true, projectId: true, fileUrl: true, uploadedById: true, report: { select: { status: true } } } });
   if (!p || !(await visibleProject(user, p.projectId))) return { ok: false, error: "Photo not found." };
-  const allowed = can(user, "site:manage") || (can(user, "site:write") && p.uploadedById === user.id && p.report?.status !== "SUBMITTED");
+  const allowed = can(user, "site:manage") || ((can(user, "site:write") || can(user, "delivery:write")) && p.uploadedById === user.id && p.report?.status !== "SUBMITTED");
   if (!allowed) return { ok: false, error: "Only the person who added a photo (before its report is submitted) or a project manager can delete it." };
   await db.sitePhoto.deleteMany({ where: { id: p.id } });
   await removePhotos([p.fileUrl]);

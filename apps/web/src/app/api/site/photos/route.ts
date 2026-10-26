@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { requirePermission } from "@/lib/permissions";
+import { hasPermission, requireUser } from "@/lib/permissions";
+import { AppError } from "@/lib/errors";
 import { handleError, newRequestId, isAppError } from "@/lib/errors";
 import { addPhotos } from "@/lib/flows/site";
 import { PHOTO_MAX_BYTES, PHOTOS_PER_UPLOAD } from "@/lib/site/rules";
@@ -17,7 +18,8 @@ export async function POST(request: Request) {
     if (origin && new URL(origin).host !== request.headers.get("host")) {
       return NextResponse.json({ error: "Not allowed." }, { status: 403 });
     }
-    const user = await requirePermission("site:write");
+    const user = await requireUser();
+    if (!hasPermission(user.role, "site:write") && !hasPermission(user.role, "delivery:write")) throw new AppError("PERMISSION_001");
     orgId = user.orgId;
     const length = Number(request.headers.get("content-length") ?? 0);
     if (length > (PHOTO_MAX_BYTES + 1024 * 1024) * PHOTOS_PER_UPLOAD) return NextResponse.json({ error: "That is too much to send at once." }, { status: 413 });
@@ -38,6 +40,7 @@ export async function POST(request: Request) {
       projectId: text("projectId"),
       reportId: text("reportId") || null,
       issueId: text("issueId") || null,
+      receiptId: text("receiptId") || null,
       area: text("area"),
       caption: text("caption"),
       files,

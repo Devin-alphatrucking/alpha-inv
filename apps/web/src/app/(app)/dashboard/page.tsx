@@ -2,6 +2,9 @@ import { hasPermission, seesAllProjects } from "@/lib/roles";
 import { pageOrg } from "@/lib/org/page";
 import type { Prisma } from "@alpha/db";
 import { getProjectScope } from "@/lib/projects/scope";
+import { canOpenPath } from "@/lib/roles";
+import { loadModuleHub } from "@/lib/flows/hub";
+import { ModuleHubView } from "@/components/module-hub";
 import {
   DashboardView,
   type CategorySpendPoint,
@@ -58,6 +61,7 @@ export default async function DashboardPage({
       ? { projectId: { in: projectScope.projects.map((p) => p.id) } }
       : {};
 
+  const hub = await loadModuleHub(user, projectScope.selectedProjectId);
   const attention = await loadAttention(db, projectFilter, fmt.format.timeZone);
   // Budgets are planning numbers: only roles with budget access see alerts, and only for the projects they can see.
   const budgetAlerts = hasPermission(session.user.role, "budget:view")
@@ -262,6 +266,10 @@ export default async function DashboardPage({
             : "Overview of construction purchase invoices and spend across all projects."}
         </p>
       </div>
+
+      <ModuleHubView hub={hub} canOpen={(href) => canOpenPath(session.user.role, href)} />
+
+      {[hub.accounts, hub.site, hub.purchase].filter(Boolean).length >= 2 && <h2 className="-mb-2 text-lg font-semibold tracking-tight">Finance</h2>}
 
       <AttentionPanel summary={attention.summary} drafts={attention.drafts} money={(minor) => fmt.money(minor / 100, 2)} date={(d) => fmt.date(d)} budgets={budgetAlerts} />
 

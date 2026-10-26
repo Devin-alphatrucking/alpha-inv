@@ -5,6 +5,8 @@ import { pageOrg } from "@/lib/org/page";
 import { hasPermission } from "@/lib/roles";
 import { getFormat, getBrand } from "@/lib/brand/brand";
 import { getOrder, suppliers } from "@/lib/flows/purchase";
+import { getDelivery } from "@/lib/flows/delivery";
+import { PROGRESS_LABEL } from "@/lib/purchase/delivery-rules";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,6 +24,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   const money = (minor: number) => fmt.money(minor / 100, 2);
   const date = (s: string | null) => (s ? fmt.date(new Date(`${s}T00:00:00Z`)) : "—");
   const editing = (await searchParams).edit === "1" && order.actions.includes("edit");
+  const delivery = await getDelivery(user, order.id);
 
   if (editing) {
     return (
@@ -59,6 +62,14 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
       </div>
 
       {order.status === "CANCELLED" && <Card className="border-destructive/40 print:hidden"><CardContent className="py-4 text-sm"><span className="font-medium">Cancelled:</span> {order.cancelReason}</CardContent></Card>}
+      {delivery && order.status === "SENT" && (
+        <Card className="print:hidden">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4 text-sm">
+            <span><span className="font-medium">Delivery:</span> {PROGRESS_LABEL[delivery.progress].toLowerCase()}{delivery.receipts.length > 0 && ` in ${delivery.receipts.length} ${delivery.receipts.length === 1 ? "delivery" : "deliveries"}`}</span>
+            <Button size="sm" variant="outline" nativeButton={false} render={<Link href={`/purchase/deliveries/${order.id}`} />}>Open deliveries</Button>
+          </CardContent>
+        </Card>
+      )}
       <div className="print:hidden"><OrderActions orderId={order.id} actions={order.actions} editHref={`/purchase/orders/${order.id}?edit=1`} /></div>
 
       {/* The order as the supplier sees it: this block is what prints. */}

@@ -86,7 +86,10 @@ export type ActivityAction =
   | "ORDER_CREATED"
   | "ORDER_UPDATED"
   | "ORDER_SENT"
-  | "ORDER_CANCELLED";
+  | "ORDER_CANCELLED"
+  | "DELIVERY_RECORDED"
+  | "DELIVERY_DELETED"
+  | "INVOICE_ORDER_LINKED";
 
 /**
  * Appends a system-wide activity log entry. Best-effort: failures are

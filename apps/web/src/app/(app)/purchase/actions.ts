@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/lib/permissions";
+import { deleteReceipt, linkInvoice, recordReceipt } from "@/lib/flows/delivery";
 import { cancelOrder, cancelRequest, createOrder, decideRequest, saveRequest, sendOrder, submitRequest, updateOrder, withdrawRequest } from "@/lib/flows/purchase";
 
 // The person and the company come from the signed session, never from the browser; the flows check the project, the role and the status again.
@@ -72,5 +73,29 @@ export async function cancelOrderAction(orderId: string, reason: string) {
   const user = await requirePermission("order:write");
   const r = await cancelOrder(user, orderId, reason);
   if (r.ok) refresh();
+  return r;
+}
+
+export async function recordReceiptAction(orderId: string, data: unknown) {
+  const user = await requirePermission("delivery:write");
+  const r = await recordReceipt(user, orderId, data);
+  if (r.ok) refresh();
+  return r;
+}
+
+export async function deleteReceiptAction(receiptId: string) {
+  const user = await requirePermission("delivery:write");
+  const r = await deleteReceipt(user, receiptId);
+  if (r.ok) refresh();
+  return r;
+}
+
+export async function linkInvoiceAction(invoiceId: string, orderId: string | null) {
+  const user = await requirePermission("order:view");
+  const r = await linkInvoice(user, invoiceId, orderId);
+  if (r.ok) {
+    revalidatePath(`/invoices/${invoiceId}`);
+    revalidatePath(`/invoices/${invoiceId}/review`);
+  }
   return r;
 }

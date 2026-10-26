@@ -96,4 +96,13 @@ assert.equal(open("ENGINEER", "/purchase/orders/abc"), false);
 assert.equal(open("MANAGER", "/purchase/orders/abc"), true);
 assert.equal(open("STAFF", "/purchase"), false);
 
+// ---- delivery check
+for (const r of ["ADMIN", "ACCOUNTANT", "PURCHASE", "MANAGER", "ENGINEER", "VIEWER"] as RoleName[]) assert.equal(hasPermission(r, "delivery:view"), true, `${r} sees deliveries`);
+assert.equal(hasPermission("STAFF", "delivery:view"), false);
+for (const r of ["ADMIN", "PURCHASE", "MANAGER", "ENGINEER"] as RoleName[]) assert.equal(hasPermission(r, "delivery:write"), true, `${r} records deliveries`);
+for (const r of ["ACCOUNTANT", "VIEWER", "STAFF"] as RoleName[]) assert.equal(hasPermission(r, "delivery:write"), false, `${r} cannot record deliveries`);
+assert.equal(open("ENGINEER", "/purchase/deliveries/abc"), true, "engineers record deliveries although they cannot open orders");
+assert.equal(open("ENGINEER", "/purchase/orders/abc"), false);
+assert.equal(open("STAFF", "/purchase/deliveries"), false);
+
 console.log("roles: all checks passed");

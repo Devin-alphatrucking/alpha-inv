@@ -46,7 +46,7 @@ The value of the three together: an order is raised from a site need, the delive
 ### Module 2, Technical (site work): FIRST VERSION BUILT (web)
 Daily site report, site photos and issues are built (see PHASE-13-TECHNICAL-SITE-WORK.md). Not built yet: progress percent, drawings and documents, offline saving and the mobile app screens.
 ### Module 3, Purchase (orders): FIRST VERSION BUILT (web)
-Material requests, approval and purchase orders are built (see PHASE-12-PURCHASE.md). Not built yet: delivery check, matching an invoice to its order, quotes, emails.
+Material requests, approval and purchase orders are built (see PHASE-12-PURCHASE.md). Delivery check and matching a bill to its order are built too (Phase 14). Not built yet: quotes, emails.
 
 ## 3. How people sign in and work (today, and what changes)
 
@@ -102,7 +102,7 @@ Phase 1 to 10 are done (section 2). Proposed next phases, each ending with tests
 | 11 | **Roles and permissions** (BUILT, see PHASE-11-ROLES.md) | Every later module needs the new roles; cheapest to do first and it improves Accounts too |
 | 12 | **Purchase: material requests and purchase orders** (web BUILT, see PHASE-12-PURCHASE.md) | The supplier and rate data already exists; gives the biggest new value for the office |
 | 13 | **Technical: daily report, photos, issues** (web BUILT, see PHASE-13-TECHNICAL-SITE-WORK.md; mobile screens and offline saving still to do) | Needs the mobile app to be solid; photo upload and offline saving are the hard part |
-| 14 | **Delivery check and 3-way match** | Connects Purchase, Technical and Accounts; needs 11 to 13 first |
+| 14 | **Delivery check and 3-way match** (BUILT, see PHASE-14-DELIVERY-AND-MATCH.md) | Connects Purchase, Technical and Accounts; needs 11 to 13 first |
 | 15 | **Reports and dashboards across modules** | Committed vs invoiced vs paid, delays, supplier performance |
 | 16 | **Real-world hardening** | Real Razorpay purchase, real Azure reading, mobile on a phone, hosting, email, rotating credentials |
 

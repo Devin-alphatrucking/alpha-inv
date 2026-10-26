@@ -1,5 +1,6 @@
 import { hasPermission } from "@/lib/roles";
 import { InvoiceComments } from "./invoice-comments";
+import { InvoiceOrderMatch } from "./order-match";
 import { HIGH_PERCENT, VERY_HIGH_PERCENT } from "@/lib/invoices/rate-alerts";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -239,6 +240,8 @@ export default async function InvoicePage({ params }: Props) {
           )}
         </CardContent>
       </Card>
+
+      <InvoiceOrderMatch invoiceId={invoice.id} user={user} />
 
       <InvoiceComments invoiceId={invoice.id} user={user} />
 
