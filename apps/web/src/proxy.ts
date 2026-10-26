@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { canOpenPath, homeFor, isRole } from "@/lib/roles";
+import { masterGate } from "@/lib/master/gate";
 
 // Brand endpoints are public on purpose: the sign-in screens need the company's
 // name, colours and logo before anyone is signed in.
@@ -14,6 +15,7 @@ const PUBLIC_PATHS = [
   "/forgot-password",
   "/reset-password",
   "/accept-invite",
+  "/operator-login",
   "/api/branding/public",
   "/api/branding/logo",
   "/api/billing/razorpay/webhook",
@@ -57,6 +59,11 @@ export default auth((req) => {
   const { nextUrl } = req;
   const pathname = nextUrl.pathname;
   // "/" is the public landing page (it sends signed-in people to their dashboard); every other public page is listed above.
+  // With MASTER_HOST set the master console lives on its own address and everything else is a 404 there (see lib/master/gate.ts).
+  const gate = masterGate({ masterHost: process.env.MASTER_HOST, host: req.headers.get("host"), pathname, signedIn: Boolean(req.auth) });
+  if (gate.action === "not_found") return NextResponse.rewrite(new URL("/__not_found__", nextUrl.origin));
+  if (gate.action === "redirect") return NextResponse.redirect(new URL(gate.to, nextUrl.origin));
+
   const isPublic = pathname === "/" || PUBLIC_PATHS.some((path) => pathname.startsWith(path));
 
   if (isPublic) {

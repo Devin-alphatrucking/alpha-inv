@@ -117,6 +117,24 @@ If you did not ask for this, change your password immediately and contact suppor
   };
 }
 
+/** Sent to a master-console operator (and to the security contact) when their sign-in looks unusual. */
+export function operatorAlertMail(to: string, d: { kind: "new_place" | "many_failures"; ip: string; when: string; email: string; brand: MailBrand }): Mail {
+  const newPlace = d.kind === "new_place";
+  const heading = newPlace ? "Master console sign-in from a new place" : "Repeated failed master console sign-ins";
+  const body = newPlace
+    ? `${d.email} signed in to the master console from an address not seen before: ${d.ip}, at ${d.when}.`
+    : `There were several failed master console sign-in attempts for ${d.email}, the latest from ${d.ip} at ${d.when}.`;
+  const advice = newPlace
+    ? "If this was you, no action is needed. If not, remove the operator with npm run master -- remove <email> and change their password."
+    : "Nothing was let in. If this was not you, someone knows or is guessing the console address; consider restricting it at your firewall.";
+  return {
+    to,
+    subject: `${d.brand.name}: ${heading}`,
+    text: `${body}\n\n${advice}`,
+    html: layout(d.brand, heading, P(esc(body)) + P(esc(advice))),
+  };
+}
+
 export function passwordChangedMail(to: string, d: { name: string; brand: MailBrand }): Mail {
   return {
     to,

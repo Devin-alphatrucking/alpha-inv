@@ -9,6 +9,8 @@ import { rawDb } from "@/lib/db";
 import { logActivity } from "@/lib/activity";
 import { isOrgAllowedToSignIn } from "@/lib/org/default-membership";
 import { loadDefaultMembership } from "@/lib/org/membership-load";
+import { operatorLogin } from "@/lib/flows/operator-login";
+import { normalizeHost } from "@/lib/master/gate";
 import { googleSessionUser, isGoogleConfigured, resolveGoogleSignIn } from "@/lib/flows/google";
 import { verifyPassword } from "@/lib/security/password";
 import { checkSecondFactor } from "@/lib/flows/two-factor";
@@ -123,6 +125,22 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
           orgRole: membership.role,
           sv: user.sessionVersion,
         };
+      },
+    }),
+    // The master console's own sign-in (see lib/flows/operator-login.ts). With MASTER_HOST set it only answers on that address.
+    Credentials({
+      id: "operator",
+      credentials: { email: {}, password: {}, code: {} },
+      authorize: async (raw, request) => {
+        const master = normalizeHost(process.env.MASTER_HOST);
+        if (master && normalizeHost(request.headers.get("host")) !== master) return null;
+        if (!master && process.env.NODE_ENV === "production") return null; // no master address configured: the normal sign-in is used
+        const result = await operatorLogin({ email: raw?.email, password: raw?.password, code: raw?.code, ip: clientIp(request.headers), userAgent: request.headers.get("user-agent") });
+        if (!result.ok) {
+          if (result.reason === "rate_limited") throw new TooManyAttempts();
+          return null;
+        }
+        return result.user;
       },
     }),
     // Only offered when the site has Google credentials (see docs/GOOGLE-SIGN-IN.md).
