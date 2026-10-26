@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { seesAllProjects } from "@/lib/roles";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/permissions";
 import { AppError } from "@/lib/errors";
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
   }
   const projectId = typeof body.projectId === "string" ? body.projectId.trim() || null : null;
 
-  if (!projectId && user.role !== "ADMIN") {
+  if (!projectId && !seesAllProjects(user.role)) {
     return NextResponse.json(
       { error: "Staff must work within an assigned project." },
       { status: 400 }

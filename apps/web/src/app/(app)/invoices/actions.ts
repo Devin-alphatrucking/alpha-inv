@@ -1,5 +1,6 @@
 "use server";
 
+import { hasPermission, seesAllProjects } from "@/lib/roles";
 import { revalidatePath } from "next/cache";
 import { scoped } from "@/lib/org/context";
 import { AppError } from "@/lib/errors";
@@ -95,7 +96,7 @@ export async function deleteInvoice(invoiceId: string) {
 
   if (!invoice) throw new AppError("NOT_FOUND_001", "Invoice not found");
 
-  if (user.role !== "ADMIN") {
+  if (!seesAllProjects(user.role)) {
     const isUploader = invoice.uploadedById === user.id;
     const assignment = await db.projectAssignment.findFirst({
       where: { userId: user.id, projectId: invoice.projectId },
@@ -110,7 +111,7 @@ export async function deleteInvoice(invoiceId: string) {
 
   // Deleting an invoice also deletes its payments. Removing a payment is an administrator action, so staff cannot get around that
   // by deleting an invoice that has money recorded against it.
-  if (user.role !== "ADMIN") {
+  if (!hasPermission(user.role, "payment:delete")) {
     const recorded = await db.payment.count({ where: { invoiceId } });
     if (recorded > 0) {
       throw new AppError("PERMISSION_001", "This invoice has payments recorded. Ask an administrator to delete it.");

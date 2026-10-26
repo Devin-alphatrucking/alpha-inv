@@ -1,12 +1,13 @@
 "use client";
 
+import { ROLE_INFO, type RoleName } from "@/lib/roles";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { getNavItemsForRole } from "@/lib/nav";
 
 type AppNavProps = {
-  role: "ADMIN" | "STAFF";
+  role: RoleName;
   onNavigate?: () => void;
   className?: string;
 };
@@ -17,9 +18,9 @@ export function AppNav({ role, onNavigate, className }: AppNavProps) {
 
   return (
     <nav className={cn("flex flex-col gap-1", className)}>
-      {role === "STAFF" && (
+      {role !== "ADMIN" && (
         <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Staff · Upload focus
+          {ROLE_INFO[role].label}
         </p>
       )}
       {items.map((item) => {
@@ -28,7 +29,7 @@ export function AppNav({ role, onNavigate, className }: AppNavProps) {
             ? pathname.startsWith("/invoices/upload") ||
               pathname.includes("/review")
             : pathname === item.href ||
-              (item.href !== "/invoices" && pathname.startsWith(`${item.href}/`)) ||
+              (item.href !== "/invoices" && pathname.startsWith(`${item.href}/`) && !(item.href === "/payments" && pathname.startsWith("/payments/planner")) && !(item.href === "/materials" && pathname.startsWith("/materials/compare"))) ||
               (item.href === "/invoices" &&
                 pathname.startsWith("/invoices") &&
                 !pathname.startsWith("/invoices/upload") &&

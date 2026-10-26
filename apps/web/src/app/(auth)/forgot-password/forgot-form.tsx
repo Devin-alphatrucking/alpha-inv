@@ -1,5 +1,6 @@
 "use client";
 
+import { ResetCodeForm } from "../reset-code-form";
 import { useState, useTransition } from "react";
 import { Loader2, MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,10 @@ export function ForgotForm() {
       <div className="flex flex-col items-center gap-3 py-2 text-center">
         <MailCheck className="size-10 text-emerald-600" />
         <p className="text-sm text-muted-foreground">{message}</p>
-        <p className="text-xs text-muted-foreground">The link works for 1 hour. Check your spam folder if it does not arrive.</p>
+        <div className="w-full pt-1">
+          <ResetCodeForm email={email.trim().toLowerCase()} />
+        </div>
+        <p className="text-xs text-muted-foreground">Prefer the link in the email? It works for 1 hour. Check your spam folder if nothing arrives.</p>
       </div>
     );
   }

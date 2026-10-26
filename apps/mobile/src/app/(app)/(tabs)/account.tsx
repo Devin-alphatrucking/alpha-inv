@@ -1,3 +1,4 @@
+import { roleLabel } from "@/lib/roles";
 import { useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
 import Constants from "expo-constants";
@@ -69,7 +70,7 @@ export default function Account() {
           <Text style={{ color: t.text, fontSize: 18, fontWeight: "700" }}>{me.user.name}</Text>
           <Muted>{me.user.email}</Muted>
           <View style={{ flexDirection: "row", gap: space.sm, marginTop: space.sm }}>
-            <Badge label={me.user.role === "ADMIN" ? "Administrator" : "Staff"} />
+            <Badge label={roleLabel(me.user.role)} />
             {current ? <Badge label={current.name} /> : null}
           </View>
         </Card>
@@ -82,7 +83,7 @@ export default function Account() {
               return (
                 <Pressable key={c.id} accessibilityRole="button" accessibilityState={{ selected: on, busy }} disabled={busy} onPress={() => change(c.id)} style={{ paddingVertical: 12, flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: t.border }}>
                   <Text style={{ color: t.text, fontSize: 15, fontWeight: on ? "700" : "400" }}>{c.name}</Text>
-                  <Muted>{on ? "Current" : c.role === "ADMIN" ? "Administrator" : "Staff"}</Muted>
+                  <Muted>{on ? "Current" : roleLabel(c.role)}</Muted>
                 </Pressable>
               );
             })}

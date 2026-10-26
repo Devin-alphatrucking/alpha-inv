@@ -154,6 +154,8 @@ async function main() {
   await check("verify: resending answers the same for unknown, unconfirmed and confirmed addresses, and mails only the unconfirmed", async () => {
     await signUp({ ...signUpBase, email: "resend@acme-co.test", companyName: "Resend Co" }, { ip: ip() });
     const first = lastTokenFor("resend@acme-co.test", "Confirm your email");
+    // A second email for the same address is held back for 30 seconds (the one-time code); pretend they have passed.
+    await q(`UPDATE "OtpCode" SET "createdAt" = "createdAt" - interval '40 seconds' WHERE email='resend@acme-co.test'`);
     const a = await resendVerification("nobody@nowhere.test", { ip: ip() });
     const b = await resendVerification("resend@acme-co.test", { ip: ip() });
     const c = await resendVerification("ann@acme-co.test", { ip: ip() }); // already confirmed
@@ -172,6 +174,7 @@ async function main() {
     assert.ok(a.ok && b.ok && a.message === b.message);
     assert.equal(mailsTo("ghost@nowhere.test").length, 0);
     const t1 = lastTokenFor("ann@acme-co.test", "Reset your");
+    await q(`UPDATE "OtpCode" SET "createdAt" = "createdAt" - interval '40 seconds' WHERE email='ann@acme-co.test'`); // the 30-second wait between codes
     await requestPasswordReset("ann@acme-co.test", { ip: ip() });
     const t2 = lastTokenFor("ann@acme-co.test", "Reset your");
     assert.notEqual(t1, t2);

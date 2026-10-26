@@ -1,12 +1,13 @@
 import type { DefaultSession } from "next-auth";
+import type { RoleName } from "@/lib/roles";
 
 declare module "next-auth" {
   interface User {
-    role: "ADMIN" | "STAFF";
+    role: RoleName;
     /** Company the user is working in (step 2b). */
     orgId: string;
     /** Role inside that company. */
-    orgRole: "ADMIN" | "STAFF";
+    orgRole: RoleName;
     /** Session version at sign-in (see User.sessionVersion). */
     sv?: number;
   }
@@ -14,9 +15,9 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      role: "ADMIN" | "STAFF";
+      role: RoleName;
       orgId: string;
-      orgRole: "ADMIN" | "STAFF";
+      orgRole: RoleName;
     } & DefaultSession["user"];
   }
 }
@@ -24,9 +25,9 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
-    role: "ADMIN" | "STAFF";
+    role: RoleName;
     orgId?: string;
-    orgRole?: "ADMIN" | "STAFF";
+    orgRole?: RoleName;
     sv?: number;
     /** When the session was last checked against the database (ms since epoch). */
     svAt?: number;

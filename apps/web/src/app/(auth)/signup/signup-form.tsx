@@ -1,5 +1,6 @@
 "use client";
 
+import { EmailCodeForm } from "../email-code-form";
 import { useState, useTransition } from "react";
 import { Loader2, MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,9 +37,12 @@ export function SignUpForm({ countries, termsUrl, privacyUrl }: Props) {
         <MailCheck className="size-10 text-emerald-600" />
         <p className="text-base font-semibold">Check your email</p>
         <p className="text-sm text-muted-foreground">
-          If <span className="font-medium text-foreground">{sentTo}</span> can be used for a new account, we have sent a confirmation link. It works for 24 hours.
+          If <span className="font-medium text-foreground">{sentTo}</span> can be used for a new account, we have emailed it a 6-digit code. Enter it below (it works for 10 minutes), or use the link in the same email.
         </p>
-        <p className="text-xs text-muted-foreground">Nothing arrived? Look in your spam folder, or try again in a few minutes.</p>
+        <div className="w-full pt-1">
+          <EmailCodeForm email={sentTo} />
+        </div>
+        <p className="text-xs text-muted-foreground">Nothing arrived? Look in your spam folder.</p>
       </div>
     );
   }

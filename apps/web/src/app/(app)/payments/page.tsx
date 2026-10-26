@@ -1,3 +1,4 @@
+import { hasPermission } from "@/lib/roles";
 import Link from "next/link";
 import { pageOrg } from "@/lib/org/page";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,9 +54,16 @@ export default async function PaymentsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Payments</h1>
-        <p className="text-sm text-muted-foreground">Payment transactions linked directly to confirmed invoices.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Payments</h1>
+          <p className="text-sm text-muted-foreground">Payment transactions linked directly to confirmed invoices.</p>
+        </div>
+        {hasPermission(session.user.role, "payment:plan") && (
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/payments/planner" />}>
+            Open the payment planner
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -115,7 +123,7 @@ export default async function PaymentsPage() {
                           {paymentModeLabel(payment.mode)}
                         </Badge>
                       </div>
-                      {session.user.role === "ADMIN" && (
+                      {hasPermission(session.user.role, "payment:delete") && (
                         <PaymentDeleteButton invoiceId={payment.invoiceId} paymentId={payment.id} />
                       )}
                     </div>
@@ -137,7 +145,7 @@ export default async function PaymentsPage() {
                         <TableCell><Badge variant="outline">{paymentModeLabel(payment.mode)}</Badge></TableCell>
                         <TableCell className="text-muted-foreground">{payment.reference ?? "—"}</TableCell>
                         <TableCell className="text-right font-medium tabular-nums">{formatCurrency(Number(payment.amount))}</TableCell>
-                        <TableCell className="text-right">{session.user.role === "ADMIN" && <PaymentDeleteButton invoiceId={payment.invoiceId} paymentId={payment.id} />}</TableCell>
+                        <TableCell className="text-right">{hasPermission(session.user.role, "payment:delete") && <PaymentDeleteButton invoiceId={payment.invoiceId} paymentId={payment.id} />}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

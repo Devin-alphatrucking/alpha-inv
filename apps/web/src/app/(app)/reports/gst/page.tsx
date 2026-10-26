@@ -1,3 +1,4 @@
+import { hasPermission, homeFor } from "@/lib/roles";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Download, TriangleAlert } from "lucide-react";
@@ -21,7 +22,7 @@ const monthName = (key: string) => new Date(`${key}-01T00:00:00Z`).toLocaleDateS
 /** Tax paid on purchases: by month and by supplier GSTIN, for filing and for your accountant. Administrators only. */
 export default async function GstReportPage({ searchParams }: Props) {
   const { session, db } = await pageOrg();
-  if (session.user.role !== "ADMIN") redirect("/dashboard");
+  if (!hasPermission(session.user.role, "report:view")) redirect(homeFor(session.user.role));
   const sp = await searchParams;
   const fmt = await getFormat();
   const money = (minor: number) => fmt.money(minor / 100, 2);
@@ -110,7 +111,7 @@ export default async function GstReportPage({ searchParams }: Props) {
         {stat("IGST", money(totals.igstMinor), "other-state purchases")}
       </div>
 
-      {(report.missingGstin.count > 0 || report.mismatched.length > 0) && (
+      {(report.missingGstin.count > 0 || report.mismatched.length > 0 || report.invalidGstin.length > 0 || report.mixedTax.length > 0 || report.splitMismatch.length > 0) && (
         <Card className="border-amber-500/50">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="flex items-center gap-2 text-base"><TriangleAlert className="size-4 text-amber-600" aria-hidden /> Worth checking before you file</CardTitle>
@@ -120,6 +121,49 @@ export default async function GstReportPage({ searchParams }: Props) {
               <p>
                 <strong>{report.missingGstin.count}</strong> invoice{report.missingGstin.count === 1 ? "" : "s"} with {money(report.missingGstin.taxMinor)} of GST {report.missingGstin.count === 1 ? "has" : "have"} a supplier with no GSTIN saved. Input credit cannot be claimed without it. Add the GSTIN on the <Link href="/vendors" className="underline underline-offset-4">Vendors</Link> page.
               </p>
+            )}
+            {report.invalidGstin.length > 0 && (
+              <div>
+                <p>
+                  <strong>{report.invalidGstin.length}</strong> supplier{report.invalidGstin.length === 1 ? "" : "s"} {report.invalidGstin.length === 1 ? "has" : "have"} a GSTIN that is not valid, so it was probably misread or mistyped. Input credit will not match without the right number:
+                </p>
+                <ul className="mt-1 grid gap-0.5">
+                  {report.invalidGstin.slice(0, 8).map((v) => (
+                    <li key={v.vendorId}>
+                      <Link href={`/vendors/${v.vendorId}`} className="font-medium underline underline-offset-4">{v.name}</Link>{" "}
+                      <span className="font-mono text-xs">{v.gstin}</span>{" "}
+                      <span className="text-muted-foreground">({v.invoices} invoice{v.invoices === 1 ? "" : "s"}, {money(v.taxMinor)} GST): {v.reason}</span>
+                    </li>
+                  ))}
+                </ul>
+                {report.invalidGstin.length > 8 && <p className="mt-1 text-xs text-muted-foreground">and {report.invalidGstin.length - 8} more.</p>}
+              </div>
+            )}
+            {report.mixedTax.length > 0 && (
+              <div>
+                <p><strong>{report.mixedTax.length}</strong> invoice{report.mixedTax.length === 1 ? "" : "s"} with IGST and CGST or SGST together. A purchase is either within the state or across states, never both:</p>
+                <ul className="mt-1 grid gap-0.5">
+                  {report.mixedTax.slice(0, 8).map((m) => (
+                    <li key={m.id}>
+                      <Link href={`/invoices/${m.id}`} className="font-medium underline underline-offset-4">{m.invoiceNumber}</Link> <span className="text-muted-foreground">{m.vendorName}</span>
+                    </li>
+                  ))}
+                </ul>
+                {report.mixedTax.length > 8 && <p className="mt-1 text-xs text-muted-foreground">and {report.mixedTax.length - 8} more.</p>}
+              </div>
+            )}
+            {report.splitMismatch.length > 0 && (
+              <div>
+                <p><strong>{report.splitMismatch.length}</strong> invoice{report.splitMismatch.length === 1 ? "" : "s"} where CGST and SGST are not the same amount (they always are):</p>
+                <ul className="mt-1 grid gap-0.5">
+                  {report.splitMismatch.slice(0, 8).map((m) => (
+                    <li key={m.id}>
+                      <Link href={`/invoices/${m.id}`} className="font-medium underline underline-offset-4">{m.invoiceNumber}</Link> <span className="text-muted-foreground">{m.vendorName}: CGST {money(m.cgstMinor)}, SGST {money(m.sgstMinor)}</span>
+                    </li>
+                  ))}
+                </ul>
+                {report.splitMismatch.length > 8 && <p className="mt-1 text-xs text-muted-foreground">and {report.splitMismatch.length - 8} more.</p>}
+              </div>
             )}
             {report.mismatched.length > 0 && (
               <div>

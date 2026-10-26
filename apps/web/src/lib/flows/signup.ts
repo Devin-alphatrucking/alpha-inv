@@ -2,6 +2,7 @@ import { rawDb } from "@/lib/db";
 import { logActivity } from "@/lib/activity";
 import { hashPassword } from "@/lib/security/password";
 import { issueToken } from "@/lib/security/tokens";
+import { issueOtp } from "@/lib/security/otp";
 import { hitAll, limitKey, retryMessage } from "@/lib/security/rate-limit";
 import { isEmailConfigured, sendMailQuietly } from "@/lib/email/transport";
 import { accountExistsMail, verifyEmailMail } from "@/lib/email/templates";
@@ -64,7 +65,8 @@ export async function signUp(raw: unknown, ctx: { ip: string }): Promise<FlowRes
   }
 
   const token = await issueToken({ type: "EMAIL_VERIFY", email: v.email, userId: created.user.id });
-  await sendMailQuietly(verifyEmailMail(v.email, { name: v.name, link: absoluteUrl(`/verify-email?token=${token}`), brand: mailBrand }));
+  const otp = await issueOtp({ purpose: "SIGNUP", email: v.email, userId: created.user.id });
+  await sendMailQuietly(verifyEmailMail(v.email, { name: v.name, link: absoluteUrl(`/verify-email?token=${token}`), brand: mailBrand, code: otp.ok ? otp.code : undefined }));
 
   await logActivity({
     userId: created.user.id,

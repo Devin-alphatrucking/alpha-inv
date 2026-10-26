@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { seesAllProjects } from "@/lib/roles";
 import { dbFor } from "@/lib/org/scoped-db";
 import { projectAccessWhere, type ProjectUser } from "@/lib/projects/access";
 
@@ -14,7 +15,7 @@ export async function getProjectScope(user: ProjectUser) {
   const requested = (await cookies()).get(PROJECT_SCOPE_COOKIE)?.value;
   const selectedProjectId = projects.some((project) => project.id === requested)
     ? requested!
-    : user.role === "ADMIN"
+    : seesAllProjects(user.role)
       ? null
       : projects[0]?.id ?? null;
 

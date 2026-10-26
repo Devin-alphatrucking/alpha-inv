@@ -1,5 +1,7 @@
 "use server";
 
+import { checkStepUp } from "@/lib/security/step-up";
+import { needsProjects, ROLES, type RoleName } from "@/lib/roles";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -18,7 +20,7 @@ const createSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   email: z.string().trim().email("Valid email required"),
   password: z.string().min(1, "Enter a password"),
-  role: z.enum(["ADMIN", "STAFF"]),
+  role: z.enum(ROLES),
   projectIds: z.array(z.string()).default([]),
 });
 
@@ -30,7 +32,7 @@ const updateSchema = z.object({
     .string()
     .optional()
     .transform((v) => (v && v.trim() ? v.trim() : undefined)),
-  role: z.enum(["ADMIN", "STAFF"]),
+  role: z.enum(ROLES),
   projectIds: z.array(z.string()).default([]),
 });
 
@@ -61,7 +63,7 @@ export async function createUser(input: {
   name: string;
   email: string;
   password: string;
-  role: "ADMIN" | "STAFF";
+  role: RoleName;
   projectIds: string[];
 }) {
   const admin = await requireAdmin();
@@ -75,7 +77,7 @@ export async function createUser(input: {
   const problem = checkPassword(parsed.password, { email, name: parsed.name });
   if (problem) throw new AppError("VALIDATION_001", problem);
   const passwordHash = await bcrypt.hash(parsed.password, 12);
-  const projectIds = parsed.role === "STAFF" ? parsed.projectIds : [];
+  const projectIds = needsProjects(parsed.role) ? parsed.projectIds : [];
   await assertProjectsInOrg(db, projectIds);
 
   // The plan limits how many people a company may have. Checked in the same transaction (company locked)
@@ -122,7 +124,7 @@ export async function updateUser(input: {
   name: string;
   email: string;
   password?: string;
-  role: "ADMIN" | "STAFF";
+  role: RoleName;
   projectIds: string[];
 }) {
   const admin = await requireAdmin();
@@ -169,7 +171,7 @@ export async function updateUser(input: {
   const passwordHash = parsed.password
     ? await bcrypt.hash(parsed.password, 12)
     : undefined;
-  const projectIds = parsed.role === "STAFF" ? parsed.projectIds : [];
+  const projectIds = needsProjects(parsed.role) ? parsed.projectIds : [];
   await assertProjectsInOrg(db, projectIds);
 
   await db.$transaction(async (tx) => {
@@ -214,8 +216,21 @@ export async function updateUser(input: {
   revalidatePath("/users");
 }
 
-export async function deleteUser(userId: string) {
+/** Removing a person needs a confirmation code from email (see lib/security/step-up.ts). Returns what happened instead of throwing, so the screen can ask for the code. */
+export async function deleteUser(userId: string, code?: string): Promise<{ ok: true } | { ok: false; error: string; needsCode?: true }> {
   const admin = await requireAdmin();
+  const step = await checkStepUp(admin.id, code);
+  if (!step.ok) return step;
+  try {
+    await removeUser(admin, userId);
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof AppError) return { ok: false, error: error.message };
+    throw error;
+  }
+}
+
+async function removeUser(admin: { id: string; orgId: string }, userId: string) {
   const db = scoped(admin);
   if (admin.id === userId) {
     throw new AppError("VALIDATION_001", "You cannot delete your own account");

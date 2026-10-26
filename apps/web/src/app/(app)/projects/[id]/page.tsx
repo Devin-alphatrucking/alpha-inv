@@ -1,3 +1,4 @@
+import { hasPermission } from "@/lib/roles";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { pageOrg } from "@/lib/org/page";
@@ -41,7 +42,7 @@ const INVOICE_STATUS_VARIANT: Record<string, "default" | "secondary" | "destruct
 
 export default async function ProjectDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const { db, user } = await pageOrg();
+  const { db, user, session } = await pageOrg();
   const fmt = await getFormat();
   const formatCurrency = (value: number, maxFraction = 0) => fmt.money(value, maxFraction);
 
@@ -140,7 +141,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
         </Card>
       </div>
 
-      {project.budget ? (
+      {project.budget && hasPermission(session.user.role, "budget:view") ? (
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Budget</CardDescription>

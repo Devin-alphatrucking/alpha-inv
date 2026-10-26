@@ -123,7 +123,56 @@ Three new tools for platform operators in the master console. As with every mast
 - Tested: 11 database checks (company on a trial and managed by hand with every record, the emailed link and its use, unknown starting password, same name twice, refusals with nothing created, audit entries, the full two-step reset and its logging, every refusal, export separation and file types) plus a run in the demo console: a company created from the form and its email, a two-step reset with its email and log entry, downloads in both formats, missing reason and unknown company refused, and an anonymous request turned away.
 - Not included: creating a company with an administrator who already has an account, resending the welcome email (the person can use "Forgot password"), and restoring a company from an export.
 
-## 11. Ideas worth building next (in my order)
+## 11. Payment planner (built)
+
+**Payments, "Open the payment planner"** (also in the menu, and under More on a phone). Administrators only. It follows the project chosen at the top.
+
+- **What you owe:** four tiles (total owed, overdue now, due in 7 days, due in 30 days) over every confirmed invoice with a balance. Part payments are taken off. Drafts and settled invoices are not counted.
+- **Week by week:** bars for overdue, then eight weeks starting today ("This week" is today and the next 6 days), then later, then no due date. Every rupee is in exactly one bar. Use it to see when cash must be in the bank.
+- **Pay run:** bills sorted most overdue first. Quick picks tick Overdue, Due within 7 days, Due within 14 days, or Everything. Tick any bill, and change its amount to pay part of it (checked as you type: a number with at most 2 decimals, more than zero, not more than the balance). Choose the payment date (not in the future), the mode and an optional shared reference, then record everything at once. A search box finds a supplier or invoice.
+- **How it is recorded:** each bill goes through the same function a single payment uses, in its own transaction. The balance is re-checked under a lock and the status is worked out from the real total, so a bill that was settled meanwhile, is no longer confirmed, or would be over-paid is reported on its own line and the rest still go through. The result panel lists every line. Submitting the identical run twice within 20 seconds is refused, so a double click cannot pay twice. A run is up to 100 bills.
+- **Trail:** each payment is logged as usual, plus one "pay run" entry with how many were paid, how many failed, the total and the reference.
+- **CSV:** "Download the list" gives everything owed, soonest due first (supplier, invoice, project, due date, days late, balance), for whoever makes the bank payments.
+- Tested: 60+ unit checks (ordering, week boundaries, quick picks, amount checks, run checks) and 7 database checks (the owed list, a full run with every field and status, the logs, partial failures, a double submit, refused runs, staff and other companies), plus the demo app: part payment through the page with the over-balance error shown, the saved payment and log, the CSV, and the phone layout.
+- Not included: scheduling payments for a future date, paying through a bank (it records payments you have made; it does not move money), and approvals before a run.
+
+## 12. Merge duplicate suppliers (built)
+
+Invoice reading spells a supplier a little differently each time ("SHREE CEMENT TRADERS PVT LTD" and "Shree Cement Traders"), which splits one company's invoices, statement and GST totals across several names. The **Vendors** page now finds likely duplicates and merges them.
+
+- **Finding them:** a "Possibly the same supplier" card lists sets of suppliers that look alike: the same name apart from words like Pvt, Ltd, Co, M/s and "&"; names a letter or two apart; or one name that is the start of the other ("Jaquar Sanitary" and "Jaquar Sanitary Depot"). Each set says why. It only suggests: you decide, and suppliers with two different GSTINs are never suggested.
+- **Merging a set:** choose which to keep (the one with a GSTIN, then the most invoices, is pre-selected), confirm, and the others are folded in. You can also open any supplier and use "Entered twice?" to merge it into any other supplier from a list.
+- **What happens:** every invoice moves to the kept supplier (payments and line items stay with their invoices), details the kept supplier lacks (GSTIN, address, contact) are filled in from the other, and the other is removed. Statements, ageing, the payment planner and the GST report all show one name afterwards. It is logged ("supplier merged", with what was removed and how many invoices moved).
+- **Refused, with a reason, and nothing changes:** two different GSTINs (they are different registrations), or an invoice number that both suppliers have (in any letter case), which would break "a supplier's invoice numbers are unique": delete or renumber the repeat first.
+- **Safe with uploads:** a merge takes the same short lock invoice upload uses to find or create suppliers, so an invoice being read at that moment cannot land on the supplier being removed. The same merge sent twice at once happens once. It cannot be undone, so the confirmation says so.
+- Tested: 35+ unit checks (name cleaning, typo distance, groups and default keeper, chains, what blocks a merge) and 6 database checks (everything moved and filled in, the GSTIN moving, both refusals, bad and cross-company requests, double submit), plus the demo app through both screens.
+- Not included: merging more than two suppliers in one click on the supplier page (the duplicates card merges a whole set), and undoing a merge.
+
+## 13. Supplier price comparison (built)
+
+**Rate Sheet, "Compare suppliers' prices"** (also in the menu, and under More on a phone). Administrators only. It answers: for the things I buy from more than one supplier, who is cheaper, and what did buying from the dearer ones cost me?
+
+- **What it compares:** the same item, matched by description and unit (letters, spacing and punctuation ignored: "Cement OPC-53 / bag" and "CEMENT OPC 53 / BAG" are one item; bags and kilos are not). Rates are before GST. Confirmed invoices only. Look back 3, 6, 12 or 24 months; it follows the project chosen at the top.
+- **Per supplier:** the average rate you paid (weighted by quantity, so a big order counts for more than a small one), how much you bought and in how many purchases, the last rate and its date, and how far above the cheapest it is.
+- **The saving:** for each item, what the quantity bought at the dearer suppliers would have cost less at the cheapest supplier's average rate, added up per item and in total, biggest first. Differences under 5% are left out as not worth acting on. Zero-rate, negative and no-quantity lines (discounts) are ignored.
+- **CSV** with one row per item and supplier.
+- **Read it with care:** the page says so itself. A cheaper price is not always a better deal (quality, brand, delivery and credit terms), and prices move over time (the "last" rate shows the most recent). It is a starting point for talking to suppliers. Merging duplicate suppliers first (Vendors page) makes the comparison cleaner.
+- Tested: 50+ unit checks (weighted averages, matching and spellings, ignored lines, ties, the 5% rule, three suppliers, last purchase, look-back dates) and 4 database checks (confirmed invoices in the period only, the comparison on real rows, one project, company separation), plus the demo app on desktop and phone and the CSV.
+- Not included: comparing by supplier-quoted price lists, price trends over time per item, and linking items that are worded differently (they stay separate items).
+
+## 14. GST number and tax checks (built)
+
+The AI sometimes misreads a digit in a GSTIN, and a wrong GSTIN means input credit that does not match when you file. A GSTIN's last character is a check on the other fourteen, so most misreadings can be caught. This module uses that.
+
+- **The check:** a GSTIN passes when it has 15 characters in the right pattern, a real state code (01 to 38, 97 or 99), and a last character that agrees with the rest (the standard mod-36 scheme; the published example 27AAPFU0939F1ZV passes). Spaces, dashes and lower case are ignored. It says plainly what is wrong ("the last character does not match the rest, so a digit or letter is probably wrong"). It cannot tell whether a number is registered or active.
+- **Where it shows:**
+  - **Review screen:** under the GSTIN box, a red note while the number is wrong (and the state name when it is right), so it can be fixed against the bill before saving. It never blocks saving: foreign, composition or special numbers exist.
+  - **Vendors page:** a red "Check GSTIN" flag beside a bad number (reason on hover), and the state name beside a good one.
+  - **GST report, "Worth checking before you file":** suppliers with an invalid GSTIN (with invoice count and GST at stake), invoices that have IGST together with CGST or SGST (a purchase is within the state or across states, never both), and invoices where CGST and SGST are not the same amount (one paisa of slack). These sit with the existing checks for missing GSTINs and amounts that do not add up.
+- Tested: 35+ unit checks on the GSTIN rules (every kind of mistake, a wrong character at each position, state codes, typing styles) and the new report checks, plus a database check from real rows, and the demo app (the made-up GSTINs in the demo data are correctly flagged).
+- Not included: looking a GSTIN up on the government portal (needs their service), checking a supplier's state against yours, and rate-slab checks (a bill can legitimately mix rates).
+
+## 15. Ideas worth building next (in my order)
 
 The planned list is finished. Things worth considering next, from what is still open:
 

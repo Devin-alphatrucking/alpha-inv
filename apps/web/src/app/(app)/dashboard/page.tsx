@@ -1,3 +1,4 @@
+import { hasPermission, seesAllProjects } from "@/lib/roles";
 import { pageOrg } from "@/lib/org/page";
 import type { Prisma } from "@alpha/db";
 import { getProjectScope } from "@/lib/projects/scope";
@@ -53,13 +54,15 @@ export default async function DashboardPage({
   const projectScope = await getProjectScope(user);
   const projectFilter: Prisma.InvoiceWhereInput = projectScope.selectedProjectId
     ? { projectId: projectScope.selectedProjectId }
-    : session.user.role === "STAFF"
+    : !seesAllProjects(session.user.role)
       ? { projectId: { in: projectScope.projects.map((p) => p.id) } }
       : {};
 
   const attention = await loadAttention(db, projectFilter, fmt.format.timeZone);
-  // Budgets are the administrators' planning numbers: staff do not see budget alerts.
-  const budgetAlerts = session.user.role === "ADMIN" ? await loadBudgetAlerts(db, projectScope.selectedProjectId ? { id: projectScope.selectedProjectId } : {}) : [];
+  // Budgets are planning numbers: only roles with budget access see alerts, and only for the projects they can see.
+  const budgetAlerts = hasPermission(session.user.role, "budget:view")
+    ? await loadBudgetAlerts(db, projectScope.selectedProjectId ? { id: projectScope.selectedProjectId } : seesAllProjects(session.user.role) ? {} : { id: { in: projectScope.projects.map((p) => p.id) } })
+    : [];
 
   const now = new Date();
   const defaultMonth = new Intl.DateTimeFormat("en-CA", {
@@ -113,10 +116,10 @@ export default async function DashboardPage({
     }),
     projectScope.selectedProjectId
       ? Promise.resolve(1)
-      : session.user.role === "STAFF"
+      : !seesAllProjects(session.user.role)
         ? Promise.resolve(projectScope.projects.length)
         : db.project.count(),
-    session.user.role === "STAFF"
+    !seesAllProjects(session.user.role)
       ? db.invoice.count({
           where: {
             ...projectFilter,

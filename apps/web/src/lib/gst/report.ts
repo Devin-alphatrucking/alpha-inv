@@ -1,5 +1,6 @@
 // GST summary rules. Pure functions, unit-tested (report.test.ts). Money is added in whole paise so totals never drift.
 import { toMinor } from "@/lib/invoices/status";
+import { checkGstin, hasValue } from "./gstin";
 
 export type GstInvoice = {
   id: string;
@@ -31,6 +32,12 @@ export type GstReport = {
   missingGstin: { count: number; taxMinor: number };
   /** Invoices where the amounts do not add up (subtotal + tax + rounding is not the total). */
   mismatched: { id: string; invoiceNumber: string; vendorName: string; differenceMinor: number }[];
+  /** Suppliers whose saved GSTIN is not a valid one (wrong length or pattern, or a last character that does not fit): probably misread. */
+  invalidGstin: { vendorId: string; name: string; gstin: string; reason: string; invoices: number; taxMinor: number }[];
+  /** Invoices carrying IGST together with CGST or SGST: a sale is either within the state or across states, never both. */
+  mixedTax: { id: string; invoiceNumber: string; vendorName: string }[];
+  /** Invoices with CGST and SGST that are not equal: the two are always the same amount. */
+  splitMismatch: { id: string; invoiceNumber: string; vendorName: string; cgstMinor: number; sgstMinor: number }[];
 };
 
 const empty = (): GstTotals => ({ invoices: 0, taxableMinor: 0, cgstMinor: 0, sgstMinor: 0, igstMinor: 0, taxMinor: 0, totalMinor: 0 });
@@ -59,6 +66,9 @@ export function buildGstReport(invoices: GstInvoice[]): GstReport {
   const byVendor = new Map<string, GstVendor>();
   const missing = { count: 0, taxMinor: 0 };
   const mismatched: GstReport["mismatched"] = [];
+  const invalid = new Map<string, GstReport["invalidGstin"][number]>();
+  const mixedTax: GstReport["mixedTax"] = [];
+  const splitMismatch: GstReport["splitMismatch"] = [];
 
   for (const i of invoices) {
     add(totals, i);
@@ -76,6 +86,21 @@ export function buildGstReport(invoices: GstInvoice[]): GstReport {
     // A rupee of slack covers rounding on the printed bill; anything more is worth a look.
     const difference = toMinor(i.total) - (toMinor(i.subtotal) + tax + toMinor(i.rounding));
     if (Math.abs(difference) > 100) mismatched.push({ id: i.id, invoiceNumber: i.invoiceNumber, vendorName: i.vendorName, differenceMinor: difference });
+
+    if (hasValue(i.vendorGstin)) {
+      const check = checkGstin(i.vendorGstin);
+      if (!check.ok) {
+        const row = invalid.get(i.vendorId) ?? { vendorId: i.vendorId, name: i.vendorName, gstin: i.vendorGstin!.trim(), reason: check.reason, invoices: 0, taxMinor: 0 };
+        row.invoices += 1;
+        row.taxMinor += tax;
+        invalid.set(i.vendorId, row);
+      }
+    }
+    const cgstMinor = toMinor(i.cgst);
+    const sgstMinor = toMinor(i.sgst);
+    if (toMinor(i.igst) > 0 && (cgstMinor > 0 || sgstMinor > 0)) mixedTax.push({ id: i.id, invoiceNumber: i.invoiceNumber, vendorName: i.vendorName });
+    // One paisa of slack: a printed bill can round each half differently.
+    else if (Math.abs(cgstMinor - sgstMinor) > 1) splitMismatch.push({ id: i.id, invoiceNumber: i.invoiceNumber, vendorName: i.vendorName, cgstMinor, sgstMinor });
   }
 
   return {
@@ -84,6 +109,9 @@ export function buildGstReport(invoices: GstInvoice[]): GstReport {
     vendors: [...byVendor.values()].sort((a, b) => b.taxMinor - a.taxMinor || a.name.localeCompare(b.name)),
     missingGstin: missing,
     mismatched,
+    invalidGstin: [...invalid.values()].sort((a, b) => b.taxMinor - a.taxMinor || a.name.localeCompare(b.name)),
+    mixedTax,
+    splitMismatch,
   };
 }
 

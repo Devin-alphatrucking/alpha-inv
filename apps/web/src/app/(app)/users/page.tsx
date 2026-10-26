@@ -1,3 +1,4 @@
+import { homeFor } from "@/lib/roles";
 import { redirect } from "next/navigation";
 import { pageOrg } from "@/lib/org/page";
 import {
@@ -16,7 +17,7 @@ import { isEmailConfigured } from "@/lib/email/transport";
 
 export default async function UsersPage() {
   const { session, db, orgId } = await pageOrg();
-  if (session.user.role !== "ADMIN") redirect("/invoices/upload");
+  if (session.user.role !== "ADMIN") redirect(homeFor(session.user.role));
 
   const pendingInvites = await listPendingInvites(orgId);
   const plan = await getEntitlements(orgId);

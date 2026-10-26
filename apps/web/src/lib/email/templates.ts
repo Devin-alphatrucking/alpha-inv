@@ -1,5 +1,6 @@
 import type { Mail } from "./transport";
 import { isHexColor } from "@/lib/brand/theme";
+import { displayCode } from "@/lib/security/otp-rules";
 
 /** Everything is plain HTML tables with inline styles (the only thing email programs agree on). Every inserted value is escaped. */
 export function esc(value: string) {
@@ -31,12 +32,32 @@ function layout(brand: MailBrand, heading: string, bodyHtml: string, button?: { 
 
 const P = (t: string) => `<p style="margin:0 0 12px">${t}</p>`;
 
-export function verifyEmailMail(to: string, d: { name: string; link: string; brand: MailBrand }): Mail {
+/** The big code block shown in an email. */
+const CODE_BOX = (code: string) => `<p style="margin:16px 0;padding:14px 18px;background:#f3f4f6;border-radius:10px;font-size:30px;letter-spacing:.35em;font-weight:700;text-align:center;font-family:ui-monospace,Menlo,Consolas,monospace">${esc(displayCode(code))}</p>`;
+
+export function verifyEmailMail(to: string, d: { name: string; link: string; brand: MailBrand; code?: string }): Mail {
+  const lead = d.code ? `Your confirmation code is ${displayCode(d.code)}. It works for 10 minutes.\n\nOr use this link (it works for 24 hours):` : "Confirm your email address to finish setting up your account:";
   return {
     to,
-    subject: `Confirm your email for ${d.brand.name}`,
-    text: `Hi ${d.name},\n\nConfirm your email address to finish setting up your account:\n${d.link}\n\nThe link works for 24 hours. If you did not create an account, you can ignore this email.`,
-    html: layout(d.brand, "Confirm your email", P(`Hi ${esc(d.name)},`) + P("Confirm your email address to finish setting up your account. The link works for 24 hours."), { label: "Confirm email", url: d.link }, "If you did not create an account, you can ignore this email."),
+    subject: d.code ? `Confirm your email: your ${d.brand.name} code is ${displayCode(d.code)}` : `Confirm your email for ${d.brand.name}`,
+    text: `Hi ${d.name},\n\n${lead}\n${d.link}\n\nIf you did not create an account, you can ignore this email.`,
+    html: layout(
+      d.brand,
+      "Confirm your email",
+      P(`Hi ${esc(d.name)},`) + (d.code ? P("Enter this code to confirm your email address. It works for 10 minutes.") + CODE_BOX(d.code) + P("Or use the button below (it works for 24 hours).") : P("Confirm your email address to finish setting up your account. The link works for 24 hours.")),
+      { label: "Confirm email", url: d.link },
+      "If you did not create an account, you can ignore this email.",
+    ),
+  };
+}
+
+/** The code that confirms a risky action (removing a person, closing the company, ...). */
+export function confirmActionMail(to: string, d: { name: string; code: string; action: string; brand: MailBrand }): Mail {
+  return {
+    to,
+    subject: `Your ${d.brand.name} confirmation code is ${displayCode(d.code)}`,
+    text: `Hi ${d.name},\n\nYour code to confirm "${d.action}" is ${displayCode(d.code)}. It works for 10 minutes.\n\nIf you did not try to do this, do not share the code, and change your password.`,
+    html: layout(d.brand, "Confirm it is you", P(`Hi ${esc(d.name)},`) + P(`Enter this code to confirm: <strong>${esc(d.action)}</strong>. It works for 10 minutes.`) + CODE_BOX(d.code), undefined, "If you did not try to do this, do not share the code, and change your password."),
   };
 }
 
@@ -49,12 +70,19 @@ export function accountExistsMail(to: string, d: { link: string; brand: MailBran
   };
 }
 
-export function passwordResetMail(to: string, d: { name: string; link: string; brand: MailBrand }): Mail {
+export function passwordResetMail(to: string, d: { name: string; link: string; brand: MailBrand; code?: string }): Mail {
+  const lead = d.code ? `Your password reset code is ${displayCode(d.code)} (it works for 10 minutes). Enter it on the reset page with your new password.\n\nOr use this link to choose a new password (valid for 1 hour):` : "Use this link to choose a new password (valid for 1 hour):";
   return {
     to,
-    subject: `Reset your ${d.brand.name} password`,
-    text: `Hi ${d.name},\n\nUse this link to choose a new password (valid for 1 hour):\n${d.link}\n\nIf you did not ask for this, ignore this email: your password stays the same.`,
-    html: layout(d.brand, "Reset your password", P(`Hi ${esc(d.name)},`) + P("Use the button below to choose a new password. The link works for 1 hour."), { label: "Choose a new password", url: d.link }, "If you did not ask for this, ignore this email: your password stays the same."),
+    subject: d.code ? `Reset your ${d.brand.name} password: your code is ${displayCode(d.code)}` : `Reset your ${d.brand.name} password`,
+    text: `Hi ${d.name},\n\n${lead}\n${d.link}\n\nIf you did not ask for this, ignore this email: your password stays the same.`,
+    html: layout(
+      d.brand,
+      "Reset your password",
+      P(`Hi ${esc(d.name)},`) + (d.code ? P("Enter this code on the reset page with your new password. It works for 10 minutes.") + CODE_BOX(d.code) + P("Or use the button below to choose a new password (it works for 1 hour).") : P("Use the button below to choose a new password. The link works for 1 hour.")),
+      { label: "Choose a new password", url: d.link },
+      "If you did not ask for this, ignore this email: your password stays the same.",
+    ),
   };
 }
 

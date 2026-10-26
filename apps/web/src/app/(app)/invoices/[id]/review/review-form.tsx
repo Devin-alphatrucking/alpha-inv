@@ -34,6 +34,7 @@ import { InvoicePaymentControls } from "@/app/(app)/invoices/invoice-payment-con
 import { InvoiceDeleteButton } from "@/app/(app)/invoices/invoice-delete-button";
 import { useFormat } from "@/components/format-provider";
 import { lineKey, rateAlert, type RateBaseline } from "@/lib/invoices/rate-alerts";
+import { checkGstin, hasValue } from "@/lib/gst/gstin";
 
 export type ReviewVendor = { id: string; name: string; gstin: string | null };
 export type ReviewCategory = { id: string; name: string; unit: string | null };
@@ -215,6 +216,11 @@ export function ReviewForm({
       setDupWarning(Boolean(dup));
     }
   }
+
+  // A GSTIN the AI misread usually fails its check character: say so while the person can still fix it. Never blocks saving.
+  const gstinCheck = hasValue(vendorGstin) ? checkGstin(vendorGstin) : null;
+  const gstinProblem = gstinCheck && !gstinCheck.ok ? `This does not look like a valid GSTIN. ${gstinCheck.reason} Check it against the bill.` : null;
+  const gstinState = gstinCheck?.ok ? gstinCheck.state : null;
 
   const lowConfidenceCount = useMemo(
     () => lineItems.filter((li) => (li.confidence ?? 1) < 0.7).length,
@@ -473,7 +479,12 @@ export function ReviewForm({
               value={vendorGstin}
               onChange={(e) => setVendorGstin(e.target.value.toUpperCase())}
               className="uppercase"
+              aria-invalid={gstinProblem ? true : undefined}
+              aria-describedby="vendorGstin-note"
             />
+            <p id="vendorGstin-note" className={`text-xs ${gstinProblem ? "text-red-600" : "text-muted-foreground"}`} role={gstinProblem ? "alert" : undefined}>
+              {gstinProblem ?? (gstinState ? `Valid GSTIN: ${gstinState}.` : "")}
+            </p>
           </div>
           <div className="sm:col-span-2">
             <Button type="button" variant="outline" size="sm" onClick={() => void handleCreateVendor()}>

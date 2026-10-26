@@ -1,3 +1,4 @@
+import { homeFor } from "@/lib/roles";
 import { redirect } from "next/navigation";
 import { rawDb } from "@/lib/db";
 import { pageOrg } from "@/lib/org/page";
@@ -12,7 +13,7 @@ import { getRlsStatus } from "@/lib/org/rls-status";
 
 export default async function SettingsPage() {
   const { session, db, orgId } = await pageOrg();
-  if (session.user.role !== "ADMIN") redirect("/invoices/upload");
+  if (session.user.role !== "ADMIN") redirect(homeFor(session.user.role));
 
   const projectIds = (await db.project.findMany({ select: { id: true } })).map((p) => p.id);
   const usage = await getUsageSummary(orgId, projectIds);

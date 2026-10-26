@@ -1,9 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
-import {
-  ADMIN_ONLY_PREFIXES,
-  STAFF_ALLOWED_PREFIXES,
-} from "@/lib/nav";
+import { canOpenPath, homeFor, isRole } from "@/lib/roles";
 
 // Brand endpoints are public on purpose: the sign-in screens need the company's
 // name, colours and logo before anyone is signed in.
@@ -84,25 +81,12 @@ export default auth((req) => {
     return NextResponse.redirect(loginUrl);
   }
 
-  const role = req.auth.user.role;
-
-  if (role === "STAFF") {
-    const allowed = STAFF_ALLOWED_PREFIXES.some((prefix) =>
-      pathname.startsWith(prefix)
-    );
-    if (!allowed) {
-      return NextResponse.redirect(new URL("/invoices/upload", nextUrl.origin));
-    }
-    return NextResponse.next();
-  }
-
-  // ADMIN: block nothing in the app shell; admin-only prefixes are informational
-  // for sidebar. Keep explicit guard if somehow a restricted path is added later.
-  const isAdminOnlyPath = ADMIN_ONLY_PREFIXES.some((prefix) =>
-    pathname.startsWith(prefix)
-  );
-  if (isAdminOnlyPath && role !== "ADMIN") {
-    return NextResponse.redirect(new URL("/invoices/upload", nextUrl.origin));
+  // What each role may open comes from one table (lib/roles.ts). Anyone who tries something else is sent to a place they can work.
+  const role = isRole(req.auth.user.role) ? req.auth.user.role : null;
+  // A session with a role we do not know (an old or damaged token) must sign in again, not bounce between pages.
+  if (!role) return NextResponse.redirect(new URL("/login", nextUrl.origin));
+  if (!canOpenPath(role, pathname)) {
+    return NextResponse.redirect(new URL(homeFor(role), nextUrl.origin));
   }
 
   return NextResponse.next();

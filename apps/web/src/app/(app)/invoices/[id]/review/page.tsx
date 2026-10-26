@@ -1,3 +1,5 @@
+import { hasPermission } from "@/lib/roles";
+import { seesAllProjects } from "@/lib/roles";
 import { InvoiceComments } from "../invoice-comments";
 import { notFound, redirect } from "next/navigation";
 import { pageOrg } from "@/lib/org/page";
@@ -20,6 +22,8 @@ type PageProps = {
 export default async function InvoiceReviewPage({ params }: PageProps) {
   const { id } = await params;
   const { session, db, user } = await pageOrg();
+  // Someone who may only read goes to the read-only page of the same invoice.
+  if (!hasPermission(session.user.role, "invoice:review")) redirect(`/invoices/${id}`);
   const fmt = await getFormat();
   const formatCurrency = (value: number, maxFraction = 0) => fmt.money(value, maxFraction);
 
@@ -38,7 +42,7 @@ export default async function InvoiceReviewPage({ params }: PageProps) {
 
   if (!invoice) notFound();
 
-  if (session.user.role === "STAFF") {
+  if (!seesAllProjects(session.user.role)) {
     const isUploader = invoice.uploadedById === session.user.id;
     const assignment = await db.projectAssignment.findFirst({
       where: { userId: session.user.id, projectId: invoice.projectId },
@@ -51,7 +55,7 @@ export default async function InvoiceReviewPage({ params }: PageProps) {
   const [vendors, categories, projects] = await Promise.all([
     db.vendor.findMany({ orderBy: { name: "asc" } }),
     db.category.findMany({ orderBy: { name: "asc" } }),
-    session.user.role === "STAFF"
+    !seesAllProjects(session.user.role)
       ? db.project.findMany({
           where: { assignments: { some: { userId: session.user.id } } },
           orderBy: { name: "asc" },

@@ -1,15 +1,16 @@
+import { seesAllProjects, type RoleName } from "@/lib/roles";
 import { dbFor } from "@/lib/org/scoped-db";
 import { AppError } from "@/lib/errors";
 
 export type SessionUser = {
   id: string;
-  role: "ADMIN" | "STAFF";
+  role: RoleName;
   orgId: string;
 };
 
 /** Prisma where clause for invoices visible to the current user. */
 export function invoiceAccessWhere(user: SessionUser) {
-  if (user.role === "ADMIN") return {};
+  if (seesAllProjects(user.role)) return {};
   return {
     OR: [
       { uploadedById: user.id },

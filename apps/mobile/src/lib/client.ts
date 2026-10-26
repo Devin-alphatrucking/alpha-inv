@@ -47,7 +47,7 @@ export type PlanSummary = {
 };
 
 export type Me = {
-  user: { id: string; name: string; email: string; role: "ADMIN" | "STAFF" };
+  user: { id: string; name: string; email: string; role: string };
   company: { id: string; brand: Brand | null };
   companies: { id: string; name: string; role: string }[];
   plan: PlanSummary;

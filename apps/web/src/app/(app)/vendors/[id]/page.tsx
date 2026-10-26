@@ -1,3 +1,4 @@
+import { MergeIntoControl } from "../merge-controls";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -40,6 +41,7 @@ export default async function VendorPage({ params }: Props) {
     },
   });
   if (!vendor) notFound();
+  const others = await db.vendor.findMany({ where: { id: { not: vendor.id } }, orderBy: { name: "asc" }, select: { id: true, name: true, gstin: true } });
 
   const confirmed = vendor.invoices.filter((i) => i.status !== "NEEDS_REVIEW" && i.status !== "PROCESSING");
   const rows = confirmed.map((i) => {
@@ -152,6 +154,16 @@ export default async function VendorPage({ params }: Props) {
               </Table>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Entered twice?</CardTitle>
+          <CardDescription>If this is the same company as another supplier, merge the two. All of this supplier&apos;s invoices move to the one you choose, and this supplier is removed. This cannot be undone.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <MergeIntoControl fromId={vendor.id} fromName={vendor.name} invoices={vendor.invoices.length} candidates={others} />
         </CardContent>
       </Card>
     </div>

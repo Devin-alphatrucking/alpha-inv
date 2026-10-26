@@ -17,6 +17,11 @@ datasource db {
 enum Role {
   ADMIN
   STAFF
+  ACCOUNTANT // all projects: invoices, payments, suppliers, reports. No people, plans or settings
+  PURCHASE // assigned projects: invoices, suppliers, rates
+  MANAGER // assigned projects: invoices, budgets and spend
+  ENGINEER // assigned projects: bills and site work
+  VIEWER // assigned projects, read only
 }
 
 model User {
@@ -500,6 +505,25 @@ enum AuthTokenType {
 
 // One-time links sent by email (verify address, reset password, join a company).
 // Only the SHA-256 of the link token is stored, never the token itself.
+// A short code (6 digits) sent by email to prove someone has the inbox: sign-up, password reset, and confirming risky actions.
+// Only an HMAC of the code is kept. Each code lives 10 minutes, allows 5 tries and works once. Not a company table (people use
+// it before they belong to one), like AuthToken.
+model OtpCode {
+  id        String    @id
+  purpose   String // SIGNUP | PASSWORD_RESET | CONFIRM_ACTION
+  email     String
+  userId    String?
+  codeHash  String
+  attempts  Int       @default(0)
+  expiresAt DateTime
+  usedAt    DateTime?
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email, purpose, createdAt])
+  @@index([userId, purpose, usedAt])
+}
+
 model AuthToken {
   id             String        @id @default(cuid())
   type           AuthTokenType

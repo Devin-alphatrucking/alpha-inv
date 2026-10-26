@@ -1,5 +1,6 @@
 "use client";
 
+import { canOpenPath, hasPermission, type RoleName } from "@/lib/roles";
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -22,6 +23,8 @@ import {
   Settings,
   Download,
   Receipt,
+  CalendarRange,
+  Scale,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -36,7 +39,7 @@ import {
 } from "@/components/ui/sheet";
 
 type MobileBottomBarProps = {
-  role: "ADMIN" | "STAFF";
+  role: RoleName;
   name: string;
   email: string;
 };
@@ -66,7 +69,7 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
     "/admin",
   ].some((prefix) => pathname.startsWith(prefix));
 
-  const adminMoreItems = [
+  const allMoreItems = [
     {
       href: "/api/admin/export?dataset=all&format=xlsx",
       label: "Download all data",
@@ -80,6 +83,12 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
       icon: FolderKanban,
     },
     {
+      href: "/payments/planner",
+      label: "Payment planner",
+      description: "What falls due, and pay several bills at once",
+      icon: CalendarRange,
+    },
+    {
       href: "/reports/gst",
       label: "GST report",
       description: "Tax by month and supplier, CSV",
@@ -90,6 +99,12 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
       label: "Rate Sheet",
       description: "Live material rates & averages",
       icon: Boxes,
+    },
+    {
+      href: "/materials/compare",
+      label: "Price comparison",
+      description: "Who sells the same item cheaper",
+      icon: Scale,
     },
     {
       href: "/vendors",
@@ -128,6 +143,13 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
       icon: Settings,
     },
   ];
+  // Each person sees only the places their role may open (the same table the sign-in guard uses).
+  const adminMoreItems = allMoreItems.filter((item) => canOpenPath(role, item.href));
+  // The full bar (with a More sheet) is for people who have somewhere to go besides their own projects and invoices.
+  const fullBar = adminMoreItems.some((item) => item.href !== "/projects");
+  const canUpload = hasPermission(role, "invoice:upload");
+  const canSeePayments = hasPermission(role, "payment:view");
+  const tab4 = canSeePayments ? { href: "/payments", label: "Payments", Icon: Wallet } : { href: "/projects", label: "Projects", Icon: FolderKanban };
 
   return (
     <>
@@ -136,7 +158,7 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
         className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/70 bg-background/95 backdrop-blur-lg supports-backdrop-filter:bg-background/85 shadow-[0_-4px_24px_rgba(0,0,0,0.07)] md:hidden pb-safe"
       >
         <div className="relative mx-auto flex h-16 max-w-md items-center justify-around px-2">
-          {role === "ADMIN" ? (
+          {fullBar ? (
             <>
               {/* Dashboard */}
               <Link
@@ -177,10 +199,11 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
               </Link>
 
               {/* Elevated Center Plus Button */}
-              <div className="relative flex flex-1 items-center justify-center">
+              <div className={cn("relative flex flex-1 items-center justify-center", !canUpload && "invisible")} aria-hidden={!canUpload}>
                 <Link
                   href="/invoices/upload"
                   aria-label="Upload Invoice"
+                  tabIndex={canUpload ? 0 : -1}
                   className={cn(
                     "group relative -top-3.5 flex size-12 flex-col items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background transition-all duration-200 active:scale-95 hover:shadow-primary/40 hover:shadow-xl",
                     isUploadActive && "ring-primary/40 ring-offset-2 ring-2"
@@ -195,21 +218,21 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
 
               {/* Payments */}
               <Link
-                href="/payments"
+                href={tab4.href}
                 className={cn(
                   "flex flex-1 flex-col items-center justify-center gap-1 py-1 text-[11px] font-medium transition-all duration-150 active:scale-95",
-                  pathname.startsWith("/payments")
+                  pathname.startsWith(tab4.href)
                     ? "text-primary font-semibold"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 <div className="relative">
-                  <Wallet className="size-5" />
-                  {pathname.startsWith("/payments") && (
+                  <tab4.Icon className="size-5" />
+                  {pathname.startsWith(tab4.href) && (
                     <span className="absolute -top-1 right-1/2 translate-x-1/2 size-1 rounded-full bg-primary" />
                   )}
                 </div>
-                <span>Payments</span>
+                <span>{tab4.label}</span>
               </Link>
 
               {/* More Sheet Trigger */}
@@ -274,10 +297,11 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
               </Link>
 
               {/* Elevated Center Plus Button */}
-              <div className="relative flex flex-1 items-center justify-center">
+              <div className={cn("relative flex flex-1 items-center justify-center", !canUpload && "invisible")} aria-hidden={!canUpload}>
                 <Link
                   href="/invoices/upload"
                   aria-label="Upload Invoice"
+                  tabIndex={canUpload ? 0 : -1}
                   className={cn(
                     "group relative -top-3.5 flex size-13 flex-col items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background transition-all duration-200 active:scale-95 hover:shadow-primary/40 hover:shadow-xl",
                     isUploadActive && "ring-primary/40 ring-offset-2 ring-2"

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { processInvoiceUpload } from "@/lib/invoices/process-upload";
-import { requireUser } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { handleError, newRequestId, isAppError } from "@/lib/errors";
 import { logActivity } from "@/lib/activity";
 
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
 
   let orgId: string | undefined;
   try {
-    const user = await requireUser();
+    const user = await requirePermission("invoice:upload");
     orgId = user.orgId;
 
     const formData = await request.formData();

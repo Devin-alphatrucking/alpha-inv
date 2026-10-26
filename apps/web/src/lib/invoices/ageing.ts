@@ -51,8 +51,8 @@ export type AttentionSummary = {
   dueSoon: { count: number; amountMinor: number; items: Owed[] };
 };
 
-/** `soonDays`: how many days ahead (including today) counts as "due soon". */
-export function summarise(invoices: OwedInvoice[], today: string, soonDays = 7, listSize = 5): AttentionSummary {
+/** Every invoice with something still to pay, with its balance, how late it is and its age bucket (input order kept). */
+export function owedInvoices(invoices: OwedInvoice[], today: string): Owed[] {
   const owed: Owed[] = [];
   for (const inv of invoices) {
     const balanceMinor = toMinor(inv.total) - toMinor(inv.paid);
@@ -60,6 +60,12 @@ export function summarise(invoices: OwedInvoice[], today: string, soonDays = 7, 
     const late = daysLate(inv.dueDate, today);
     owed.push({ ...inv, balanceMinor, daysLate: late, bucket: bucketFor(late) });
   }
+  return owed;
+}
+
+/** `soonDays`: how many days ahead (including today) counts as "due soon". */
+export function summarise(invoices: OwedInvoice[], today: string, soonDays = 7, listSize = 5): AttentionSummary {
+  const owed = owedInvoices(invoices, today);
 
   const buckets = BUCKETS.map((b) => {
     const inB = owed.filter((o) => o.bucket === b.key);

@@ -1,5 +1,6 @@
 "use client";
 
+import { seesAllProjects, type RoleName } from "@/lib/roles";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FolderKanban, Loader2 } from "lucide-react";
@@ -18,14 +19,14 @@ export function ProjectSwitcher({
   projects,
   selectedProjectId,
 }: {
-  role: "ADMIN" | "STAFF";
+  role: RoleName;
   projects: ProjectOption[];
   selectedProjectId: string | null;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const items = [
-    ...(role === "ADMIN" ? [{ value: "ALL", label: "All projects" }] : []),
+    ...(seesAllProjects(role) ? [{ value: "ALL", label: "All projects" }] : []),
     ...projects.map((project) => ({ value: project.id, label: project.name })),
   ];
 
@@ -68,7 +69,7 @@ export function ProjectSwitcher({
           <SelectValue placeholder="Select project" />
         </SelectTrigger>
         <SelectContent align="start">
-          {role === "ADMIN" && <SelectItem value="ALL">All projects</SelectItem>}
+          {seesAllProjects(role) && <SelectItem value="ALL">All projects</SelectItem>}
           {projects.map((project) => (
             <SelectItem key={project.id} value={project.id}>
               {project.name}

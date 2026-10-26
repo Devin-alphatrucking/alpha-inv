@@ -1,12 +1,13 @@
+import { seesAllProjects, type RoleName } from "@/lib/roles";
 import type { Prisma } from "@alpha/db";
 import { dbFor } from "@/lib/org/scoped-db";
 import { AppError } from "@/lib/errors";
 
-export type ProjectUser = { id: string; role: "ADMIN" | "STAFF"; orgId: string };
+export type ProjectUser = { id: string; role: RoleName; orgId: string };
 
 /** Prisma where clause for projects visible to the current user (inside their company). */
 export function projectAccessWhere(user: ProjectUser): Prisma.ProjectWhereInput {
-  if (user.role === "ADMIN") return {};
+  if (seesAllProjects(user.role)) return {};
   return {
     assignments: { some: { userId: user.id } },
   };

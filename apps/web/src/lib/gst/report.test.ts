@@ -78,4 +78,29 @@ const csv = toCsv(["A", "B"], [["x", 1], ["y,z", null]]);
 assert.ok(csv.startsWith("﻿A,B\r\n"));
 assert.ok(csv.endsWith('"y,z",\r\n'));
 
+// ---- GSTIN, mixed tax and split checks
+import { gstinCheckChar } from "./gstin";
+const valid = (first14: string) => `${first14}${gstinCheckChar(first14)}`;
+const goodGstin = valid("27AABCS1234F1Z");
+const checks = buildGstReport([
+  inv({ vendorId: "ok", vendorName: "Good Co", vendorGstin: goodGstin }),
+  inv({ vendorId: "bad1", vendorName: "Typo Co", vendorGstin: "27AABCS1234F1Z5", cgst: 90, sgst: 90 }), // wrong check character
+  inv({ vendorId: "bad1", vendorName: "Typo Co", vendorGstin: "27AABCS1234F1Z5", cgst: 10, sgst: 10, total: 1020 }),
+  inv({ vendorId: "bad2", vendorName: "Short Co", vendorGstin: "27AAB", cgst: 0, sgst: 0, igst: 180, total: 1180 }),
+  inv({ vendorId: "none", vendorName: "No Gstin Co", vendorGstin: null }), // missing is reported elsewhere, not as invalid
+  inv({ vendorId: "blank", vendorName: "Blank Co", vendorGstin: "  - " }),
+  inv({ vendorId: "ok", vendorName: "Good Co", vendorGstin: goodGstin, cgst: 90, sgst: 0, igst: 90, total: 1180 }), // both kinds of tax
+  inv({ vendorId: "ok", vendorName: "Good Co", vendorGstin: goodGstin, cgst: 100, sgst: 80, total: 1180 }), // halves differ
+  inv({ vendorId: "ok", vendorName: "Good Co", vendorGstin: goodGstin, cgst: 90, sgst: 90.01, total: 1180.01 }), // a paisa apart is fine
+]);
+assert.deepEqual(checks.invalidGstin.map((x) => [x.vendorId, x.invoices, x.taxMinor]), [["bad1", 2, 20_000], ["bad2", 1, 18_000]], "one row per supplier, biggest tax first");
+assert.match(checks.invalidGstin[0].reason, /last character/);
+assert.match(checks.invalidGstin[1].reason, /15 characters/);
+assert.ok(!checks.invalidGstin.some((x) => ["ok", "none", "blank"].includes(x.vendorId)), "valid, missing and blank are not 'invalid'");
+assert.equal(checks.mixedTax.length, 1);
+assert.equal(checks.mixedTax[0].vendorName, "Good Co");
+assert.deepEqual(checks.splitMismatch.map((x) => [x.cgstMinor, x.sgstMinor]), [[10_000, 8_000]]);
+assert.ok(!checks.splitMismatch.some((x) => x.cgstMinor === 9_000 && x.sgstMinor === 9_001), "one paisa of difference is allowed");
+assert.deepEqual(buildGstReport([]).invalidGstin, []);
+
 console.log("gst report: all checks passed");

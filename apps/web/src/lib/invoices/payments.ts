@@ -1,3 +1,4 @@
+import type { RoleName } from "@/lib/roles";
 import { z } from "zod";
 import { scoped } from "@/lib/org/context";
 import { AppError } from "@/lib/errors";
@@ -20,7 +21,7 @@ const paymentSchema = z.object({
   notes: z.string().trim().max(500).optional(),
 });
 
-export type PaymentUser = { id: string; orgId: string; role: "ADMIN" | "STAFF" };
+export type PaymentUser = { id: string; orgId: string; role: RoleName };
 
 export async function recordPayment(
   user: PaymentUser,

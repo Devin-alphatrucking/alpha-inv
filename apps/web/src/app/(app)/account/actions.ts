@@ -1,5 +1,7 @@
 "use server";
 
+import { createOwnCompany } from "@/lib/flows/company-create";
+import { checkStepUp } from "@/lib/security/step-up";
 import { revalidatePath } from "next/cache";
 import { serverUpdateProof, signOut, unstable_update } from "@/lib/auth";
 import { requireAdmin, requireUser } from "@/lib/permissions";
@@ -22,19 +24,34 @@ export async function signOutEverywhereAction() {
   await signOut({ redirectTo: "/login" });
 }
 
-export async function deleteAccountAction(password: string) {
+export async function deleteAccountAction(password: string, code?: string) {
   const user = await requireUser({ allowLocked: true });
+  const step = await checkStepUp(user.id, code);
+  if (!step.ok) return step;
   const result = await deleteAccount(user.id, password);
   if (!result.ok) return result;
   await signOut({ redirectTo: "/login" });
   return result;
 }
 
-export async function closeCompanyAction(password: string) {
+export async function closeCompanyAction(password: string, code?: string) {
   const admin = await requireAdmin({ allowLocked: true });
+  const step = await checkStepUp(admin.id, code);
+  if (!step.ok) return step;
   const result = await closeCompany({ id: admin.id, orgId: admin.orgId }, password);
   if (!result.ok) return result;
   await signOut({ redirectTo: "/login" });
+  return result;
+}
+
+/** Starts a company of the signed-in person's own (see lib/flows/company-create.ts) and moves this session into it. */
+export async function createOwnCompanyAction(input: { companyName: string; country: string }) {
+  const user = await requireUser({ allowLocked: true });
+  const result = await createOwnCompany({ id: user.id }, input);
+  if (!result.ok) return result;
+  await unstable_update({ switchOrgId: result.orgId } as never);
+  await logActivity({ userId: user.id, organizationId: result.orgId, action: "COMPANY_SWITCHED", module: "AUTH", entityId: result.orgId });
+  revalidatePath("/", "layout");
   return result;
 }
 

@@ -1,3 +1,4 @@
+import { hasPermission } from "@/lib/roles";
 import Link from "next/link";
 import { rawDb } from "@/lib/db";
 import { pageOrg } from "@/lib/org/page";
@@ -38,6 +39,7 @@ export default async function ProjectsPage() {
   const formatCurrency = (value: number, maxFraction = 0) => fmt.money(value, maxFraction);
 
   const isAdmin = session.user.role === "ADMIN";
+  const canSeeBudget = hasPermission(session.user.role, "budget:view");
   const plan = await getEntitlements(orgId);
   const addCheck = checkAddProject(plan.state, plan.limits, plan.usage);
   const accessWhere = projectAccessWhere(user);
@@ -98,7 +100,7 @@ export default async function ProjectsPage() {
       total,
       paid,
       pending: Math.max(0, pending),
-      budget: project.budget ? Number(project.budget) : null,
+      budget: canSeeBudget && project.budget ? Number(project.budget) : null,
       spent: total,
     };
   });

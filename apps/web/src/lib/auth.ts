@@ -1,3 +1,4 @@
+import type { RoleName } from "@/lib/roles";
 import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
@@ -139,7 +140,7 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
   callbacks: {
     jwt: async ({ token, user, trigger, session }) => {
       if (user) {
-        token.role = (user as { role: "ADMIN" | "STAFF" }).role; // membership role
+        token.role = (user as { role: RoleName }).role; // membership role
         token.id = user.id as string;
         token.orgId = user.orgId;
         token.orgRole = user.orgRole;
@@ -203,9 +204,9 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
     session: async ({ session, token }) => {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as "ADMIN" | "STAFF";
+        session.user.role = token.role as RoleName;
         session.user.orgId = token.orgId as string;
-        session.user.orgRole = token.orgRole as "ADMIN" | "STAFF";
+        session.user.orgRole = token.orgRole as RoleName;
       }
       return session;
     },

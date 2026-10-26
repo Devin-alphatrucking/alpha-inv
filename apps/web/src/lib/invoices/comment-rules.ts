@@ -1,3 +1,4 @@
+import type { RoleName } from "@/lib/roles";
 // Rules for invoice comments. Pure functions, unit-tested (comment-rules.test.ts).
 
 export const COMMENT_MAX = 2000;
@@ -23,6 +24,6 @@ export function cleanComment(raw: unknown): { ok: true; body: string } | { ok: f
 }
 
 /** The author, or an administrator, may remove a comment. */
-export function canDeleteComment(user: { id: string; role: "ADMIN" | "STAFF" }, comment: { userId: string | null }): boolean {
+export function canDeleteComment(user: { id: string; role: RoleName }, comment: { userId: string | null }): boolean {
   return user.role === "ADMIN" || (comment.userId !== null && comment.userId === user.id);
 }

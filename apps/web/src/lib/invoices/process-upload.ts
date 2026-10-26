@@ -1,3 +1,4 @@
+import type { RoleName } from "@/lib/roles";
 import { Prisma } from "@alpha/db";
 import { rawDb } from "@/lib/db";
 import { dbFor } from "@/lib/org/scoped-db";
@@ -73,7 +74,7 @@ export async function processInvoiceUpload(params: {
   /** Company of the signed-in user. Everything below is locked to it. */
   orgId: string;
   userId: string;
-  role: "ADMIN" | "STAFF";
+  role: RoleName;
   projectId: string;
   categoryId?: string | null;
 }) {

@@ -1,12 +1,13 @@
 "use client";
 
+import type { RoleName } from "@/lib/roles";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CreditCard, LifeBuoy, Lock, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** The only places a locked company can go: choose a plan, billing, support, and its own account. Used in the side menu and as the phone bar. */
-export function LockedNav({ role, variant }: { role: "ADMIN" | "STAFF"; variant: "side" | "bar" }) {
+export function LockedNav({ role, variant }: { role: RoleName; variant: "side" | "bar" }) {
   const pathname = usePathname();
   const items = [
     { href: "/locked", label: "Choose a plan", icon: Lock },

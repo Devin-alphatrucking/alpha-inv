@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { clientIp } from "@/lib/security/rate-limit";
 import { signUp } from "@/lib/flows/signup";
-import { confirmEmail, requestPasswordReset, resendVerification, resetPassword } from "@/lib/flows/verify-reset";
+import { confirmEmail, confirmEmailWithCode, requestPasswordReset, resendVerification, resetPassword, resetPasswordWithCode } from "@/lib/flows/verify-reset";
 import { acceptInvite } from "@/lib/flows/invite";
 
 // Thin wrappers: the pages call these, the real work (and its tests) lives in src/lib/flows.
@@ -20,6 +20,14 @@ export async function signUpAction(input: Record<string, unknown>) {
 
 export async function confirmEmailAction(token: string) {
   return confirmEmail(token);
+}
+
+export async function confirmEmailCodeAction(email: string, code: string) {
+  return confirmEmailWithCode(email, code, { ip: await ip() });
+}
+
+export async function resetPasswordCodeAction(input: { email: string; code: string; password: string }) {
+  return resetPasswordWithCode(input, { ip: await ip() });
 }
 
 export async function resendVerificationAction(email: string) {

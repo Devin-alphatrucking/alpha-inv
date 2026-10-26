@@ -1,5 +1,6 @@
 "use client";
 
+import { EmailCodeForm } from "../email-code-form";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
@@ -59,17 +60,20 @@ export function VerifyEmailPanel({ token, linkProblem }: { token: string | null;
       {error && <p className="text-sm text-destructive">{error}</p>}
       {!token && (
         <form onSubmit={resend} className="grid gap-3">
-          <p className="text-sm text-muted-foreground">Enter your email and we will send a new confirmation link.</p>
+          <p className="text-sm text-muted-foreground">Enter your email and we will send a new 6-digit code (and a link).</p>
           <div className="grid gap-2">
             <Label htmlFor="ve-email">Email</Label>
             <Input id="ve-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
           {sent ? (
-            <p className="text-sm text-emerald-700">{sent}</p>
+            <div className="grid gap-3">
+              <p className="text-sm text-emerald-700">{sent}</p>
+              <EmailCodeForm email={email.trim().toLowerCase()} />
+            </div>
           ) : (
             <Button type="submit" disabled={pending} className="h-11 w-full">
               {pending && <Loader2 className="size-4 animate-spin" />}
-              Send a new link
+              Send a new code
             </Button>
           )}
         </form>

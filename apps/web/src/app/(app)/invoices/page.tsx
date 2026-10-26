@@ -1,3 +1,4 @@
+import { seesAllProjects } from "@/lib/roles";
 import { Suspense } from "react";
 import Link from "next/link";
 import { pageOrg } from "@/lib/org/page";
@@ -75,7 +76,7 @@ export default async function InvoicesPage({
   const formatCurrency = (value: number, maxFraction = 0) => fmt.money(value, maxFraction);
 
   const params = await searchParams;
-  const isStaff = session.user.role === "STAFF";
+  const isStaff = !seesAllProjects(session.user.role); // limited to their own projects and uploads
 
   const accessWhere = invoiceAccessWhere(user);
   const projectScope = await getProjectScope(user);

@@ -4,62 +4,9 @@ import { bearerFrom } from "@/lib/mobile/token";
 import { assertNotLocked } from "@/lib/plans/lock";
 import { auth } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
+import { hasPermission, type Permission, type RoleName } from "@/lib/roles";
 
-export type Permission =
-  | "dashboard:view"
-  | "invoice:view"
-  | "invoice:upload"
-  | "invoice:review"
-  | "invoice:delete"
-  | "payment:create"
-  | "payment:delete"
-  | "project:view"
-  | "project:manage"
-  | "user:manage"
-  | "vendor:manage"
-  | "category:manage"
-  | "material:view"
-  | "logs:view";
-
-const ALL_PERMISSIONS: Permission[] = [
-  "dashboard:view",
-  "invoice:view",
-  "invoice:upload",
-  "invoice:review",
-  "invoice:delete",
-  "payment:create",
-  "payment:delete",
-  "project:view",
-  "project:manage",
-  "user:manage",
-  "vendor:manage",
-  "category:manage",
-  "material:view",
-  "logs:view",
-];
-
-const ROLE_PERMISSIONS: Record<"ADMIN" | "STAFF", Set<Permission>> = {
-  ADMIN: new Set(ALL_PERMISSIONS),
-  // STAFF: upload-first workflow — view/review their own invoices, record
-  // payments on invoices they can access, and view assigned projects.
-  STAFF: new Set<Permission>([
-    "dashboard:view",
-    "invoice:view",
-    "invoice:upload",
-    "invoice:review",
-    "invoice:delete",
-    "payment:create",
-    "project:view",
-  ]),
-};
-
-export function hasPermission(
-  role: "ADMIN" | "STAFF" | undefined,
-  permission: Permission
-) {
-  if (!role) return false;
-  return ROLE_PERMISSIONS[role]?.has(permission) ?? false;
-}
+export { hasPermission, type Permission } from "@/lib/roles";
 
 async function bearerFromRequest(): Promise<string | null> {
   try {
@@ -71,11 +18,11 @@ async function bearerFromRequest(): Promise<string | null> {
 
 export type SessionUser = {
   id: string;
-  role: "ADMIN" | "STAFF";
+  role: RoleName;
   /** Company the user is working in. Always present for a valid session. */
   orgId: string;
   /** Role inside that company (same as `role` until step 2c/2d). */
-  orgRole: "ADMIN" | "STAFF";
+  orgRole: RoleName;
   name?: string | null;
   email?: string | null;
 };

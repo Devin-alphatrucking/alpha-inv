@@ -1,5 +1,6 @@
 "use server";
 
+import { seesAllProjects } from "@/lib/roles";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { Prisma } from "@alpha/db";
@@ -70,7 +71,7 @@ async function assertCanReview(invoiceId: string) {
   });
   if (!invoice) throw new AppError("NOT_FOUND_001", "Invoice not found");
 
-  if (session.role === "STAFF") {
+  if (!seesAllProjects(session.role)) {
     const isUploader = invoice.uploadedById === session.id;
     const assignment = await db.projectAssignment.findFirst({
       where: { userId: session.id, projectId: invoice.projectId },

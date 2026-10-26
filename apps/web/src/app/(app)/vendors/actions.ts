@@ -6,6 +6,7 @@ import { scoped } from "@/lib/org/context";
 import { AppError } from "@/lib/errors";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
+import { mergeVendors } from "@/lib/flows/vendor-merge";
 
 const vendorSchema = z.object({
   name: z.string().trim().min(1, "Enter the vendor name.").max(160),
@@ -83,4 +84,14 @@ export async function deleteVendor(vendorId: string) {
   });
 
   revalidatePath("/vendors");
+}
+
+/** Folds one supplier into another (see lib/flows/vendor-merge.ts). The person and company come from the session. */
+export async function mergeVendorsAction(fromId: string, intoId: string) {
+  const user = await requirePermission("vendor:manage");
+  const result = await mergeVendors({ id: user.id, orgId: user.orgId }, fromId, intoId);
+  if (result.ok) {
+    for (const path of ["/vendors", "/invoices", "/dashboard", "/payments", "/payments/planner", "/reports/gst"]) revalidatePath(path);
+  }
+  return result;
 }

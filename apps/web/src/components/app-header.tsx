@@ -1,5 +1,6 @@
 "use client";
 
+import { ROLE_INFO, type RoleName } from "@/lib/roles";
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 type AppHeaderProps = {
   name: string;
   email: string;
-  role: "ADMIN" | "STAFF";
+  role: RoleName;
 };
 
 export function AppHeader({ name, email, role }: AppHeaderProps) {
@@ -26,7 +27,7 @@ export function AppHeader({ name, email, role }: AppHeaderProps) {
     <header className="flex h-14 items-center justify-between border-b bg-background px-6">
       <div />
       <div className="flex items-center gap-3">
-        <Badge variant="secondary">{role}</Badge>
+        <Badge variant="secondary">{ROLE_INFO[role].label}</Badge>
         <div className="flex items-center gap-2">
           <Avatar className="size-8">
             <AvatarFallback>{initials}</AvatarFallback>

@@ -1,3 +1,4 @@
+import { homeFor } from "@/lib/roles";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { pageOrg } from "@/lib/org/page";
@@ -28,7 +29,7 @@ const STATE_LABEL: Record<string, { label: string; variant: "default" | "seconda
 
 export default async function PlanPage() {
   const { session, db, orgId } = await pageOrg({ allowLocked: true });
-  if (session.user.role !== "ADMIN") redirect("/invoices/upload");
+  if (session.user.role !== "ADMIN") redirect(homeFor(session.user.role));
 
   const fmt = await getFormat();
   const brand = await getBrand();

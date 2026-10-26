@@ -1,5 +1,6 @@
 "use client";
 
+import { ROLE_INFO, type RoleName } from "@/lib/roles";
 import { Download, LogOut, Settings, ShieldCheck, UserRound } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { AppNav } from "@/components/app-nav";
@@ -30,7 +31,7 @@ type AppShellProps = {
   /** Companies this person belongs to (the switcher shows only when there is more than one). */
   companies: { id: string; name: string; role: string }[];
   currentOrgId: string;
-  role: "ADMIN" | "STAFF";
+  role: RoleName;
   name: string;
   email: string;
   projects: { id: string; name: string; status: string }[];
@@ -89,7 +90,7 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
               variant="secondary"
               className="hidden text-[11px] font-semibold xl:inline-flex"
             >
-              {role}
+              {ROLE_INFO[role].label}
             </Badge>
             <Avatar className="hidden size-8 shrink-0 xl:flex">
               <AvatarFallback className="text-xs font-semibold">{initials}</AvatarFallback>
@@ -118,7 +119,7 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
                         <p className="truncate text-sm font-semibold text-foreground">{name}</p>
                         <p className="truncate text-xs font-normal text-muted-foreground">{email}</p>
                       </div>
-                      <Badge variant="secondary" className="text-[10px]">{role}</Badge>
+                      <Badge variant="secondary" className="text-[10px]">{ROLE_INFO[role].label}</Badge>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />

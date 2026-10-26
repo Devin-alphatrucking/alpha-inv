@@ -18,6 +18,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createVendor } from "./actions";
 import { ActionForm } from "@/components/action-form";
+import { findDuplicateGroups } from "@/lib/vendors/duplicates";
+import { DuplicateGroupCard } from "./merge-controls";
+import { GstinFlag } from "@/components/gstin-flag";
 
 export default async function VendorsPage() {
   const { db } = await pageOrg();
@@ -25,6 +28,8 @@ export default async function VendorsPage() {
     orderBy: { name: "asc" },
     include: { _count: { select: { invoices: true } } },
   });
+
+  const duplicateGroups = findDuplicateGroups(vendors.map((v) => ({ id: v.id, name: v.name, gstin: v.gstin, invoices: v._count.invoices })));
 
   return (
     <div className="flex flex-col gap-6">
@@ -34,6 +39,20 @@ export default async function VendorsPage() {
           Suppliers you purchase construction materials from.
         </p>
       </div>
+
+      {duplicateGroups.length > 0 && (
+        <Card className="border-amber-500/50">
+          <CardHeader>
+            <CardTitle>Possibly the same supplier ({duplicateGroups.length})</CardTitle>
+            <p className="text-sm text-muted-foreground">These look like one company entered more than once. Check each, choose the one to keep, and merge. Their invoices move across.</p>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            {duplicateGroups.map((g) => (
+              <DuplicateGroupCard key={g.vendors.map((v) => v.id).join("-")} group={g} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -92,6 +111,7 @@ export default async function VendorsPage() {
                     {vendor.gstin && (
                       <p className="text-xs text-muted-foreground">
                         GSTIN: <span className="font-mono text-foreground">{vendor.gstin}</span>
+                        <GstinFlag gstin={vendor.gstin} />
                       </p>
                     )}
                     {vendor.contact && (
@@ -122,7 +142,10 @@ export default async function VendorsPage() {
                             {vendor.name}
                           </Link>
                         </TableCell>
-                        <TableCell>{vendor.gstin ?? "—"}</TableCell>
+                        <TableCell>
+                          {vendor.gstin ?? "—"}
+                          <GstinFlag gstin={vendor.gstin} />
+                        </TableCell>
                         <TableCell>{vendor.contact ?? "—"}</TableCell>
                         <TableCell className="text-right">
                           {vendor._count.invoices}

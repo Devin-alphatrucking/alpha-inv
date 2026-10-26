@@ -1,3 +1,4 @@
+import type { RoleName } from "@/lib/roles";
 import { z } from "zod";
 import { rawDb } from "@/lib/db";
 import { logActivity } from "@/lib/activity";
@@ -22,7 +23,7 @@ const ABSOLUTE_DAYS = 180;
 const ROTATION_GRACE_MS = 30_000;
 const DAY = 86_400_000;
 
-export type MobileUser = { id: string; role: "ADMIN" | "STAFF"; orgId: string; orgRole: "ADMIN" | "STAFF"; name: string; email: string; sessionId: string };
+export type MobileUser = { id: string; role: RoleName; orgId: string; orgRole: RoleName; name: string; email: string; sessionId: string };
 
 export type Tokens = { accessToken: string; accessExpiresAt: string; refreshToken: string; refreshExpiresAt: string };
 

@@ -135,6 +135,28 @@ async function main() {
     assert.equal((await loadGstInvoices(dbFor(a), fy)).some((r) => r.vendorName === "Beta Vendor"), false);
   });
 
+  await check("the report flags invalid GSTINs, mixed IGST/CGST and unequal CGST/SGST from real rows", async () => {
+    const { gstinCheckChar } = await import("@/lib/gst/gstin");
+    const first14 = "27AABCS1234F1Z";
+    const validGstin = `${first14}${gstinCheckChar(first14)}`;
+    const vGood = await addVendor(a, "Valid Gstin Supplier", validGstin);
+    await addInvoice(a, pa1, vGood, "2026-12-01", 1000, 90, 90, 0); // clean
+    await addInvoice(a, pa1, vGood, "2026-12-02", 1000, 90, 0, 90); // both kinds of tax
+    await addInvoice(a, pa1, vGood, "2026-12-03", 1000, 100, 80, 0); // halves differ
+    const r = buildGstReport(await loadGstInvoices(dbFor(a), fy));
+    assert.ok(!r.invalidGstin.some((v) => v.vendorId === vGood), "a valid GSTIN is not flagged");
+    const flagged = r.invalidGstin.find((v) => v.vendorId === va);
+    assert.ok(flagged, "Cement Co's made-up GSTIN fails its check character");
+    assert.match(flagged.reason, /last character/);
+    assert.equal(flagged.invoices, 3, "its three invoices in the year");
+    assert.ok(!r.invalidGstin.some((v) => v.vendorId === vNo), "a supplier with no GSTIN is reported as missing, not as invalid");
+    assert.equal(r.mixedTax.length, 1);
+    assert.equal(r.splitMismatch.length, 1);
+    assert.deepEqual([r.splitMismatch[0].cgstMinor, r.splitMismatch[0].sgstMinor], [10_000, 8_000]);
+    const forB = buildGstReport(await loadGstInvoices(dbFor(b), fy));
+    assert.deepEqual([forB.invalidGstin.length, forB.mixedTax.length, forB.splitMismatch.length], [1, 0, 0], "only Beta's own vendor (its GSTIN is made up too)");
+  });
+
   await owner.end();
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed === 0 ? 0 : 1);

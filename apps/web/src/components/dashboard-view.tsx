@@ -1,5 +1,6 @@
 "use client";
 
+import { seesAllProjects, type RoleName } from "@/lib/roles";
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -136,7 +137,7 @@ export function DashboardView({
   from,
   to,
 }: {
-  role: "ADMIN" | "STAFF";
+  role: RoleName;
   revenue: number;
   paid: number;
   pending: number;
@@ -248,7 +249,7 @@ export function DashboardView({
 
   return (
     <div className="flex flex-col gap-4">
-      {role === "STAFF" && (
+      {!seesAllProjects(role) && (
         <div className="flex items-end justify-between gap-4 rounded-xl border bg-card/60 p-3.5">
           <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:max-w-56">
             <Label htmlFor="staff-dashboard-month" className="text-xs text-muted-foreground">

@@ -1,3 +1,4 @@
+import type { RoleName } from "@/lib/roles";
 /**
  * Which company a user lands in after sign-in (step 2b of
  * docs/PHASE-2-COMPANIES.md). A person can belong to several companies; until
@@ -5,7 +6,7 @@
  * allowed to sign in. Suspended or closed companies cannot be entered.
  */
 
-export type OrgRole = "ADMIN" | "STAFF";
+export type OrgRole = RoleName;
 
 export type MembershipWithOrg = {
   organizationId: string;

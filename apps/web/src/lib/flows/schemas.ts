@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ROLES } from "@/lib/roles";
 import { checkPassword } from "@/lib/security/password";
 import { COUNTRY_CODES } from "@/lib/org/starter-data";
 
@@ -33,7 +34,7 @@ export const resetSchema = z.object({ token: z.string().min(20).max(100), passwo
 
 export const inviteSchema = z.object({
   email,
-  role: z.enum(["ADMIN", "STAFF"]),
+  role: z.enum(ROLES),
   projectIds: z.array(z.string().min(1).max(64)).max(200).default([]),
 });
 

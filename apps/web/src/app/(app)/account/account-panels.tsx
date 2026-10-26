@@ -1,5 +1,6 @@
 "use client";
 
+import { StepUpDialog } from "@/components/step-up-dialog";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -50,11 +51,15 @@ export function AccountPanels({ companies, currentOrgId, currentCompanyName, isA
   const [delPw, setDelPw] = useState("");
   const [delWord, setDelWord] = useState("");
   const [delError, setDelError] = useState<string | null>(null);
+  const [stepUp, setStepUp] = useState<null | "delete" | "close">(null);
   function deleteAccount() {
     setDelError(null);
     start(async () => {
       const r = await deleteAccountAction(delPw);
-      if (r && !r.ok) setDelError(r.error);
+      if (r && !r.ok) {
+        if ("needsCode" in r && r.needsCode) setStepUp("delete");
+        else setDelError(r.error);
+      }
     });
   }
 
@@ -65,8 +70,18 @@ export function AccountPanels({ companies, currentOrgId, currentCompanyName, isA
     setCloseError(null);
     start(async () => {
       const r = await closeCompanyAction(closePw);
-      if (r && !r.ok) setCloseError(r.error);
+      if (r && !r.ok) {
+        if ("needsCode" in r && r.needsCode) setStepUp("close");
+        else setCloseError(r.error);
+      }
     });
+  }
+
+  /** Runs the same action again with the emailed code. Success signs the person out, so only a refusal comes back here. */
+  async function withCode(code: string): Promise<{ ok: true } | { ok: false; error: string }> {
+    const r = stepUp === "delete" ? await deleteAccountAction(delPw, code) : await closeCompanyAction(closePw, code);
+    if (r && !r.ok) return { ok: false, error: r.error };
+    return { ok: true };
   }
 
   function switchTo(id: string) {
@@ -205,6 +220,7 @@ export function AccountPanels({ companies, currentOrgId, currentCompanyName, isA
           </CardContent>
         </Card>
       )}
+      <StepUpDialog open={stepUp !== null} onOpenChange={(open) => !open && setStepUp(null)} action={stepUp === "close" ? "Close the company" : "Delete your account"} onConfirm={withCode} />
     </>
   );
 }

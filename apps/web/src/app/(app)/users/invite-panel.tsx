@@ -1,5 +1,6 @@
 "use client";
 
+import { needsProjects, ROLE_INFO, ROLES, type RoleName } from "@/lib/roles";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Loader2, MailPlus, X } from "lucide-react";
@@ -10,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useFormat } from "@/components/format-provider";
 import { inviteUserAction, revokeInviteAction } from "./invite-actions";
 
-type Pending = { id: string; email: string; role: "ADMIN" | "STAFF"; expiresAt: string };
+type Pending = { id: string; email: string; role: RoleName; expiresAt: string };
 
 export function InvitePanel({
   projects,
@@ -25,7 +26,7 @@ export function InvitePanel({
 }) {
   const fmt = useFormat();
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"ADMIN" | "STAFF">("STAFF");
+  const [role, setRole] = useState<RoleName>("STAFF");
   const [projectIds, setProjectIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, start] = useTransition();
@@ -58,7 +59,7 @@ export function InvitePanel({
   return (
     <div className="grid gap-5">
       <form onSubmit={send} className="grid gap-4 sm:max-w-xl" noValidate>
-        <div className="grid gap-4 sm:grid-cols-[1fr_150px]">
+        <div className="grid gap-4 sm:grid-cols-[1fr_220px]">
           <div className="grid gap-2">
             <Label htmlFor="inv-email">Email</Label>
             <Input id="inv-email" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" required />
@@ -68,16 +69,20 @@ export function InvitePanel({
             <select
               id="inv-role"
               value={role}
-              onChange={(e) => setRole(e.target.value as "ADMIN" | "STAFF")}
+              onChange={(e) => setRole(e.target.value as RoleName)}
               className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <option value="STAFF">Staff</option>
-              <option value="ADMIN">Admin</option>
+              {ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_INFO[r].label}
+                </option>
+              ))}
             </select>
+            <p className="text-xs text-muted-foreground">{ROLE_INFO[role].summary}</p>
           </div>
         </div>
 
-        {role === "STAFF" && projects.length > 0 && (
+        {needsProjects(role) && projects.length > 0 && (
           <div className="grid gap-2">
             <Label>Projects they can use</Label>
             <div className="max-h-36 space-y-2 overflow-y-auto rounded-lg border p-3">
@@ -112,7 +117,7 @@ export function InvitePanel({
               <div className="min-w-0">
                 <p className="truncate font-medium">{i.email}</p>
                 <p className="text-xs text-muted-foreground">
-                  {i.role.toLowerCase()} · expires {fmt.date(i.expiresAt)}
+                  {ROLE_INFO[i.role].label} · expires {fmt.date(i.expiresAt)}
                 </p>
               </div>
               <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => revoke(i.id)} aria-label={`Cancel invitation for ${i.email}`}>

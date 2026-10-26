@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { toast } from "sonner";
-import { Building2, Check, ChevronsUpDown } from "lucide-react";
+import { Building2, Check, ChevronsUpDown, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,6 +10,7 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { switchCompanyAction } from "@/app/(app)/account/actions";
@@ -55,6 +56,11 @@ export function CompanySwitcher({
             </DropdownMenuItem>
           ))}
         </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem render={<a href="/account#new-company" />} className="px-2 py-2 text-muted-foreground">
+          <Plus className="size-4" />
+          Start a company of your own
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

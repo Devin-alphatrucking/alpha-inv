@@ -1,4 +1,7 @@
+import { hasPermission } from "@/lib/roles";
+import { seesAllProjects } from "@/lib/roles";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { pageOrg } from "@/lib/org/page";
 import {
   Card,
@@ -17,7 +20,8 @@ import { getProjectScope } from "@/lib/projects/scope";
 
 export default async function UploadInvoicePage() {
   const { session, db, user } = await pageOrg();
-  const isStaff = session.user.role === "STAFF";
+  if (!hasPermission(session.user.role, "invoice:upload")) redirect("/invoices");
+  const isStaff = !seesAllProjects(session.user.role); // limited to their own projects and uploads
   const blobConfigured = isBlobStorageConfigured();
   const projectScope = await getProjectScope(user);
 

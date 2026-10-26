@@ -1,3 +1,4 @@
+import { hasPermission } from "@/lib/roles";
 import { InvoiceComments } from "./invoice-comments";
 import { HIGH_PERCENT, VERY_HIGH_PERCENT } from "@/lib/invoices/rate-alerts";
 import Link from "next/link";
@@ -71,7 +72,7 @@ export default async function InvoicePage({ params }: Props) {
   const total = Number(invoice.total);
   const paid = invoice.payments.reduce((s, p) => s + Number(p.amount), 0);
   const balance = Math.max(0, total - paid);
-  const isAdmin = session.user.role === "ADMIN";
+  const canSeePayments = hasPermission(session.user.role, "payment:view");
   const row = (label: string, value: React.ReactNode) => (
     <div className="flex items-baseline justify-between gap-4 py-1 text-sm">
       <dt className="text-muted-foreground">{label}</dt>
@@ -183,7 +184,7 @@ export default async function InvoicePage({ params }: Props) {
                 ))}
               </ul>
             )}
-            {isAdmin && invoice.payments.length > 0 && (
+            {canSeePayments && invoice.payments.length > 0 && (
               <p className="mt-3 text-xs text-muted-foreground">
                 To remove a payment, use <Link href="/payments" className="underline underline-offset-4">Payments</Link>.
               </p>
@@ -222,7 +223,7 @@ export default async function InvoicePage({ params }: Props) {
                       <TableCell className="text-right tabular-nums">
                         {money(Number(l.rateExclGst))}
                         {/* Prices are the administrators' view of the company; the saved deviation is from the whole company's history. */}
-                        {session.user.role === "ADMIN" && l.rateDeviationPercent !== null && Number(l.rateDeviationPercent) >= HIGH_PERCENT && (
+                        {hasPermission(session.user.role, "price:compare") && l.rateDeviationPercent !== null && Number(l.rateDeviationPercent) >= HIGH_PERCENT && (
                           <span className={`block text-xs font-medium ${Number(l.rateDeviationPercent) >= VERY_HIGH_PERCENT ? "text-red-600" : "text-amber-600"}`}>
                             +{Math.round(Number(l.rateDeviationPercent))}% vs usual
                           </span>

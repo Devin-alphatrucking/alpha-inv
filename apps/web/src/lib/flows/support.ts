@@ -1,3 +1,4 @@
+import type { RoleName } from "@/lib/roles";
 import { z } from "zod";
 import { rawDb } from "@/lib/db";
 import { dbFor } from "@/lib/org/scoped-db";
@@ -91,7 +92,7 @@ export async function createTicket(user: TicketUser, raw: unknown): Promise<Flow
 }
 
 /** Tickets a person may see: administrators see their whole company's, everyone else only their own. */
-export async function listTickets(user: { id: string; orgId: string; role: "ADMIN" | "STAFF" }, limit = 25) {
+export async function listTickets(user: { id: string; orgId: string; role: RoleName }, limit = 25) {
   const rows = await dbFor(user.orgId).supportTicket.findMany({
     where: user.role === "ADMIN" ? {} : { userId: user.id },
     orderBy: { createdAt: "desc" },

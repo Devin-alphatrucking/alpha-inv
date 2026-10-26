@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { pageOrg } from "@/lib/org/page";
 import {
   Card,
@@ -63,7 +65,12 @@ export default async function MaterialsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Rate Sheet</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight">Rate Sheet</h1>
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/materials/compare" />}>
+            Compare suppliers&apos; prices
+          </Button>
+        </div>
         <p className="text-sm text-muted-foreground">
           Live average rate per material, computed from every recorded
           invoice line item — always current.

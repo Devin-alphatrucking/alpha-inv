@@ -1,6 +1,6 @@
 import { rawDb } from "@/lib/db";
 import { dbFor } from "@/lib/org/scoped-db";
-import { requireAdmin } from "@/lib/permissions";
+import { requirePermission } from "@/lib/permissions";
 import { AppError } from "@/lib/errors";
 import { companyTimeZone } from "@/lib/invoices/company-tz";
 import { todayIn, toMinor } from "@/lib/invoices/status";
@@ -12,15 +12,15 @@ export const runtime = "nodejs";
 const VIEWS = ["invoices", "vendors", "months"] as const;
 type View = (typeof VIEWS)[number];
 
-/** GET /api/reports/gst?view=invoices|vendors|months&fy=2026 (or from=&to=)&project=<id>: the GST summary as a CSV file. Administrators only. */
+/** GET /api/reports/gst?view=invoices|vendors|months&fy=2026 (or from=&to=)&project=<id>: the GST summary as a CSV file. Roles with access only. */
 export async function GET(request: Request) {
-  let admin: Awaited<ReturnType<typeof requireAdmin>>;
+  let admin: Awaited<ReturnType<typeof requirePermission>>;
   try {
-    admin = await requireAdmin();
+    admin = await requirePermission("report:view");
   } catch (error) {
     if (error instanceof AppError && error.code === "PLAN_LOCKED") return Response.json({ error: error.message, code: error.code }, { status: 402 });
     const forbidden = error instanceof AppError && error.code === "PERMISSION_001";
-    return Response.json({ error: forbidden ? "Only administrators can download this report." : "Authentication required." }, { status: forbidden ? 403 : 401 });
+    return Response.json({ error: forbidden ? "You do not have access to the GST report." : "Authentication required." }, { status: forbidden ? 403 : 401 });
   }
 
   const url = new URL(request.url);

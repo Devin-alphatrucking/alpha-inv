@@ -6,6 +6,7 @@ import { hitAll, limitKey, retryMessage } from "@/lib/security/rate-limit";
 import { isEmailConfigured, sendMail, sendMailQuietly } from "@/lib/email/transport";
 import { passwordChangedMail, passwordResetMail, verifyEmailMail } from "@/lib/email/templates";
 import { absoluteUrl } from "@/lib/app-url";
+import { issueOtp, verifyOtp } from "@/lib/security/otp";
 import { PRODUCT_NAME } from "@/lib/brand/product";
 import { emailOnlySchema, firstIssue, resetSchema, type FlowResult } from "@/lib/flows/schemas";
 
@@ -22,11 +23,40 @@ export async function confirmEmail(token: string | null | undefined): Promise<Fl
   if (!user || user.deletedAt || user.email !== row.email) {
     return { ok: false, error: "This confirmation link is invalid or has expired. Request a new one." };
   }
-  if (!user.emailVerifiedAt) {
-    await rawDb.user.update({ where: { id: user.id }, data: { emailVerifiedAt: new Date() } });
-    const membership = await rawDb.membership.findFirst({ where: { userId: user.id }, orderBy: { createdAt: "asc" } });
-    await logActivity({ userId: user.id, organizationId: membership?.organizationId ?? null, action: "EMAIL_VERIFIED", module: "AUTH", entityId: user.id });
-  }
+  await markVerified(user);
+  return { ok: true, email: user.email };
+}
+
+/** Records that the person owns their address (once), and says so in the activity log. */
+async function markVerified(user: { id: string; emailVerifiedAt: Date | null }) {
+  if (user.emailVerifiedAt) return;
+  await rawDb.user.update({ where: { id: user.id }, data: { emailVerifiedAt: new Date() } });
+  const membership = await rawDb.membership.findFirst({ where: { userId: user.id }, orderBy: { createdAt: "asc" } });
+  await logActivity({ userId: user.id, organizationId: membership?.organizationId ?? null, action: "EMAIL_VERIFIED", module: "AUTH", entityId: user.id });
+}
+
+/**
+ * Confirms an address with the 6-digit code from the email (the same outcome as the link). Wrong codes are counted and the
+ * code locks after 5; the answer does not say whether the address has an account.
+ */
+export async function confirmEmailWithCode(rawEmail: unknown, rawCode: unknown, ctx: { ip: string }): Promise<FlowResult<{ email: string }>> {
+  const parsed = emailOnlySchema.safeParse({ email: rawEmail });
+  if (!parsed.success) return { ok: false, ...firstIssue(parsed.error) };
+  const { email } = parsed.data;
+  const limit = await hitAll([
+    { key: limitKey("otp:ip", ctx.ip), limit: 40, windowSeconds: 3600 },
+    { key: limitKey("otp:email", email), limit: 20, windowSeconds: 3600 },
+  ]);
+  if (!limit.allowed) return { ok: false, error: retryMessage(limit.retryAfterSeconds) };
+
+  const checked = await verifyOtp({ purpose: "SIGNUP", email, code: rawCode });
+  const generic = { ok: false as const, error: "That code is not right, or it has expired. Ask for a new code.", field: "code" };
+  if (!checked.ok) return { ok: false, error: checked.error, field: "code" };
+  if (!checked.userId) return generic;
+  const user = await rawDb.user.findUnique({ where: { id: checked.userId } });
+  if (!user || user.deletedAt || user.email !== email) return generic;
+  await markVerified(user);
+  await revokeTokens({ type: "EMAIL_VERIFY", userId: user.id });
   return { ok: true, email: user.email };
 }
 
@@ -44,8 +74,12 @@ export async function resendVerification(rawEmail: unknown, ctx: { ip: string })
 
   const user = await rawDb.user.findUnique({ where: { email } });
   if (user && !user.deletedAt && !user.emailVerifiedAt) {
-    const token = await issueToken({ type: "EMAIL_VERIFY", email, userId: user.id });
-    await sendMailQuietly(verifyEmailMail(email, { name: user.name, link: absoluteUrl(`/verify-email?token=${token}`), brand: mailBrand }));
+    // Asking again within 30 seconds sends nothing new (and says nothing different), so this cannot be used to flood an inbox.
+    const otp = await issueOtp({ purpose: "SIGNUP", email, userId: user.id });
+    if (otp.ok) {
+      const token = await issueToken({ type: "EMAIL_VERIFY", email, userId: user.id });
+      await sendMailQuietly(verifyEmailMail(email, { name: user.name, link: absoluteUrl(`/verify-email?token=${token}`), brand: mailBrand, code: otp.code }));
+    }
   }
   return { ok: true, message: NEUTRAL };
 }
@@ -66,8 +100,11 @@ export async function requestPasswordReset(rawEmail: unknown, ctx: { ip: string 
 
   const user = await rawDb.user.findUnique({ where: { email }, include: { memberships: { select: { id: true }, take: 1 } } });
   if (user && !user.deletedAt && user.memberships.length > 0) {
-    const token = await issueToken({ type: "PASSWORD_RESET", email, userId: user.id });
-    await sendMailQuietly(passwordResetMail(email, { name: user.name, link: absoluteUrl(`/reset-password?token=${token}`), brand: mailBrand }));
+    const otp = await issueOtp({ purpose: "PASSWORD_RESET", email, userId: user.id });
+    if (otp.ok) {
+      const token = await issueToken({ type: "PASSWORD_RESET", email, userId: user.id });
+      await sendMailQuietly(passwordResetMail(email, { name: user.name, link: absoluteUrl(`/reset-password?token=${token}`), brand: mailBrand, code: otp.code }));
+    }
   }
   return { ok: true, message: NEUTRAL };
 }
@@ -103,6 +140,47 @@ export async function resetPassword(raw: unknown): Promise<FlowResult> {
   });
   if (!done) return { ok: false, error: "This reset link is invalid or has expired. Request a new one." };
 
+  await revokeTokens({ type: "PASSWORD_RESET", userId: user.id });
+  const membership = await rawDb.membership.findFirst({ where: { userId: user.id }, orderBy: { createdAt: "asc" } });
+  await logActivity({ userId: user.id, organizationId: membership?.organizationId ?? null, action: "PASSWORD_RESET", module: "AUTH", entityId: user.id });
+  await sendMail(passwordChangedMail(user.email, { name: user.name, brand: mailBrand }));
+  return { ok: true };
+}
+
+/**
+ * Sets a new password using the 6-digit code from the reset email (instead of the link). The password is checked BEFORE the code is
+ * spent, so a weak password does not use up a try. Same effects as the link: every session ends, the person is told by email.
+ */
+export async function resetPasswordWithCode(raw: unknown, ctx: { ip: string }): Promise<FlowResult> {
+  const input = (raw ?? {}) as { email?: unknown; code?: unknown; password?: unknown };
+  const parsed = emailOnlySchema.safeParse({ email: input.email });
+  if (!parsed.success) return { ok: false, ...firstIssue(parsed.error) };
+  const { email } = parsed.data;
+  const password = typeof input.password === "string" ? input.password : "";
+  const limit = await hitAll([
+    { key: limitKey("otp:ip", ctx.ip), limit: 40, windowSeconds: 3600 },
+    { key: limitKey("otp:email", email), limit: 20, windowSeconds: 3600 },
+  ]);
+  if (!limit.allowed) return { ok: false, error: retryMessage(limit.retryAfterSeconds) };
+
+  const user = await rawDb.user.findUnique({ where: { email } });
+  const generic = { ok: false as const, error: "That code is not right, or it has expired. Ask for a new code.", field: "code" };
+  if (!user || user.deletedAt) {
+    // Same work and the same answer whether or not the address has an account.
+    await hashPassword(password || "x");
+    return generic;
+  }
+  const problem = checkPassword(password, { email: user.email, name: user.name });
+  if (problem) return { ok: false, error: problem, field: "password" };
+
+  const checked = await verifyOtp({ purpose: "PASSWORD_RESET", email, code: input.code, userId: user.id });
+  if (!checked.ok) return { ok: false, error: checked.error, field: "code" };
+
+  const passwordHash = await hashPassword(password);
+  await rawDb.user.update({
+    where: { id: user.id },
+    data: { passwordHash, sessionVersion: { increment: 1 }, emailVerifiedAt: user.emailVerifiedAt ?? new Date() },
+  });
   await revokeTokens({ type: "PASSWORD_RESET", userId: user.id });
   const membership = await rawDb.membership.findFirst({ where: { userId: user.id }, orderBy: { createdAt: "asc" } });
   await logActivity({ userId: user.id, organizationId: membership?.organizationId ?? null, action: "PASSWORD_RESET", module: "AUTH", entityId: user.id });

@@ -1,5 +1,7 @@
 "use client";
 
+import { StepUpDialog } from "@/components/step-up-dialog";
+import { needsProjects, ROLE_INFO, ROLES, type RoleName } from "@/lib/roles";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
@@ -38,7 +40,7 @@ export type UserRow = {
   id: string;
   name: string;
   email: string;
-  role: "ADMIN" | "STAFF";
+  role: RoleName;
   projectIds: string[];
   projectNames: string[];
 };
@@ -49,7 +51,7 @@ type FormState = {
   name: string;
   email: string;
   password: string;
-  role: "ADMIN" | "STAFF";
+  role: RoleName;
   projectIds: string[];
 };
 
@@ -75,6 +77,7 @@ export function UsersManager({
   const [form, setForm] = useState<FormState>(emptyForm);
   const [pending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [stepUpFor, setStepUpFor] = useState<UserRow | null>(null);
   const [userToDelete, setUserToDelete] = useState<UserRow | null>(null);
 
   function openCreate() {
@@ -148,17 +151,29 @@ export function UsersManager({
 
   async function performDelete() {
     if (!userToDelete) return;
-    setDeletingId(userToDelete.id);
+    const target = userToDelete;
+    setDeletingId(target.id);
     try {
-      await deleteUser(userToDelete.id);
-      toast.success(`User ${userToDelete.name} deleted`);
+      const r = await deleteUser(target.id);
+      if (r.ok) toast.success(`User ${target.name} deleted`);
+      else if (r.needsCode) setStepUpFor(target); // the next step asks for the code emailed to you
+      else toast.error(r.error);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Delete failed");
-      throw err;
     } finally {
       setDeletingId(null);
       setUserToDelete(null);
     }
+  }
+
+  async function deleteWithCode(code: string): Promise<{ ok: true } | { ok: false; error: string }> {
+    if (!stepUpFor) return { ok: false, error: "Nobody is selected." };
+    const target = stepUpFor;
+    const r = await deleteUser(target.id, code);
+    if (!r.ok) return { ok: false, error: r.error };
+    toast.success(`User ${target.name} deleted`);
+    setStepUpFor(null);
+    return { ok: true };
   }
 
   return (
@@ -190,7 +205,7 @@ export function UsersManager({
                 </p>
               </div>
               <Badge variant={user.role === "ADMIN" ? "default" : "secondary"}>
-                {user.role}
+                {ROLE_INFO[user.role].label}
               </Badge>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
@@ -259,7 +274,7 @@ export function UsersManager({
                   <Badge
                     variant={user.role === "ADMIN" ? "default" : "secondary"}
                   >
-                    {user.role}
+                    {ROLE_INFO[user.role].label}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -358,27 +373,28 @@ export function UsersManager({
                 onValueChange={(value) =>
                   setForm((prev) => ({
                     ...prev,
-                    role: (value as "ADMIN" | "STAFF") ?? "STAFF",
+                    role: (value as RoleName) ?? "STAFF",
                     projectIds:
-                      value === "ADMIN" ? [] : prev.projectIds,
+                      value && needsProjects(value as RoleName) ? prev.projectIds : [],
                   }))
                 }
-                items={[
-                  { value: "ADMIN", label: "ADMIN" },
-                  { value: "STAFF", label: "STAFF" },
-                ]}
+                items={ROLES.map((r) => ({ value: r, label: ROLE_INFO[r].label }))}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ADMIN">ADMIN</SelectItem>
-                  <SelectItem value="STAFF">STAFF</SelectItem>
+                  {ROLES.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {ROLE_INFO[r].label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">{ROLE_INFO[form.role].summary}</p>
             </div>
 
-            {form.role === "STAFF" && (
+            {needsProjects(form.role) && (
               <div className="grid gap-2">
                 <Label>Assigned projects</Label>
                 {projects.length === 0 ? (
@@ -442,6 +458,7 @@ export function UsersManager({
         confirmLabel="Delete User"
         onConfirm={performDelete}
       />
+      <StepUpDialog open={Boolean(stepUpFor)} onOpenChange={(open) => !open && setStepUpFor(null)} action="Remove a person from the company" onConfirm={deleteWithCode} />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { needsProjects, type RoleName } from "@/lib/roles";
 import { rawDb } from "@/lib/db";
 import { dbFor } from "@/lib/org/scoped-db";
 import { logActivity } from "@/lib/activity";
@@ -33,7 +34,7 @@ export async function createInvite(admin: Admin, raw: unknown): Promise<FlowResu
   }
 
   // Projects must be this company's (they come from the browser).
-  const projectIds = v.role === "STAFF" ? [...new Set(v.projectIds)] : [];
+  const projectIds = needsProjects(v.role) ? [...new Set(v.projectIds)] : [];
   if (projectIds.length > 0) {
     const count = await dbFor(admin.orgId).project.count({ where: { id: { in: projectIds } } });
     if (count !== projectIds.length) return { ok: false, error: "One or more selected projects were not found." };
@@ -75,7 +76,7 @@ export async function createInvite(admin: Admin, raw: unknown): Promise<FlowResu
   return { ok: true, message: `Invitation sent to ${v.email}.` };
 }
 
-export type PendingInvite = { id: string; email: string; role: "ADMIN" | "STAFF"; createdAt: Date; expiresAt: Date };
+export type PendingInvite = { id: string; email: string; role: RoleName; createdAt: Date; expiresAt: Date };
 
 /** Open invitations of one company. */
 export async function listPendingInvites(orgId: string): Promise<PendingInvite[]> {
@@ -84,7 +85,7 @@ export async function listPendingInvites(orgId: string): Promise<PendingInvite[]
     orderBy: { createdAt: "desc" },
     select: { id: true, email: true, role: true, createdAt: true, expiresAt: true },
   });
-  return rows.map((r) => ({ ...r, role: (r.role ?? "STAFF") as "ADMIN" | "STAFF" }));
+  return rows.map((r) => ({ ...r, role: (r.role ?? "STAFF") as RoleName }));
 }
 
 export async function revokeInvite(admin: Admin, inviteId: string): Promise<FlowResult> {
@@ -109,7 +110,7 @@ export async function describeInvite(token: string | null | undefined) {
   const payload = (row.payload ?? {}) as { invitedByName?: string };
   return {
     email: row.email,
-    role: (row.role ?? "STAFF") as "ADMIN" | "STAFF",
+    role: (row.role ?? "STAFF") as RoleName,
     company: org.displayName || org.name,
     slug: org.slug,
     color: org.primaryColor,
@@ -134,7 +135,7 @@ export async function acceptInvite(raw: unknown, signedInUserId: string | null):
   const row = await peekToken(v.token, "INVITE");
   if (!row || !row.organizationId) return { ok: false, error: "This invitation is invalid, has expired or was cancelled. Ask for a new one." };
   const orgId = row.organizationId;
-  const role = (row.role ?? "STAFF") as "ADMIN" | "STAFF";
+  const role = (row.role ?? "STAFF") as RoleName;
   const wantedProjects = ((row.payload ?? {}) as { projectIds?: string[] }).projectIds ?? [];
 
   let passwordHash: string | null = null;
@@ -184,7 +185,7 @@ export async function acceptInvite(raw: unknown, signedInUserId: string | null):
       create: { userId, organizationId: orgId, role },
       update: { role },
     });
-    if (role === "STAFF" && wantedProjects.length > 0) {
+    if (needsProjects(role) && wantedProjects.length > 0) {
       await tx.$executeRaw`SELECT set_config('app.org_id', ${orgId}, true)`;
       const valid = await tx.project.findMany({ where: { id: { in: wantedProjects }, organizationId: orgId }, select: { id: true } });
       if (valid.length > 0) {

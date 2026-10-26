@@ -1,3 +1,7 @@
+import { NewCompanyPanel } from "./new-company-panel";
+import { COUNTRY_DEFAULTS } from "@/lib/org/starter-data";
+import { trialDays } from "@/lib/plans/entitlements";
+import { ROLE_INFO } from "@/lib/roles";
 import { rawDb } from "@/lib/db";
 import { pageOrg } from "@/lib/org/page";
 import { listMyCompanies } from "@/lib/flows/account";
@@ -42,7 +46,7 @@ export default async function AccountPage() {
           </p>
           <p>
             <span className="text-muted-foreground">Company: </span>
-            <span className="font-medium">{org.displayName || org.name}</span> as {session.user.role.toLowerCase()}
+            <span className="font-medium">{org.displayName || org.name}</span> as {ROLE_INFO[session.user.role].label.toLowerCase()}
           </p>
         </CardContent>
       </Card>
@@ -50,6 +54,12 @@ export default async function AccountPage() {
       {session.user.role === "ADMIN" && <EmailPreferences initial={user.emailDigest} />}
 
       <TwoFactorPanel enabled={tf.enabled} recoveryLeft={tf.recoveryLeft} isOperator={tf.isOperator} />
+
+      <NewCompanyPanel
+        countries={Object.entries(COUNTRY_DEFAULTS).map(([code, c]) => ({ code, label: c.label }))}
+        trialDays={trialDays()}
+        mine={companies.filter((c) => c.role === "ADMIN").length}
+      />
 
       <AccountPanels
         companies={companies}
