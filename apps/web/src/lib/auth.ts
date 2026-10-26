@@ -1,12 +1,15 @@
 import type { RoleName } from "@/lib/roles";
 import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import { z } from "zod";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { rawDb } from "@/lib/db";
 import { logActivity } from "@/lib/activity";
-import { pickDefaultMembership, isOrgAllowedToSignIn } from "@/lib/org/default-membership";
+import { isOrgAllowedToSignIn } from "@/lib/org/default-membership";
+import { loadDefaultMembership } from "@/lib/org/membership-load";
+import { googleSessionUser, isGoogleConfigured, resolveGoogleSignIn } from "@/lib/flows/google";
 import { verifyPassword } from "@/lib/security/password";
 import { checkSecondFactor } from "@/lib/flows/two-factor";
 import { clientIp, hitAll, limitKey } from "@/lib/security/rate-limit";
@@ -50,20 +53,6 @@ function isServerUpdate(session: unknown): boolean {
 
 /** How often an open session is re-checked against the database (sign-out-everywhere, role changes, closed companies). */
 const RECHECK_MS = Number(process.env.SESSION_RECHECK_MS) || 60_000;
-
-/** Default company + role for a user, or null if no company may be entered. */
-async function loadDefaultMembership(userId: string) {
-  const memberships = await rawDb.membership.findMany({
-    where: { userId },
-    select: {
-      organizationId: true,
-      role: true,
-      createdAt: true,
-      organization: { select: { status: true } },
-    },
-  });
-  return pickDefaultMembership(memberships);
-}
 
 export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
   // Required for Cloudflare Tunnel / preview hosts (detect host from request).
@@ -136,9 +125,35 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
         };
       },
     }),
+    // Only offered when the site has Google credentials (see docs/GOOGLE-SIGN-IN.md).
+    ...(isGoogleConfigured() ? [Google({ clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET })] : []),
   ],
   callbacks: {
-    jwt: async ({ token, user, trigger, session }) => {
+    signIn: async ({ account, profile }) => {
+      if (account?.provider !== "google") return true;
+      try {
+        const result = await resolveGoogleSignIn((profile ?? {}) as { email?: string; email_verified?: boolean; name?: string });
+        return result.ok ? true : `/login?error=google_${result.reason}`;
+      } catch (error) {
+        console.error("Google sign-in failed", error);
+        return "/login?error=google_failed";
+      }
+    },
+    jwt: async ({ token, user, account, trigger, session }) => {
+      if (user && account?.provider === "google") {
+        // The sign-in step already checked the account; here the session is built from OUR database, never from what Google sent.
+        const ours = await googleSessionUser(user.email);
+        if (!ours) return null;
+        token.role = ours.role;
+        token.id = ours.id;
+        token.orgId = ours.orgId;
+        token.orgRole = ours.orgRole;
+        token.sv = ours.sv;
+        token.svAt = Date.now();
+        token.name = ours.name;
+        token.email = ours.email;
+        return token;
+      }
       if (user) {
         token.role = (user as { role: RoleName }).role; // membership role
         token.id = user.id as string;

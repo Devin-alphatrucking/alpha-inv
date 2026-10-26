@@ -10,8 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { safeCallbackPath } from "@/lib/security/redirect";
+import { GoogleButton } from "@/components/google-button";
 
-export function LoginForm({ signupEnabled }: { signupEnabled: boolean }) {
+export function LoginForm({ signupEnabled, googleEnabled = false }: { signupEnabled: boolean; googleEnabled?: boolean }) {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -80,6 +81,11 @@ export function LoginForm({ signupEnabled }: { signupEnabled: boolean }) {
       <p className="mb-5 text-sm text-muted-foreground">
         Sign in to your account
       </p>
+      {googleEnabled && (
+        <div className="mb-5">
+          <GoogleButton label="Sign in with Google" />
+        </div>
+      )}
 
       <div className="grid gap-4">
         <div className="grid gap-2">

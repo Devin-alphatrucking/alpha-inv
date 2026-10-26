@@ -70,7 +70,7 @@ try {
   console.log("Created app_runtime role (ordinary role, no BYPASSRLS)");
 
   const emailFile = path.join(os.tmpdir(), `outbox-${dbName}.jsonl`);
-  const suites = (process.env.ISOLATION_SUITES || "tests/isolation.test.ts,tests/auth-flows.test.ts,tests/plans.test.ts,tests/billing.test.ts,tests/master.test.ts,tests/mobile.test.ts,tests/hardening.test.ts,tests/twofactor.test.ts,tests/lock.test.ts,tests/digest.test.ts,tests/budget.test.ts,tests/gst.test.ts,tests/bulk.test.ts,tests/rates.test.ts,tests/comments.test.ts,tests/master-tools.test.ts,tests/payrun.test.ts,tests/vendor-merge.test.ts,tests/pricecompare.test.ts,tests/roles.test.ts,tests/otp.test.ts,tests/own-company.test.ts,tests/site.test.ts,tests/purchase.test.ts,tests/delivery.test.ts").split(",");
+  const suites = (process.env.ISOLATION_SUITES || "tests/isolation.test.ts,tests/auth-flows.test.ts,tests/plans.test.ts,tests/billing.test.ts,tests/master.test.ts,tests/mobile.test.ts,tests/hardening.test.ts,tests/twofactor.test.ts,tests/lock.test.ts,tests/digest.test.ts,tests/budget.test.ts,tests/gst.test.ts,tests/bulk.test.ts,tests/rates.test.ts,tests/comments.test.ts,tests/master-tools.test.ts,tests/payrun.test.ts,tests/vendor-merge.test.ts,tests/pricecompare.test.ts,tests/roles.test.ts,tests/otp.test.ts,tests/own-company.test.ts,tests/site.test.ts,tests/purchase.test.ts,tests/delivery.test.ts,tests/google.test.ts").split(",");
   exitCode = 0;
   for (const suite of suites) {
     console.log(`

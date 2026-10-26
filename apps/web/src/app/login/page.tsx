@@ -4,6 +4,7 @@ import { AuthBackdrop } from "@/components/auth-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
 import { getBrand } from "@/lib/brand/brand";
 import { isEmailConfigured } from "@/lib/email/transport";
+import { isGoogleConfigured } from "@/lib/flows/google";
 
 export default async function LoginPage() {
   const brand = await getBrand();
@@ -34,7 +35,7 @@ export default async function LoginPage() {
             <div className="h-64 animate-pulse rounded-2xl border bg-card/80" />
           }
         >
-          <LoginForm signupEnabled={signupEnabled} />
+          <LoginForm signupEnabled={signupEnabled} googleEnabled={isGoogleConfigured()} />
         </Suspense>
         {(brand.supportEmail || brand.supportUrl) && (
           <p className="mt-4 text-center text-xs text-muted-foreground">
