@@ -17,6 +17,8 @@ import {
   Receipt,
   CalendarRange,
   Scale,
+  HardHat,
+  ShoppingCart,
   type LucideIcon,
 } from "lucide-react";
 
@@ -39,6 +41,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/invoices", label: "My Invoices", icon: FileText, permission: "invoice:view", scope: "assigned" },
   { href: "/invoices", label: "Invoices", icon: FileText, permission: "invoice:view", scope: "all" },
   { href: "/projects", label: "Projects", icon: FolderKanban, permission: "project:view" },
+  { href: "/purchase", label: "Purchase", icon: ShoppingCart, permission: "request:view" },
+  { href: "/site", label: "Site work", icon: HardHat, permission: "site:view" },
   { href: "/payments", label: "Payments", icon: Wallet, permission: "payment:view" },
   { href: "/payments/planner", label: "Payment planner", icon: CalendarRange, permission: "payment:plan" },
   { href: "/reports/gst", label: "GST report", icon: Receipt, permission: "report:view" },

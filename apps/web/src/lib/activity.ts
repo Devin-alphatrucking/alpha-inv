@@ -10,7 +10,9 @@ export type ActivityModule =
   | "CATEGORY"
   | "COMPANY"
   | "BILLING"
-  | "MASTER";
+  | "MASTER"
+  | "SITE"
+  | "PURCHASE";
 
 export type ActivityAction =
   | "LOGIN"
@@ -67,7 +69,24 @@ export type ActivityAction =
   | "MASTER_RECONCILED"
   | "MASTER_CREATED_COMPANY"
   | "MASTER_RESET_TWO_STEP"
-  | "MASTER_EXPORTED_COMPANY";
+  | "MASTER_EXPORTED_COMPANY"
+  | "SITE_REPORT_SAVED"
+  | "SITE_REPORT_SUBMITTED"
+  | "SITE_REPORT_REOPENED"
+  | "SITE_PHOTO_ADDED"
+  | "SITE_PHOTO_DELETED"
+  | "SITE_ISSUE_RAISED"
+  | "SITE_ISSUE_UPDATED"
+  | "SITE_ISSUE_STATUS"
+  | "REQUEST_SAVED"
+  | "REQUEST_SUBMITTED"
+  | "REQUEST_WITHDRAWN"
+  | "REQUEST_DECIDED"
+  | "REQUEST_CANCELLED"
+  | "ORDER_CREATED"
+  | "ORDER_UPDATED"
+  | "ORDER_SENT"
+  | "ORDER_CANCELLED";
 
 /**
  * Appends a system-wide activity log entry. Best-effort: failures are

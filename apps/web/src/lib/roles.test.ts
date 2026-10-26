@@ -67,4 +67,33 @@ assert.equal(homeFor("ENGINEER"), "/invoices/upload");
 assert.equal(homeFor("VIEWER"), "/dashboard", "a viewer cannot upload, so the dashboard is home");
 assert.equal(homeFor(undefined), "/dashboard");
 
+// ---- site work (Technical module)
+for (const r of ["ADMIN", "ACCOUNTANT", "PURCHASE", "MANAGER", "ENGINEER", "VIEWER"] as RoleName[]) assert.equal(hasPermission(r, "site:view"), true, `${r} sees site work`);
+assert.equal(hasPermission("STAFF", "site:view"), false, "staff have no site work");
+for (const r of ["ADMIN", "MANAGER", "ENGINEER"] as RoleName[]) assert.equal(hasPermission(r, "site:write"), true, `${r} writes site work`);
+for (const r of ["ACCOUNTANT", "PURCHASE", "VIEWER", "STAFF"] as RoleName[]) assert.equal(hasPermission(r, "site:write"), false, `${r} only reads site work`);
+for (const r of ["ADMIN", "MANAGER"] as RoleName[]) assert.equal(hasPermission(r, "site:manage"), true, `${r} submits and closes`);
+for (const r of ["ENGINEER", "ACCOUNTANT", "PURCHASE", "VIEWER", "STAFF"] as RoleName[]) assert.equal(hasPermission(r, "site:manage"), false, `${r} cannot reopen reports or close issues`);
+assert.equal(open("ENGINEER", "/site/issues/abc"), true);
+assert.equal(open("ENGINEER", "/api/site/photos/abc"), true);
+assert.equal(open("STAFF", "/site"), false);
+assert.equal(open("STAFF", "/api/site/photos/abc"), false);
+
+// ---- purchase
+for (const r of ["ADMIN", "ACCOUNTANT", "PURCHASE", "MANAGER", "ENGINEER", "VIEWER"] as RoleName[]) assert.equal(hasPermission(r, "request:view"), true, `${r} sees requests`);
+assert.equal(hasPermission("STAFF", "request:view"), false);
+for (const r of ["ADMIN", "PURCHASE", "MANAGER", "ENGINEER"] as RoleName[]) assert.equal(hasPermission(r, "request:write"), true, `${r} raises requests`);
+for (const r of ["ACCOUNTANT", "VIEWER", "STAFF"] as RoleName[]) assert.equal(hasPermission(r, "request:write"), false, `${r} cannot raise requests`);
+for (const r of ["ADMIN", "MANAGER"] as RoleName[]) assert.equal(hasPermission(r, "request:approve"), true, `${r} approves`);
+for (const r of ["PURCHASE", "ENGINEER", "ACCOUNTANT", "VIEWER", "STAFF"] as RoleName[]) assert.equal(hasPermission(r, "request:approve"), false, `${r} cannot approve`);
+for (const r of ["ADMIN", "ACCOUNTANT", "PURCHASE", "MANAGER", "VIEWER"] as RoleName[]) assert.equal(hasPermission(r, "order:view"), true, `${r} sees orders`);
+for (const r of ["ENGINEER", "STAFF"] as RoleName[]) assert.equal(hasPermission(r, "order:view"), false, `${r} does not see order prices`);
+for (const r of ["ADMIN", "PURCHASE"] as RoleName[]) assert.equal(hasPermission(r, "order:write"), true, `${r} makes orders`);
+for (const r of ["ACCOUNTANT", "MANAGER", "ENGINEER", "VIEWER", "STAFF"] as RoleName[]) assert.equal(hasPermission(r, "order:write"), false, `${r} cannot make orders`);
+assert.equal(open("ENGINEER", "/purchase/requests/abc"), true);
+assert.equal(open("ENGINEER", "/purchase/orders"), false, "longest rule wins: orders need order:view");
+assert.equal(open("ENGINEER", "/purchase/orders/abc"), false);
+assert.equal(open("MANAGER", "/purchase/orders/abc"), true);
+assert.equal(open("STAFF", "/purchase"), false);
+
 console.log("roles: all checks passed");

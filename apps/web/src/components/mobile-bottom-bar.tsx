@@ -25,6 +25,8 @@ import {
   Receipt,
   CalendarRange,
   Scale,
+  HardHat,
+  ShoppingCart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -66,6 +68,8 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
     "/categories",
     "/users",
     "/projects",
+    "/site",
+    "/purchase",
     "/admin",
   ].some((prefix) => pathname.startsWith(prefix));
 
@@ -81,6 +85,18 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
       label: "Projects",
       description: "Sites, teams & spend per project",
       icon: FolderKanban,
+    },
+    {
+      href: "/purchase",
+      label: "Purchase",
+      description: "Material requests & purchase orders",
+      icon: ShoppingCart,
+    },
+    {
+      href: "/site",
+      label: "Site work",
+      description: "Daily reports, photos & issues from site",
+      icon: HardHat,
     },
     {
       href: "/payments/planner",
@@ -155,7 +171,7 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
     <>
       <nav
         aria-label="Mobile Navigation"
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/70 bg-background/95 backdrop-blur-lg supports-backdrop-filter:bg-background/85 shadow-[0_-4px_24px_rgba(0,0,0,0.07)] md:hidden pb-safe"
+        className="fixed bottom-0 left-0 right-0 z-50 print:hidden border-t border-border/70 bg-background/95 backdrop-blur-lg supports-backdrop-filter:bg-background/85 shadow-[0_-4px_24px_rgba(0,0,0,0.07)] md:hidden pb-safe"
       >
         <div className="relative mx-auto flex h-16 max-w-md items-center justify-around px-2">
           {fullBar ? (

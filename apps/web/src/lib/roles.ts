@@ -12,10 +12,10 @@ export const isRole = (value: unknown): value is RoleName => typeof value === "s
 export const ROLE_INFO: Record<RoleName, { label: string; summary: string }> = {
   ADMIN: { label: "Administrator", summary: "Everything, including people, plans, settings and logs." },
   ACCOUNTANT: { label: "Accountant", summary: "All projects: invoices, payments, suppliers, GST report and planner. No people, plans or settings." },
-  PURCHASE: { label: "Purchase officer", summary: "Assigned projects: upload and review invoices, manage suppliers, see rates and price comparison." },
-  MANAGER: { label: "Project manager", summary: "Assigned projects: invoices, budgets and spend." },
-  ENGINEER: { label: "Site engineer", summary: "Assigned projects: upload and review bills, site work." },
-  VIEWER: { label: "Viewer", summary: "Assigned projects: read only (for a client or an auditor)." },
+  PURCHASE: { label: "Purchase officer", summary: "Assigned projects: upload and review invoices, manage suppliers, see rates and price comparison, and make purchase orders from approved material requests." },
+  MANAGER: { label: "Project manager", summary: "Assigned projects: invoices, budgets and spend, and site work (reports, photos, issues) including submitting reports and closing issues. Approves material requests." },
+  ENGINEER: { label: "Site engineer", summary: "Assigned projects: upload and review bills, and site work: daily reports, photos and issues. Raises material requests (does not see order prices)." },
+  VIEWER: { label: "Viewer", summary: "Assigned projects: read only, including site reports and photos (for a client or an auditor)." },
   STAFF: { label: "General staff", summary: "Assigned projects: upload and review invoices, record payments." },
 };
 
@@ -40,24 +40,34 @@ export type Permission =
   | "price:compare"
   | "report:view"
   | "budget:view"
+  | "site:view"
+  | "site:write"
+  | "site:manage"
+  | "request:view"
+  | "request:write"
+  | "request:approve"
+  | "order:view"
+  | "order:write"
   | "logs:view";
 
 const ALL: Permission[] = [
   "dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "invoice:delete", "comment:write", "payment:view", "payment:create", "payment:delete",
   "payment:plan", "project:view", "project:manage", "user:manage", "vendor:view", "vendor:manage", "category:manage", "material:view", "price:compare",
-  "report:view", "budget:view", "logs:view",
+  "report:view", "budget:view", "site:view", "site:write", "site:manage",
+  "request:view", "request:write", "request:approve", "order:view", "order:write", "logs:view",
 ];
 
 const ROLE_PERMISSIONS: Record<RoleName, ReadonlySet<Permission>> = {
   ADMIN: new Set(ALL),
   ACCOUNTANT: new Set<Permission>([
     "dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "invoice:delete", "comment:write", "payment:view", "payment:create", "payment:delete", "payment:plan",
-    "project:view", "vendor:view", "vendor:manage", "category:manage", "material:view", "price:compare", "report:view", "budget:view",
+    "project:view", "vendor:view", "vendor:manage", "category:manage", "material:view", "price:compare", "report:view", "budget:view", "site:view",
+    "request:view", "order:view",
   ]),
-  PURCHASE: new Set<Permission>(["dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "comment:write", "project:view", "vendor:view", "vendor:manage", "material:view", "price:compare"]),
-  MANAGER: new Set<Permission>(["dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "comment:write", "project:view", "budget:view", "material:view"]),
-  ENGINEER: new Set<Permission>(["dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "comment:write", "project:view"]),
-  VIEWER: new Set<Permission>(["dashboard:view", "invoice:view", "project:view", "budget:view"]),
+  PURCHASE: new Set<Permission>(["dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "comment:write", "project:view", "vendor:view", "vendor:manage", "material:view", "price:compare", "site:view", "request:view", "request:write", "order:view", "order:write"]),
+  MANAGER: new Set<Permission>(["dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "comment:write", "project:view", "budget:view", "material:view", "site:view", "site:write", "site:manage", "request:view", "request:write", "request:approve", "order:view"]),
+  ENGINEER: new Set<Permission>(["dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "comment:write", "project:view", "site:view", "site:write", "request:view", "request:write"]),
+  VIEWER: new Set<Permission>(["dashboard:view", "invoice:view", "project:view", "budget:view", "site:view", "request:view", "order:view"]),
   // The original role: upload-first, view and review their own invoices, record payments on invoices they can access.
   STAFF: new Set<Permission>(["dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "invoice:delete", "comment:write", "payment:create", "project:view"]),
 };
@@ -90,6 +100,10 @@ export const ROUTE_PERMISSIONS: { prefix: string; permission: Permission | "ADMI
   { prefix: "/materials", permission: "material:view" },
   { prefix: "/vendors", permission: "vendor:view" },
   { prefix: "/categories", permission: "category:manage" },
+  { prefix: "/purchase/orders", permission: "order:view" },
+  { prefix: "/purchase", permission: "request:view" },
+  { prefix: "/site", permission: "site:view" },
+  { prefix: "/api/site", permission: "site:view" },
   { prefix: "/users", permission: "user:manage" },
   { prefix: "/admin", permission: "ADMIN_ONLY" },
   { prefix: "/plan", permission: "ADMIN_ONLY" },

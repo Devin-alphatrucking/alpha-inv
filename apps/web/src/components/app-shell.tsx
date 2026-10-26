@@ -54,7 +54,7 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
   return (
     <div className="flex min-h-dvh bg-muted/30">
       {/* Desktop Sidebar (visible on md and up) */}
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:flex">
+      <aside className="sticky top-0 print:hidden hidden h-dvh w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:flex">
         <div className="border-b border-sidebar-border px-5 py-5">
           <BrandLogo name={brand.name} logoUrl={brand.logoUrl} />
           <p className="mt-1 text-xs text-muted-foreground">Invoice &amp; Billing</p>
@@ -65,9 +65,9 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {banner}
+        <div className="print:hidden">{banner}</div>
         {/* Top Header */}
-        <header className="sticky top-0 z-40 flex h-14 items-center justify-between gap-2 border-b border-border/80 bg-background px-4 sm:gap-3 sm:px-6">
+        <header className="sticky top-0 z-40 print:hidden flex h-14 items-center justify-between gap-2 border-b border-border/80 bg-background px-4 sm:gap-3 sm:px-6">
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
             {/* Mobile App Brand Title */}
             <div className="md:hidden">
