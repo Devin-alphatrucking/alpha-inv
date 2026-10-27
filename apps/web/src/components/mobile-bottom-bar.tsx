@@ -27,6 +27,7 @@ import {
   Scale,
   HardHat,
   ShoppingCart,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -103,6 +104,12 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
       label: "Payment planner",
       description: "What falls due, and pay several bills at once",
       icon: CalendarRange,
+    },
+    {
+      href: "/reports/purchase",
+      label: "Purchase report",
+      description: "Ordered, delivered, billed, paid; suppliers",
+      icon: BarChart3,
     },
     {
       href: "/reports/gst",

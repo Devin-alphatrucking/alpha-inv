@@ -19,6 +19,7 @@ import {
   Scale,
   HardHat,
   ShoppingCart,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 
@@ -45,6 +46,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/site", label: "Site work", icon: HardHat, permission: "site:view" },
   { href: "/payments", label: "Payments", icon: Wallet, permission: "payment:view" },
   { href: "/payments/planner", label: "Payment planner", icon: CalendarRange, permission: "payment:plan" },
+  { href: "/reports/purchase", label: "Purchase report", icon: BarChart3, permission: "order:view" },
   { href: "/reports/gst", label: "GST report", icon: Receipt, permission: "report:view" },
   { href: "/materials", label: "Rate Sheet", icon: Boxes, permission: "material:view" },
   { href: "/materials/compare", label: "Price comparison", icon: Scale, permission: "price:compare" },

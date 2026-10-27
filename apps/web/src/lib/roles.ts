@@ -98,6 +98,8 @@ export const ROUTE_PERMISSIONS: { prefix: string; permission: Permission | "ADMI
   { prefix: "/payments", permission: "payment:view" },
   { prefix: "/api/reports/payables", permission: "payment:plan" },
   { prefix: "/reports/gst", permission: "report:view" },
+  { prefix: "/reports/purchase", permission: "order:view" },
+  { prefix: "/api/reports/purchase", permission: "order:view" },
   { prefix: "/api/reports/gst", permission: "report:view" },
   { prefix: "/materials/compare", permission: "price:compare" },
   { prefix: "/api/reports/price-compare", permission: "price:compare" },
