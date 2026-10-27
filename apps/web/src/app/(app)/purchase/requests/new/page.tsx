@@ -7,6 +7,7 @@ import { getProjectScope } from "@/lib/projects/scope";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RequestForm } from "../request-form";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export default async function NewRequestPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
   const { user } = await pageOrg();
@@ -26,9 +27,9 @@ export default async function NewRequestPage({ searchParams }: { searchParams: P
             <span>For</span>
             {active.length > 1 ? (
               <>
-                <select name="project" defaultValue={project.id} aria-label="Project" className="h-9 rounded-xl border border-input bg-background px-3 text-sm text-foreground">
+                <NativeSelect name="project" defaultValue={project.id} aria-label="Project">
                   {active.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
+                </NativeSelect>
                 <Button type="submit" variant="outline" size="sm">Change</Button>
               </>
             ) : <span className="font-medium text-foreground">{project.name}</span>}

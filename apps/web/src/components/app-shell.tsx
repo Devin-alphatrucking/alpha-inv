@@ -101,7 +101,7 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="flex size-9 shrink-0 items-center justify-center rounded-full outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring xl:hidden"
+                className="flex size-10 shrink-0 items-center justify-center rounded-full outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring xl:hidden"
                 aria-label="Open account menu"
               >
                 <Avatar className="size-9">

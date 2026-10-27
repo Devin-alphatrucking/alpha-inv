@@ -99,7 +99,7 @@ export function InvoicePaymentControls({
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="h-8 gap-1 text-xs"
+                  className="gap-1"
                 >
                   <CreditCard className="size-3.5" />
                   Pay
@@ -194,7 +194,7 @@ export function InvoicePaymentControls({
           type="button"
           size="icon-sm"
           variant="ghost"
-          className="size-8 text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground"
           onClick={handlePrint}
           title="Print invoice"
         >

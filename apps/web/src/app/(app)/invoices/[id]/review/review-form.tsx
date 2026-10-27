@@ -377,7 +377,7 @@ export function ReviewForm({
           type="button"
           variant="outline"
           size="sm"
-          className="h-8 gap-1.5 px-2.5 text-xs font-medium"
+          className="gap-1.5 font-medium"
           onClick={() => router.push("/invoices")}
         >
           <ArrowLeft className="size-4" />
@@ -886,7 +886,7 @@ export function ReviewForm({
                 variant="outline"
                 size="sm"
                 onClick={addCustomTax}
-                className="h-8 gap-1.5 text-xs rounded-lg font-medium"
+                className="gap-1.5 font-medium"
               >
                 <Plus className="size-3.5" />
                 Add Tax / Charge
@@ -901,7 +901,7 @@ export function ReviewForm({
                       placeholder="Tax Title (e.g. TDS, CESS, FREIGHT)"
                       value={tax.title}
                       onChange={(e) => updateCustomTax(tax.id, { title: e.target.value })}
-                      className="h-9 flex-1 uppercase text-xs"
+                      className="flex-1 uppercase"
                     />
                     <div className="w-36">
                       <Input

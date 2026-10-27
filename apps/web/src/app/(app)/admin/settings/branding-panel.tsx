@@ -45,7 +45,7 @@ function ColorField({
           aria-label={`${label} picker`}
           value={isHexColor(value) ? value : FALLBACK_PRIMARY}
           onChange={(e) => onChange(e.target.value.toUpperCase())}
-          className="h-9 w-12 cursor-pointer rounded-md border bg-transparent p-1"
+          className="h-11 w-14 cursor-pointer rounded-xl border bg-transparent p-1 md:h-10"
         />
         <Input id={id} value={value} placeholder="#0F4C81" onChange={(e) => onChange(e.target.value)} className="w-32 font-mono" />
         {value && (

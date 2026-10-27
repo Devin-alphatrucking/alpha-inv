@@ -13,6 +13,7 @@ import { PhotoGrid } from "../photo-grid";
 import { PhotoUploader } from "../photo-uploader";
 import { ReportStatusBadge } from "../badges";
 import { ReportForm } from "../report-form";
+import { NativeSelect } from "@/components/ui/native-select";
 
 type Params = Promise<{ project?: string; date?: string }>;
 
@@ -46,9 +47,9 @@ export default async function ReportPage({ searchParams }: { searchParams: Param
         </div>
         <form method="get" className="flex flex-wrap items-end gap-2" aria-label="Choose project and day">
           {scope.projects.length > 1 && (
-            <select name="project" defaultValue={project.id} aria-label="Project" className="h-10 rounded-xl border border-input bg-background px-3 text-sm">
+            <NativeSelect name="project" defaultValue={project.id} aria-label="Project">
               {scope.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+            </NativeSelect>
           )}
           {scope.projects.length <= 1 && <input type="hidden" name="project" value={project.id} />}
           <Input type="date" name="date" defaultValue={date} max={today} aria-label="Day" className="w-auto" />

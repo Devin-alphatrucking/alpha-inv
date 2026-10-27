@@ -6,6 +6,7 @@ import { ImageOff, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { deletePhotoAction } from "./actions";
+import { useConfirm } from "@/components/confirm-provider";
 
 export type GridPhoto = { id: string; caption: string | null; area: string | null; takenOn: string; projectName?: string; uploaderName: string | null; canDelete: boolean };
 
@@ -13,9 +14,10 @@ export type GridPhoto = { id: string; caption: string | null; area: string | nul
 export function PhotoGrid({ photos, showProject = false }: { photos: GridPhoto[]; showProject?: boolean }) {
   const router = useRouter();
   const [removing, setRemoving] = useState<string | null>(null);
+  const ask = useConfirm();
 
   async function remove(id: string) {
-    if (!window.confirm("Delete this photo? This cannot be undone.")) return;
+    if (!(await ask({ title: "Delete this photo?", description: "This cannot be undone.", confirmLabel: "Delete photo", cancelLabel: "Keep it" }))) return;
     setRemoving(id);
     const r = await deletePhotoAction(id);
     setRemoving(null);

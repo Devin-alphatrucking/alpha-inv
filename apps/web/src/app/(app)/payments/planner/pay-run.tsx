@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useConfirm } from "@/components/confirm-provider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, CircleAlert, Loader2 } from "lucide-react";
@@ -14,6 +15,7 @@ import type { Owed } from "@/lib/invoices/ageing";
 import { recordPayRunAction } from "./actions";
 import { StepUpDialog } from "@/components/step-up-dialog";
 import type { PayRunResult } from "@/lib/flows/pay-run";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export type PlannerRow = Pick<Owed, "id" | "invoiceNumber" | "vendorName" | "projectName" | "balanceMinor" | "daysLate"> & { dueLabel: string };
 
@@ -31,6 +33,7 @@ const lateText = (d: number | null) => (d === null ? "No due date" : d > 0 ? `${
 export function PayRun({ rows, today }: { rows: PlannerRow[]; today: string }) {
   const fmt = useFormat();
   const router = useRouter();
+  const ask = useConfirm();
   const [pending, startTransition] = useTransition();
   const [picked, setPicked] = useState<Record<string, string>>({}); // invoice id -> the amount as typed
   const [filter, setFilter] = useState("");
@@ -80,9 +83,9 @@ export function PayRun({ rows, today }: { rows: PlannerRow[]; today: string }) {
     router.refresh();
   }
 
-  function submit() {
+  async function submit() {
     if (!valid || pending) return;
-    if (!window.confirm(`Record ${checks.length} payment${checks.length === 1 ? "" : "s"} totalling ${money(total)}, paid on ${paidOn} by ${mode}?`)) return;
+    if (!(await ask({ title: "Record these payments?", description: `Record ${checks.length} payment${checks.length === 1 ? "" : "s"} totalling ${money(total)}, paid on ${paidOn} by ${mode}?`, confirmLabel: "Record payments", variant: "default" }))) return;
     startTransition(async () => {
       const r = await recordPayRunAction(payload());
       // Money going out: the first time in 15 minutes, a code from email confirms it is you.
@@ -110,7 +113,7 @@ export function PayRun({ rows, today }: { rows: PlannerRow[]; today: string }) {
             {p.label}
           </Button>
         ))}
-        <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Find a supplier or invoice" className="ml-auto h-8 w-full max-w-56 text-sm" aria-label="Find a supplier or invoice" />
+        <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Find a supplier or invoice" className="ml-auto w-full max-w-56" aria-label="Find a supplier or invoice" />
       </div>
 
       {rows.length === 0 ? (
@@ -193,19 +196,19 @@ export function PayRun({ rows, today }: { rows: PlannerRow[]; today: string }) {
           </div>
           <label className="grid gap-1 text-xs text-muted-foreground">
             Paid on
-            <input type="date" value={paidOn} max={today} onChange={(e) => setPaidOn(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground" />
+            <Input type="date" value={paidOn} max={today} onChange={(e) => setPaidOn(e.target.value)} className="w-auto" />
           </label>
           <label className="grid gap-1 text-xs text-muted-foreground">
             Mode
-            <select value={mode} onChange={(e) => setMode(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground">
+            <NativeSelect value={mode} onChange={(e) => setMode(e.target.value)} className="border border-input bg-background text-foreground">
               {PAYMENT_MODES.map((m) => (
                 <option key={m}>{m}</option>
               ))}
-            </select>
+            </NativeSelect>
           </label>
           <label className="grid gap-1 text-xs text-muted-foreground">
             Reference (optional)
-            <Input value={reference} onChange={(e) => setReference(e.target.value)} maxLength={100} placeholder="Batch or bank reference" className="h-9 w-44 text-sm" />
+            <Input value={reference} onChange={(e) => setReference(e.target.value)} maxLength={100} placeholder="Batch or bank reference" className="w-44" />
           </label>
           <Button type="button" onClick={submit} disabled={!valid || pending || !paidOn}>
             {pending && <Loader2 className="size-4 animate-spin" aria-hidden />}

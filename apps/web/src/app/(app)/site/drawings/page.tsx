@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { DocumentForm } from "./document-form";
+import { NativeSelect } from "@/components/ui/native-select";
 
 type Params = Promise<{ project?: string; category?: string; q?: string }>;
 
@@ -39,15 +40,15 @@ export default async function DrawingsPage({ searchParams }: { searchParams: Par
 
       <form method="get" className="flex flex-wrap items-end gap-2" aria-label="Find drawings">
         {scope.projects.length > 1 && (
-          <select name="project" defaultValue={projectId ?? ""} aria-label="Project" className="h-10 rounded-xl border border-input bg-background px-3 text-sm">
+          <NativeSelect name="project" defaultValue={projectId ?? ""} aria-label="Project">
             <option value="">All projects</option>
             {scope.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
+          </NativeSelect>
         )}
-        <select name="category" defaultValue={category} aria-label="Category" className="h-10 rounded-xl border border-input bg-background px-3 text-sm">
+        <NativeSelect name="category" defaultValue={category} aria-label="Category">
           <option value="">All categories</option>
           {CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
-        </select>
+        </NativeSelect>
         <Input name="q" defaultValue={params.q ?? ""} placeholder="Title or number" aria-label="Search" className="w-auto" />
         <Button type="submit" variant="outline" size="sm">Show</Button>
       </form>

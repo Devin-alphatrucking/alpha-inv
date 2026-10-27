@@ -9,10 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { OrderAction } from "@/lib/purchase/rules";
 import { cancelOrderAction, closeOrderAction, sendOrderAction } from "../actions";
+import { useConfirm } from "@/components/confirm-provider";
 
 /** Steps on one purchase order: change a draft, mark it sent, print it, cancel it (with a reason). */
 export function OrderActions({ orderId, actions, editHref, shortClose = false }: { orderId: string; actions: OrderAction[]; editHref: string; shortClose?: boolean }) {
   const router = useRouter();
+  const ask = useConfirm();
   const [busy, setBusy] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -37,7 +39,7 @@ export function OrderActions({ orderId, actions, editHref, shortClose = false }:
       <div className="flex flex-wrap gap-2">
         {has("edit") && <Button size="sm" variant="outline" nativeButton={false} render={<Link href={editHref} />}><Pencil className="size-4" aria-hidden /> Change</Button>}
         {has("send") && (
-          <Button size="sm" disabled={busy !== null} onClick={() => { if (window.confirm("Mark this order as sent to the supplier? It can no longer be edited, only cancelled.")) void run("send", () => sendOrderAction(orderId), "Marked as sent"); }}>
+          <Button size="sm" disabled={busy !== null} onClick={async () => { if (await ask({ title: "Mark this order as sent?", description: "It can no longer be edited, only cancelled.", confirmLabel: "Mark as sent", variant: "default" })) void run("send", () => sendOrderAction(orderId), "Marked as sent"); }}>
             {busy === "send" ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Send className="size-4" aria-hidden />} Mark as sent
           </Button>
         )}

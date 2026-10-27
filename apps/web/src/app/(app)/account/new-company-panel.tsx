@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createOwnCompanyAction } from "./actions";
+import { NativeSelect } from "@/components/ui/native-select";
 
 /** Start a company of your own with the same sign-in (for example you work for someone else's company today). */
 export function NewCompanyPanel({ countries, trialDays, mine }: { countries: { code: string; label: string }[]; trialDays: number; mine: number }) {
@@ -48,13 +49,13 @@ export function NewCompanyPanel({ countries, trialDays, mine }: { countries: { c
           </div>
           <div className="grid gap-2">
             <Label htmlFor="nc-country">Country</Label>
-            <select id="nc-country" value={country} onChange={(e) => setCountry(e.target.value)} className="h-10 rounded-xl border border-input bg-background px-3 text-sm">
+            <NativeSelect id="nc-country" value={country} onChange={(e) => setCountry(e.target.value)} className="border border-input bg-background px-3">
               {countries.map((c) => (
                 <option key={c.code} value={c.code}>
                   {c.label}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
             <p className="text-xs text-muted-foreground">Sets the currency and time zone.</p>
           </div>
           {error && error.field !== "companyName" && (

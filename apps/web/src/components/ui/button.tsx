@@ -20,17 +20,19 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
+        // Heights: a phone gets thumb-sized targets (44px, 40px for small, 36px for extra small); from the md breakpoint up they step down.
+        // "default" matches the 40px inputs and selects, so a field and a button side by side line up.
         default:
-          "h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        icon: "size-8",
+          "h-11 gap-2 rounded-xl px-4 text-base md:h-10 md:px-3.5 md:text-sm has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
+        xs: "h-9 gap-1 rounded-lg px-2.5 text-sm md:h-7 md:px-2 md:text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3.5 md:[&_svg:not([class*='size-'])]:size-3",
+        sm: "h-10 gap-1.5 rounded-xl px-3.5 text-sm md:h-8 md:rounded-lg md:px-3 md:text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5 [&_svg:not([class*='size-'])]:size-4 md:[&_svg:not([class*='size-'])]:size-3.5",
+        lg: "h-12 gap-2 rounded-xl px-5 text-base md:h-11 md:px-4 has-data-[icon=inline-end]:pr-3.5 has-data-[icon=inline-start]:pl-3.5",
+        icon: "size-11 rounded-xl md:size-10",
         "icon-xs":
-          "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
+          "size-9 rounded-lg md:size-7 in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-4 md:[&_svg:not([class*='size-'])]:size-3",
         "icon-sm":
-          "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
-        "icon-lg": "size-9",
+          "size-10 rounded-xl md:size-8 md:rounded-lg in-data-[slot=button-group]:rounded-lg",
+        "icon-lg": "size-12 rounded-xl md:size-11",
       },
     },
     defaultVariants: {

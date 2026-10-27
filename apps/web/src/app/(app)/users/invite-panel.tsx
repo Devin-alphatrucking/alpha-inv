@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useFormat } from "@/components/format-provider";
 import { inviteUserAction, revokeInviteAction } from "./invite-actions";
+import { NativeSelect } from "@/components/ui/native-select";
 
 type Pending = { id: string; email: string; role: RoleName; expiresAt: string };
 
@@ -66,18 +67,18 @@ export function InvitePanel({
           </div>
           <div className="grid gap-2">
             <Label htmlFor="inv-role">Role</Label>
-            <select
+            <NativeSelect
               id="inv-role"
               value={role}
               onChange={(e) => setRole(e.target.value as RoleName)}
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="border border-input bg-background px-3 outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {ROLES.map((r) => (
                 <option key={r} value={r}>
                   {ROLE_INFO[r].label}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
             <p className="text-xs text-muted-foreground">{ROLE_INFO[role].summary}</p>
           </div>
         </div>

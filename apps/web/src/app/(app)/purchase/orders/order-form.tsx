@@ -10,8 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createOrderAction, updateOrderAction } from "../actions";
 import { blankLine, LineEditor, type EditorLine } from "../line-editor";
+import { NativeSelect } from "@/components/ui/native-select";
 
-const selectClass = "h-11 w-full rounded-xl border border-input bg-background px-3 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 md:h-10 md:text-sm dark:bg-input/30";
 
 export type OrderFormValues = { vendorId: string; orderDate: string; deliveryDate: string; deliveryAddress: string; paymentTerms: string; note: string; lines: EditorLine[] };
 
@@ -49,10 +49,10 @@ export function OrderForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-1.5 sm:col-span-2">
           <Label htmlFor="po-vendor">Supplier</Label>
-          <select id="po-vendor" className={selectClass} value={v.vendorId} onChange={set("vendorId")} disabled={pending} aria-invalid={bad("vendorId")}>
+          <NativeSelect id="po-vendor" value={v.vendorId} onChange={set("vendorId")} disabled={pending} aria-invalid={bad("vendorId")}>
             <option value="">Choose a supplier…</option>
             {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}{s.gstin ? ` (${s.gstin})` : ""}</option>)}
-          </select>
+          </NativeSelect>
           {suppliers.length === 0 && <p className="text-xs text-muted-foreground">There are no suppliers yet. Add one under Vendors first.</p>}
         </div>
         <div className="grid gap-1.5">

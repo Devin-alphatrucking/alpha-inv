@@ -9,10 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { RequestAction } from "@/lib/purchase/rules";
 import { cancelRequestAction, decideRequestAction, submitRequestAction, withdrawRequestAction } from "../actions";
+import { useConfirm } from "@/components/confirm-provider";
 
 /** The steps this person can take on a request. Rejecting asks for a reason first. */
 export function RequestActions({ requestId, projectId, actions }: { requestId: string; projectId: string; actions: RequestAction[] }) {
   const router = useRouter();
+  const ask = useConfirm();
   const [busy, setBusy] = useState<string | null>(null);
   const [asking, setAsking] = useState<"approve" | "reject" | null>(null);
   const [note, setNote] = useState("");
@@ -42,7 +44,7 @@ export function RequestActions({ requestId, projectId, actions }: { requestId: s
         {has("reject") && <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => setAsking(asking === "reject" ? null : "reject")}><X className="size-4" aria-hidden /> Reject</Button>}
         {has("order") && <Button size="sm" nativeButton={false} render={<Link href={`/purchase/orders/new?project=${projectId}&request=${requestId}`} />}><ShoppingCart className="size-4" aria-hidden /> Make a purchase order</Button>}
         {has("cancel") && (
-          <Button size="sm" variant="ghost" className="text-muted-foreground" disabled={busy !== null} onClick={() => { if (window.confirm("Cancel this request? It cannot be undone.")) void run("cancel", () => cancelRequestAction(requestId), "Request cancelled"); }}>
+          <Button size="sm" variant="ghost" className="text-muted-foreground" disabled={busy !== null} onClick={async () => { if (await ask({ title: "Cancel this request?", description: "It cannot be undone.", confirmLabel: "Cancel request", cancelLabel: "Keep it" })) void run("cancel", () => cancelRequestAction(requestId), "Request cancelled"); }}>
             {spin("cancel")} Cancel request
           </Button>
         )}

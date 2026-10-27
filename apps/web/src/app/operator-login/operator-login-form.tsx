@@ -46,18 +46,18 @@ export function OperatorLoginForm() {
     <form onSubmit={submit} noValidate className="grid gap-4 rounded-2xl border border-border/80 bg-card p-5 shadow-sm sm:p-6">
       <div className="grid gap-2">
         <Label htmlFor="op-email">Email</Label>
-        <Input id="op-email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} className="h-11 text-base md:h-10 md:text-sm" required />
+        <Input id="op-email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
       </div>
       <div className="grid gap-2">
         <Label htmlFor="op-password">Password</Label>
-        <Input id="op-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="h-11 text-base md:h-10 md:text-sm" required />
+        <Input id="op-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
       </div>
       <div className="grid gap-2">
         <Label htmlFor="op-code">Authenticator code</Label>
-        <Input id="op-code" inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit code or a recovery code" value={code} onChange={(e) => setCode(e.target.value)} className="h-11 text-base md:h-10 md:text-sm" required />
+        <Input id="op-code" inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit code or a recovery code" value={code} onChange={(e) => setCode(e.target.value)} required />
       </div>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-      <Button type="submit" className="h-11 md:h-10" disabled={busy}>
+      <Button type="submit" disabled={busy}>
         {busy && <Loader2 className="size-4 animate-spin" aria-hidden />} Sign in
       </Button>
     </form>

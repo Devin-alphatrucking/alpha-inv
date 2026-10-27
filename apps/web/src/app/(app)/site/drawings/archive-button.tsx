@@ -6,12 +6,14 @@ import { Archive, ArchiveRestore, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { archiveDocumentAction } from "../actions";
+import { useConfirm } from "@/components/confirm-provider";
 
 export function ArchiveButton({ documentId, archived }: { documentId: string; archived: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const ask = useConfirm();
   async function run() {
-    if (!archived && !window.confirm("Archive this drawing? It disappears from the lists but its history is kept, and you can bring it back.")) return;
+    if (!archived && !(await ask({ title: "Archive this drawing?", description: "It disappears from the lists but its history is kept, and you can bring it back.", confirmLabel: "Archive", variant: "default" }))) return;
     setBusy(true);
     const r = await archiveDocumentAction(documentId, !archived);
     setBusy(false);

@@ -10,8 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ISSUE_MAX, SEVERITIES, SEVERITY_LABEL } from "@/lib/site/rules";
 import { createIssueAction, updateIssueAction } from "../actions";
+import { NativeSelect } from "@/components/ui/native-select";
 
-const selectClass = "h-11 w-full rounded-xl border border-input bg-background px-3 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 md:h-10 md:text-sm dark:bg-input/30";
 
 type Values = { title: string; description: string; area: string; severity: string; dueDate: string; assigneeId: string };
 export const emptyIssue: Values = { title: "", description: "", area: "", severity: "MEDIUM", dueDate: "", assigneeId: "" };
@@ -68,9 +68,9 @@ export function IssueForm({
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="issue-sev">How serious</Label>
-          <select id="issue-sev" className={selectClass} value={v.severity} onChange={set("severity")} disabled={pending}>
+          <NativeSelect id="issue-sev" value={v.severity} onChange={set("severity")} disabled={pending}>
             {SEVERITIES.map((s) => <option key={s} value={s}>{SEVERITY_LABEL[s]}</option>)}
-          </select>
+          </NativeSelect>
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="issue-due">Fix by</Label>
@@ -78,10 +78,10 @@ export function IssueForm({
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="issue-who">Given to</Label>
-          <select id="issue-who" className={selectClass} value={v.assigneeId} onChange={set("assigneeId")} disabled={pending} aria-invalid={bad("assigneeId")}>
+          <NativeSelect id="issue-who" value={v.assigneeId} onChange={set("assigneeId")} disabled={pending} aria-invalid={bad("assigneeId")}>
             <option value="">Nobody yet</option>
             {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
+          </NativeSelect>
         </div>
       </div>
       {error && <p role="alert" className="text-sm text-destructive">{error.message}</p>}

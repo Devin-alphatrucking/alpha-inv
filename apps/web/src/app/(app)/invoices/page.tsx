@@ -375,7 +375,7 @@ export default async function InvoicesPage({
                                     ? "default"
                                     : "outline"
                                 }
-                                className="h-8 px-2.5 text-xs"
+                                
                                 nativeButton={false}
                                 render={
                                   <Link href={`/invoices/${invoice.id}/review`} />
@@ -402,7 +402,7 @@ export default async function InvoicesPage({
                                   invoiceId={invoice.id}
                                   invoiceNumber={invoice.invoiceNumber}
                                   vendorName={invoice.vendor.name}
-                                  className="h-8 w-8"
+                                  className="aspect-square px-0"
                                 />
                               )}
                             </div>

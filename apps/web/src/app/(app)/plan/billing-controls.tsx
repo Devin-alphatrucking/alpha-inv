@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useConfirm } from "@/components/confirm-provider";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -81,12 +82,13 @@ export function CancelPlanButton({ purchaseId, running }: { purchaseId: string; 
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const ask = useConfirm();
 
-  function cancel() {
+  async function cancel() {
     const text = running
       ? "Stop this project plan at the end of the period you have paid for? You keep it until then and nothing is deleted."
       : "Cancel this project plan?";
-    if (!window.confirm(text)) return;
+    if (!(await ask({ title: running ? "Stop this plan at the end of the period?" : "Cancel this plan?", description: text, confirmLabel: running ? "Stop the plan" : "Cancel the plan", cancelLabel: "Keep it", variant: "destructive" }))) return;
     setError(null);
     start(async () => {
       const r = await cancelPurchaseAction(purchaseId);

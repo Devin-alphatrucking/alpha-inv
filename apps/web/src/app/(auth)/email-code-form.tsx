@@ -73,7 +73,7 @@ export function EmailCodeForm({ email }: { email: string }) {
         </p>
       )}
       {note && <p className="text-sm text-emerald-700">{note}</p>}
-      <Button type="submit" className="h-11 w-full" disabled={pending || code.length !== 6}>
+      <Button type="submit" className="w-full" disabled={pending || code.length !== 6}>
         {pending && <Loader2 className="size-4 animate-spin" />}
         Confirm my email
       </Button>

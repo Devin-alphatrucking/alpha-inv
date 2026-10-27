@@ -44,7 +44,7 @@ export default function NewIssue() {
   return (
     <Screen style={{ paddingBottom: 0 }}>
       <Stack.Screen options={{ title: "Raise an issue" }} />
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: space.lg, gap: space.lg, paddingBottom: space.xl * 2 }} keyboardShouldPersistTaps="handled">
           <Field label="What is wrong?" value={title} onChangeText={setTitle} maxLength={120} placeholder="e.g. Honeycombing in column C4" />
           <Field label="Details" multiline style={{ minHeight: 90, textAlignVertical: "top", paddingTop: 12 }} value={description} onChangeText={setDescription} />

@@ -132,3 +132,29 @@
 @utility pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/* Form controls: on a phone every text field uses 16px text (a smaller size makes iPhones zoom in when a field is tapped),
+   and plain checkboxes and radio buttons get a comfortable size and the brand colour. */
+@layer base {
+  @media (max-width: 767px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]),
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--primary);
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+  }
+  @media (min-width: 768px) {
+    input[type="checkbox"],
+    input[type="radio"] {
+      width: 1rem;
+      height: 1rem;
+    }
+  }
+}

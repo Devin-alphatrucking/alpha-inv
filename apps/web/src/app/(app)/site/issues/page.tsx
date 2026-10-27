@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { IssueStatusBadge, SeverityBadge } from "../badges";
 import { IssueForm } from "./issue-form";
+import { NativeSelect } from "@/components/ui/native-select";
 
 type Params = Promise<{ project?: string; status?: string }>;
 
@@ -47,10 +48,10 @@ export default async function IssuesPage({ searchParams }: { searchParams: Param
         {scope.projects.length > 1 && (
           <form method="get" className="ml-auto flex items-center gap-2">
             {filter && <input type="hidden" name="status" value={filter} />}
-            <select name="project" defaultValue={projectId ?? ""} aria-label="Project" className="h-9 rounded-xl border border-input bg-background px-3 text-sm">
+            <NativeSelect name="project" defaultValue={projectId ?? ""} aria-label="Project">
               <option value="">All projects</option>
               {scope.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+            </NativeSelect>
             <Button type="submit" variant="outline" size="sm">Show</Button>
           </form>
         )}

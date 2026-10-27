@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ACCEPTED_EXTENSIONS, CATEGORIES, CATEGORY_LABEL, DOCUMENT_MAX_BYTES } from "@/lib/site/document-rules";
+import { NativeSelect } from "@/components/ui/native-select";
 
-const selectClass = "h-11 w-full rounded-xl border border-input bg-background px-3 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 md:h-10 md:text-sm dark:bg-input/30";
 const ACCEPT = ACCEPTED_EXTENSIONS.map((e) => `.${e}`).join(",");
 
 /**
@@ -72,9 +72,9 @@ export function DocumentForm({ projectId, documentId, suggestedRevision, today }
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="d-cat">Category</Label>
-            <select id="d-cat" className={selectClass} value={v.category} onChange={set("category")} disabled={busy} aria-invalid={bad("category")}>
+            <NativeSelect id="d-cat" value={v.category} onChange={set("category")} disabled={busy} aria-invalid={bad("category")}>
               {CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
-            </select>
+            </NativeSelect>
           </div>
         </div>
       )}

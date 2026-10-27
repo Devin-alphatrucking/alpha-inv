@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Alert, Image, Modal, Pressable, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ApiError, type PhotoTarget, type PhotoView } from "@/lib/client";
 import { useSession } from "@/lib/session";
 import { space, useTheme } from "@/lib/theme";
@@ -31,6 +32,7 @@ export function PhotoStrip({ photos, onChanged }: { photos: PhotoView[]; onChang
   const t = useTheme();
   const { client } = useSession();
   const [open, setOpen] = useState<PhotoView | null>(null);
+  const insets = useSafeAreaInsets();
 
   function remove(p: PhotoView) {
     Alert.alert("Delete this photo?", "It cannot be undone.", [
@@ -61,10 +63,10 @@ export function PhotoStrip({ photos, onChanged }: { photos: PhotoView[]; onChang
           </Pressable>
         ))}
       </View>
-      <Modal visible={!!open} transparent animationType="fade" onRequestClose={() => setOpen(null)}>
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.92)", justifyContent: "center" }}>
+      <Modal visible={!!open} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setOpen(null)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.92)", justifyContent: "center", paddingTop: insets.top }}>
           {open ? <View style={{ flex: 1, margin: space.md }}><Picture id={open.id} fit="contain" /></View> : null}
-          <View style={{ padding: space.lg, gap: space.sm }}>
+          <View style={{ padding: space.lg, paddingBottom: space.lg + insets.bottom, gap: space.sm }}>
             {open ? <Text style={{ color: "#ffffff", fontSize: 14 }}>{[open.caption, open.area, open.takenOn, open.uploaderName ? `by ${open.uploaderName}` : null].filter(Boolean).join(" · ")}</Text> : null}
             <View style={{ flexDirection: "row", gap: space.sm }}>
               <View style={{ flex: 1 }}><Button label="Close" variant="outline" onPress={() => setOpen(null)} /></View>

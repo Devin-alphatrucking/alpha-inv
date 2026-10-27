@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { FilterBar, PageTitle, Pager, fmtDateTime } from "../master-ui";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export const metadata = { title: "Logs | Master console" };
 export const dynamic = "force-dynamic";
@@ -60,14 +61,14 @@ async function Activity({ q, module, org, page }: { q: string; module: string; o
         </div>
         <div className="grid gap-1.5">
           <label htmlFor="module" className="text-xs text-muted-foreground">Module</label>
-          <select id="module" name="module" defaultValue={module} className="h-10 rounded-xl border border-input bg-background px-3 text-sm">
+          <NativeSelect id="module" name="module" defaultValue={module}>
             <option value="">All modules</option>
             {r.modules.map((m) => (
               <option key={m.value} value={m.value}>
                 {m.value} ({m.count})
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       </FilterBar>
       <Card>
@@ -121,14 +122,14 @@ async function Errors({ q, code, org, page }: { q: string; code: string; org: st
         </div>
         <div className="grid gap-1.5">
           <label htmlFor="code" className="text-xs text-muted-foreground">Error code</label>
-          <select id="code" name="code" defaultValue={code} className="h-10 rounded-xl border border-input bg-background px-3 text-sm">
+          <NativeSelect id="code" name="code" defaultValue={code}>
             <option value="">All codes</option>
             {r.codes.map((c) => (
               <option key={c.value} value={c.value}>
                 {c.value} ({c.count})
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       </FilterBar>
       <Card>

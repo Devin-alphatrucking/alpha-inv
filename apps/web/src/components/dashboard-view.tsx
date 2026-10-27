@@ -261,7 +261,7 @@ export function DashboardView({
               value={selectedMonth}
               min="1000-01"
               max="9999-12"
-              className="h-10 rounded-xl bg-background"
+              className="bg-background"
               disabled={pendingTransition}
               onChange={(event) => applyMonth(event.target.value)}
             />
@@ -323,7 +323,7 @@ export function DashboardView({
               }
               items={categoryItems}
             >
-              <SelectTrigger className="h-10 w-full rounded-xl text-sm">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="All categories" />
               </SelectTrigger>
               <SelectContent>
@@ -339,7 +339,7 @@ export function DashboardView({
             <Button
               type="button"
               size="sm"
-              className="h-10 rounded-xl px-3.5 text-xs font-semibold"
+              className="font-semibold"
               disabled={pendingTransition}
               onClick={() => applyFilters()}
             >
@@ -356,7 +356,7 @@ export function DashboardView({
               type="button"
               size="sm"
               variant="outline"
-              className="h-10 rounded-xl px-3 text-xs"
+              className="px-3"
               onClick={applyThisMonth}
             >
               This Month
@@ -365,7 +365,7 @@ export function DashboardView({
               type="button"
               size="sm"
               variant="outline"
-              className="h-10 rounded-xl px-3 text-xs"
+              className="px-3"
               onClick={applyLastMonth}
             >
               Last Month
@@ -374,7 +374,7 @@ export function DashboardView({
               type="button"
               size="sm"
               variant="outline"
-              className="h-10 rounded-xl px-3 text-xs"
+              className="px-3"
               onClick={() => applyPreset(30)}
             >
               30 days
@@ -383,7 +383,7 @@ export function DashboardView({
               type="button"
               size="sm"
               variant="outline"
-              className="h-10 rounded-xl px-3 text-xs"
+              className="px-3"
               onClick={() => applyPreset(365)}
             >
               12 months
@@ -393,7 +393,7 @@ export function DashboardView({
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="h-10 rounded-xl px-2.5 text-xs text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground"
                 onClick={clearDates}
               >
                 Clear

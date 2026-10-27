@@ -84,7 +84,7 @@ export default function DeliveryScreen() {
   return (
     <Screen style={{ paddingBottom: 0 }}>
       <Stack.Screen options={{ title: d?.number ?? "Delivery" }} />
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: space.lg, gap: space.lg, paddingBottom: space.xl * 2 }} keyboardShouldPersistTaps="handled">
           {error ? <ErrorBox message={error} onRetry={load} /> : null}
           {d ? (

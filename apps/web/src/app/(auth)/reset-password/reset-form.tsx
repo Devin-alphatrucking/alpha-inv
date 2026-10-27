@@ -54,7 +54,7 @@ export function ResetForm({ token }: { token: string }) {
         <Input id="rp-again" type="password" autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} required />
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
-      <Button type="submit" className="h-11 w-full" disabled={pending}>
+      <Button type="submit" className="w-full" disabled={pending}>
         {pending && <Loader2 className="size-4 animate-spin" />}
         Change password
       </Button>

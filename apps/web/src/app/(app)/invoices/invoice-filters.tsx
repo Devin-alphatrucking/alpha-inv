@@ -164,7 +164,7 @@ export function InvoiceFilters({
             onKeyDown={(e) => {
               if (e.key === "Enter") apply();
             }}
-            className="h-10 rounded-xl pl-9 pr-8 text-sm"
+            className="pl-9 pr-8"
           />
           {q && (
             <button
@@ -187,7 +187,7 @@ export function InvoiceFilters({
             type="button"
             variant={activeFilterCount > 0 ? "default" : "outline"}
             onClick={() => setIsMobileExpanded((prev) => !prev)}
-            className="h-10 flex-1 gap-2 rounded-xl px-3.5 text-xs font-semibold sm:flex-initial"
+            className="flex-1 gap-2 font-semibold sm:flex-initial"
           >
             <SlidersHorizontal className="size-3.5" />
             <span>Filters</span>
@@ -211,7 +211,7 @@ export function InvoiceFilters({
             type="button"
             onClick={() => apply()}
             disabled={pending}
-            className="h-10 rounded-xl px-4 text-xs font-semibold"
+            className="px-4 font-semibold"
           >
             {pending ? (
               <span className="flex items-center gap-1.5">
@@ -230,7 +230,7 @@ export function InvoiceFilters({
               variant="ghost"
               onClick={clearAll}
               disabled={pending}
-              className="text-muted-foreground hover:text-foreground h-10 rounded-xl px-2.5 text-xs font-medium"
+              className="text-muted-foreground hover:text-foreground font-medium"
               title="Reset all filters"
             >
               <RotateCcw className="size-3.5" />
@@ -262,7 +262,7 @@ export function InvoiceFilters({
               }}
               items={vendorItems}
             >
-              <SelectTrigger className="h-10 w-full rounded-xl text-sm">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="All vendors" />
               </SelectTrigger>
               <SelectContent>
@@ -289,7 +289,7 @@ export function InvoiceFilters({
               }}
               items={categoryItems}
             >
-              <SelectTrigger className="h-10 w-full rounded-xl text-sm">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="All categories" />
               </SelectTrigger>
               <SelectContent>
@@ -316,7 +316,7 @@ export function InvoiceFilters({
               }}
               items={[...STATUS_OPTIONS]}
             >
-              <SelectTrigger className="h-10 w-full rounded-xl text-sm">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
               <SelectContent>
@@ -375,7 +375,7 @@ export function InvoiceFilters({
                 variant="outline"
                 size="sm"
                 onClick={() => applyDatePreset("this_month")}
-                className="h-10 rounded-xl px-3 text-xs font-medium"
+                className="px-3 font-medium"
               >
                 This Month
               </Button>
@@ -384,7 +384,7 @@ export function InvoiceFilters({
                 variant="outline"
                 size="sm"
                 onClick={() => applyDatePreset("last_month")}
-                className="h-10 rounded-xl px-3 text-xs font-medium"
+                className="px-3 font-medium"
               >
                 Last Month
               </Button>
@@ -393,7 +393,7 @@ export function InvoiceFilters({
                 variant="outline"
                 size="sm"
                 onClick={() => applyDatePreset("last_30_days")}
-                className="h-10 rounded-xl px-3 text-xs font-medium"
+                className="px-3 font-medium"
               >
                 Last 30 Days
               </Button>
@@ -402,7 +402,7 @@ export function InvoiceFilters({
                 variant="outline"
                 size="sm"
                 onClick={() => applyDatePreset("this_year")}
-                className="h-10 rounded-xl px-3 text-xs font-medium"
+                className="px-3 font-medium"
               >
                 This Year
               </Button>
@@ -412,7 +412,7 @@ export function InvoiceFilters({
                   variant="ghost"
                   size="sm"
                   onClick={clearAll}
-                  className="text-muted-foreground hover:text-destructive h-10 rounded-xl px-2.5 text-xs font-medium"
+                  className="text-muted-foreground hover:text-destructive font-medium"
                 >
                   Clear All
                 </Button>

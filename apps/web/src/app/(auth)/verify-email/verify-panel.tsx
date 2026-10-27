@@ -52,7 +52,7 @@ export function VerifyEmailPanel({ token, linkProblem }: { token: string | null;
   return (
     <div className="grid gap-4">
       {token && (
-        <Button onClick={confirm} disabled={pending} className="h-11 w-full">
+        <Button onClick={confirm} disabled={pending} className="w-full">
           {pending && <Loader2 className="size-4 animate-spin" />}
           Confirm my email
         </Button>
@@ -71,7 +71,7 @@ export function VerifyEmailPanel({ token, linkProblem }: { token: string | null;
               <EmailCodeForm email={email.trim().toLowerCase()} />
             </div>
           ) : (
-            <Button type="submit" disabled={pending} className="h-11 w-full">
+            <Button type="submit" disabled={pending} className="w-full">
               {pending && <Loader2 className="size-4 animate-spin" />}
               Send a new code
             </Button>

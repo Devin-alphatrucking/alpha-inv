@@ -113,7 +113,7 @@ export function AcceptInviteForm({ token, invite, signedInAsInvitee, signedInOth
       </label>
       {fieldError("acceptTerms")}
       {error && !error.field && <p className="text-sm text-destructive">{error.message}</p>}
-      <Button type="submit" className="h-11 w-full" disabled={pending}>
+      <Button type="submit" className="w-full" disabled={pending}>
         {pending && <Loader2 className="size-4 animate-spin" />}
         Create my account and join
       </Button>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signUpAction } from "../actions";
+import { NativeSelect } from "@/components/ui/native-select";
 
 type Props = {
   countries: { code: string; label: string }[];
@@ -74,18 +75,18 @@ export function SignUpForm({ countries, termsUrl, privacyUrl }: Props) {
       </div>
       <div className="grid gap-2">
         <Label htmlFor="su-country">Country</Label>
-        <select
+        <NativeSelect
           id="su-country"
           value={v.country}
           onChange={(e) => set("country", e.target.value)}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="border border-input bg-background px-3 outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {countries.map((c) => (
             <option key={c.code} value={c.code}>
               {c.label}
             </option>
           ))}
-        </select>
+        </NativeSelect>
         <p className="text-xs text-muted-foreground">Sets your currency and timezone. You can change them later.</p>
         {fieldError("country")}
       </div>
@@ -113,7 +114,7 @@ export function SignUpForm({ countries, termsUrl, privacyUrl }: Props) {
       </label>
       {fieldError("acceptTerms")}
       {error && !error.field && <p className="text-sm text-destructive">{error.message}</p>}
-      <Button type="submit" className="h-11 w-full" disabled={pending}>
+      <Button type="submit" className="w-full" disabled={pending}>
         {pending && <Loader2 className="size-4 animate-spin" />}
         Create account
       </Button>

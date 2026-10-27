@@ -74,7 +74,7 @@ export default function RequestNew() {
   return (
     <Screen style={{ paddingBottom: 0 }}>
       <Stack.Screen options={{ title: id ? "Change request" : "New request" }} />
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: space.lg, gap: space.lg, paddingBottom: space.xl * 2 }} keyboardShouldPersistTaps="handled">
           {!id ? <Chips label="Project" options={projects} value={projectId} onChange={setProjectId} /> : null}
           {!id && projects.length === 0 ? <Muted>You are not on any active project.</Muted> : null}

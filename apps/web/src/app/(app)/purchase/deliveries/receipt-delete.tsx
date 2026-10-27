@@ -6,12 +6,14 @@ import { Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { deleteReceiptAction } from "../actions";
+import { useConfirm } from "@/components/confirm-provider";
 
 export function ReceiptDelete({ receiptId }: { receiptId: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const ask = useConfirm();
   async function remove() {
-    if (!window.confirm("Remove this delivery record? The quantities will no longer count as received.")) return;
+    if (!(await ask({ title: "Remove this delivery?", description: "The quantities will no longer count as received.", confirmLabel: "Remove delivery", cancelLabel: "Keep it" }))) return;
     setBusy(true);
     const r = await deleteReceiptAction(receiptId);
     setBusy(false);

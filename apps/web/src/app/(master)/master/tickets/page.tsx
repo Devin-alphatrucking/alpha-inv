@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { FilterBar, PageTitle, Pager, fmtDateTime } from "../master-ui";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export const metadata = { title: "Tickets | Master console" };
 export const dynamic = "force-dynamic";
@@ -31,13 +32,13 @@ export default async function TicketsPage({ searchParams }: { searchParams: SP }
         </div>
         <div className="grid gap-1.5">
           <label htmlFor="status" className="text-xs text-muted-foreground">Status</label>
-          <select id="status" name="status" defaultValue={status} className="h-10 rounded-xl border border-input bg-background px-3 text-sm">
+          <NativeSelect id="status" name="status" defaultValue={status}>
             <option value="ACTIVE">Not resolved</option>
             <option value="OPEN">Open</option>
             <option value="WAITING">Waiting on customer</option>
             <option value="RESOLVED">Resolved</option>
             <option value="">All</option>
-          </select>
+          </NativeSelect>
         </div>
       </FilterBar>
 

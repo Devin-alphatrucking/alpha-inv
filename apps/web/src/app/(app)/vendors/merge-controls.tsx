@@ -1,24 +1,27 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useConfirm } from "@/components/confirm-provider";
 import { useRouter } from "next/navigation";
 import { GitMerge, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { REASON_TEXT, type DuplicateGroup } from "@/lib/vendors/duplicates";
 import { mergeVendorsAction } from "./actions";
+import { NativeSelect } from "@/components/ui/native-select";
 
 /** One set of suppliers that look like the same company: choose which to keep, and fold the others into it. */
 export function DuplicateGroupCard({ group }: { group: DuplicateGroup }) {
   const router = useRouter();
+  const ask = useConfirm();
   const [keepId, setKeepId] = useState(group.keepId);
   const [pending, startTransition] = useTransition();
   const keep = group.vendors.find((v) => v.id === keepId)!;
   const others = group.vendors.filter((v) => v.id !== keepId);
   const moving = others.reduce((s, v) => s + v.invoices, 0);
 
-  function merge() {
-    if (!window.confirm(`Merge ${others.map((v) => `"${v.name}"`).join(" and ")} into "${keep.name}"? Their ${moving} invoice${moving === 1 ? "" : "s"} move to "${keep.name}" and the other supplier${others.length === 1 ? "" : "s"} will be removed. This cannot be undone.`)) return;
+  async function merge() {
+    if (!(await ask({ title: "Merge these suppliers?", description: `Merge ${others.map((v) => `"${v.name}"`).join(" and ")} into "${keep.name}"? Their ${moving} invoice${moving === 1 ? "" : "s"} move to "${keep.name}" and the other supplier${others.length === 1 ? "" : "s"} will be removed. This cannot be undone.`, confirmLabel: "Merge" }))) return;
     startTransition(async () => {
       let movedTotal = 0;
       for (const other of others) {
@@ -62,13 +65,14 @@ export function DuplicateGroupCard({ group }: { group: DuplicateGroup }) {
 /** On one supplier's page: fold this supplier into another one chosen from a list. */
 export function MergeIntoControl({ fromId, fromName, invoices, candidates }: { fromId: string; fromName: string; invoices: number; candidates: { id: string; name: string; gstin: string | null }[] }) {
   const router = useRouter();
+  const ask = useConfirm();
   const [intoId, setIntoId] = useState("");
   const [pending, startTransition] = useTransition();
   const target = candidates.find((c) => c.id === intoId);
 
-  function merge() {
+  async function merge() {
     if (!target) return;
-    if (!window.confirm(`Merge "${fromName}" into "${target.name}"? Its ${invoices} invoice${invoices === 1 ? "" : "s"} move to "${target.name}" and "${fromName}" will be removed. This cannot be undone.`)) return;
+    if (!(await ask({ title: "Merge this supplier?", description: `Merge "${fromName}" into "${target.name}"? Its ${invoices} invoice${invoices === 1 ? "" : "s"} move to "${target.name}" and "${fromName}" will be removed. This cannot be undone.`, confirmLabel: "Merge" }))) return;
     startTransition(async () => {
       const r = await mergeVendorsAction(fromId, target.id);
       if (!r.ok) {
@@ -85,7 +89,7 @@ export function MergeIntoControl({ fromId, fromName, invoices, candidates }: { f
     <div className="flex flex-wrap items-end gap-3">
       <label className="grid min-w-64 flex-1 gap-1.5 text-xs text-muted-foreground">
         Merge this supplier into
-        <select value={intoId} onChange={(e) => setIntoId(e.target.value)} disabled={pending} className="h-10 rounded-xl border border-input bg-background px-3 text-sm text-foreground">
+        <NativeSelect value={intoId} onChange={(e) => setIntoId(e.target.value)} disabled={pending} className="border border-input bg-background px-3 text-foreground">
           <option value="">Choose the supplier to keep…</option>
           {candidates.map((c) => (
             <option key={c.id} value={c.id}>
@@ -93,7 +97,7 @@ export function MergeIntoControl({ fromId, fromName, invoices, candidates }: { f
               {c.gstin ? ` (${c.gstin})` : ""}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </label>
       <Button type="button" variant="outline" onClick={merge} disabled={!target || pending}>
         {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <GitMerge className="size-4" aria-hidden />}

@@ -44,7 +44,7 @@ export function GoogleButton({ label = "Continue with Google" }: { label?: strin
 
   return (
     <div className="grid gap-4">
-      <Button type="button" variant="outline" className="h-11 w-full gap-2.5 text-base md:h-10 md:text-sm" disabled={busy} onClick={() => void go()}>
+      <Button type="button" variant="outline" className="w-full gap-2.5" disabled={busy} onClick={() => void go()}>
         {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <GoogleMark />}
         {label}
       </Button>

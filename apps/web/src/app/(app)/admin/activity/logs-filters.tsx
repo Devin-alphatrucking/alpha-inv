@@ -72,7 +72,7 @@ export function LogsFilters({
             onKeyDown={(e) => {
               if (e.key === "Enter") apply({ q: q.trim() || null });
             }}
-            className="h-10 rounded-xl pl-9 pr-8 text-sm"
+            className="pl-9 pr-8"
           />
           {q && (
             <button
@@ -97,7 +97,7 @@ export function LogsFilters({
               }
               items={items}
             >
-              <SelectTrigger className="h-10 w-full rounded-xl text-sm">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder={`All ${filterLabel.toLowerCase()}`} />
               </SelectTrigger>
               <SelectContent>
@@ -112,7 +112,7 @@ export function LogsFilters({
           <Button
             type="button"
             size="sm"
-            className="h-10 rounded-xl px-3 text-xs"
+            className="px-3"
             disabled={pending}
             onClick={() => apply({ q: q.trim() || null })}
           >

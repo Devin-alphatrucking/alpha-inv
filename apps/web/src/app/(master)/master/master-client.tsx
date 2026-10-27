@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useConfirm } from "@/components/confirm-provider";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Loader2 } from "lucide-react";
@@ -9,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { reconcileAction, resetTwoStepAction, setTicketStatusAction, type MasterResult } from "./actions";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const NAV = [
   { href: "/master", label: "Overview", exact: true },
@@ -79,12 +81,13 @@ export function ActionForm({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [result, setResult] = useState<MasterResult | null>(null);
+  const ask = useConfirm();
 
-  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
     const data = Object.fromEntries(new FormData(form).entries()) as Record<string, string>;
-    if (confirmText && !window.confirm(confirmText)) return;
+    if (confirmText && !(await ask({ title: "Are you sure?", description: confirmText, confirmLabel: submit, variant: destructive ? "destructive" : "default" }))) return;
     setResult(null);
     start(async () => {
       const r = await action(data);
@@ -115,13 +118,13 @@ export function ActionForm({
                 {f.label}
               </Label>
               {f.type === "select" ? (
-                <select id={`f-${f.name}`} name={f.name} required={f.required} defaultValue={f.defaultValue ?? ""} className="h-10 rounded-xl border border-input bg-background px-3 text-sm">
+                <NativeSelect id={`f-${f.name}`} name={f.name} required={f.required} defaultValue={f.defaultValue ?? ""}>
                   {f.options?.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               ) : (
                 <Input id={`f-${f.name}`} name={f.name} type={f.type ?? "text"} inputMode={f.type === "number" ? "numeric" : undefined} min={f.min} max={f.max} required={f.required} defaultValue={f.defaultValue ?? ""} placeholder={f.placeholder} />
               )}

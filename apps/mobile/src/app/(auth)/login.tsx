@@ -41,7 +41,7 @@ export default function Login() {
 
   return (
     <Screen>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: space.xl, gap: space.lg }} keyboardShouldPersistTaps="handled">
           <View style={{ gap: 6, marginBottom: space.md }}>
             <Text accessibilityRole="header" style={{ fontSize: 30, fontWeight: "700", color: t.text }}>Sign in</Text>

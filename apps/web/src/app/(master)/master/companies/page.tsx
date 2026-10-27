@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CompanyStatusBadge, FilterBar, PageTitle, Pager, StateBadge, STATE_LABEL, fmtDate } from "../master-ui";
 import type { PlanState } from "@/lib/plans/rules";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Button } from "@/components/ui/button";
 
 export const metadata = { title: "Companies | Master console" };
 export const dynamic = "force-dynamic";
@@ -22,9 +24,7 @@ export default async function CompaniesPage({ searchParams }: { searchParams: SP
     <>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <PageTitle title="Companies">Search every company, then open one to see and change its plan, people and billing.</PageTitle>
-        <Link href="/master/companies/new" className="inline-flex h-9 items-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-          Set up a company
-        </Link>
+        <Button nativeButton={false} render={<Link href="/master/companies/new" />}>Set up a company</Button>
       </div>
 
       <FilterBar action="/master/companies">
@@ -34,14 +34,14 @@ export default async function CompaniesPage({ searchParams }: { searchParams: SP
         </div>
         <div className="grid gap-1.5">
           <label htmlFor="state" className="text-xs text-muted-foreground">Plan state</label>
-          <select id="state" name="state" defaultValue={state} className="h-10 rounded-xl border border-input bg-background px-3 text-sm">
+          <NativeSelect id="state" name="state" defaultValue={state}>
             <option value="">All states</option>
             {(Object.keys(STATE_LABEL) as PlanState[]).map((s) => (
               <option key={s} value={s}>
                 {STATE_LABEL[s].label}{counts[s] ? ` (${counts[s]})` : ""}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       </FilterBar>
 

@@ -50,8 +50,9 @@ export function Button({ label, onPress, busy, variant = "primary", disabled }: 
   );
 }
 
-export function Field({ label, error, inputRef, ...props }: TextInputProps & { label: string; error?: string | null; inputRef?: React.Ref<React.ComponentRef<typeof TextInput>> }) {
+export function Field({ label, error, inputRef, style, ...props }: TextInputProps & { label: string; error?: string | null; inputRef?: React.Ref<React.ComponentRef<typeof TextInput>> }) {
   const t = useTheme();
+  const multiline = !!props.multiline;
   return (
     <View style={{ gap: 6 }}>
       <Text style={{ fontSize: 13, fontWeight: "600", color: t.muted }}>{label}</Text>
@@ -59,8 +60,14 @@ export function Field({ label, error, inputRef, ...props }: TextInputProps & { l
         ref={inputRef}
         accessibilityLabel={label}
         placeholderTextColor={t.muted}
-        style={{ minHeight: 48, borderRadius: 12, borderWidth: 1, borderColor: error ? t.danger : t.border, backgroundColor: t.card, paddingHorizontal: 14, fontSize: 16, color: t.text }}
         {...props}
+        // The same look for every field (48pt high, 16pt text so nothing zooms or clips). A screen can add to this look, never lose it.
+        style={[
+          { minHeight: multiline ? 96 : 48, borderRadius: 12, borderWidth: 1, borderColor: error ? t.danger : t.border, backgroundColor: t.card, paddingHorizontal: 14, fontSize: 16, color: t.text },
+          multiline ? { textAlignVertical: "top", paddingTop: 12, paddingBottom: 12 } : { paddingVertical: 10 },
+          props.editable === false ? { opacity: 0.6 } : null,
+          style,
+        ]}
       />
       {error ? <Text style={{ color: t.danger, fontSize: 13 }}>{error}</Text> : null}
     </View>
@@ -108,7 +115,7 @@ export function Chips({ label, options, value, onChange }: { label?: string; opt
         {options.map((o) => {
           const on = o.id === value;
           return (
-            <Pressable key={o.id} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(o.id)} style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: on ? t.primary : t.card, borderWidth: 1, borderColor: on ? t.primary : t.border }}>
+            <Pressable key={o.id} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(o.id)} style={{ paddingHorizontal: 16, minHeight: 44, justifyContent: "center", borderRadius: 999, backgroundColor: on ? t.primary : t.card, borderWidth: 1, borderColor: on ? t.primary : t.border }}>
               <Text style={{ color: on ? t.onPrimary : t.text, fontSize: 14, fontWeight: "600" }}>{o.name}</Text>
             </Pressable>
           );

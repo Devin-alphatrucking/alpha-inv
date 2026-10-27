@@ -101,7 +101,7 @@ export function LoginForm({ signupEnabled, googleEnabled = false }: { signupEnab
             placeholder="you@company.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="h-11 text-base md:h-10 md:text-sm"
+            
             required
           />
         </div>
@@ -117,7 +117,7 @@ export function LoginForm({ signupEnabled, googleEnabled = false }: { signupEnab
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="h-11 text-base md:h-10 md:text-sm"
+           
             required
           />
           <div className="text-right">
@@ -141,7 +141,7 @@ export function LoginForm({ signupEnabled, googleEnabled = false }: { signupEnab
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="123456"
-              className="h-11 text-base tracking-widest md:h-10 md:text-sm"
+              className="tracking-widest"
             />
             <p className="text-xs text-muted-foreground">Lost your phone? Type one of your recovery codes instead.</p>
           </div>
@@ -159,7 +159,7 @@ export function LoginForm({ signupEnabled, googleEnabled = false }: { signupEnab
 
         <Button
           type="submit"
-          className="mt-1 h-11 w-full text-base md:h-10 md:text-sm"
+          className="mt-1 w-full"
           disabled={isSubmitting}
         >
           {isSubmitting ? "Signing in..." : "Sign in"}

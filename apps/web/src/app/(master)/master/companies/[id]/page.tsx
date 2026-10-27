@@ -10,6 +10,9 @@ import { UsageMeter } from "@/components/usage-meter";
 import { CompanyStatusBadge, PageTitle, StateBadge, fmtDate, fmtDateTime, money } from "../../master-ui";
 import { ActionForm, ReconcileButton, ResetTwoStepControl } from "../../master-client";
 import { extendTrialAction, setCompanyStatusAction, setLimitsAction, setProjectPlansAction } from "../../actions";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export const metadata = { title: "Company | Master console" };
 export const dynamic = "force-dynamic";
@@ -167,16 +170,16 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
             <input type="hidden" name="orgId" value={org.id} />
             <div className="grid gap-1.5">
               <label htmlFor="export-format" className="text-xs text-muted-foreground">Format</label>
-              <select id="export-format" name="format" defaultValue="xlsx" className="h-10 rounded-xl border border-input bg-background px-3 text-sm">
+              <NativeSelect id="export-format" name="format" defaultValue="xlsx">
                 <option value="xlsx">Excel workbook</option>
                 <option value="json">JSON backup</option>
-              </select>
+              </NativeSelect>
             </div>
             <div className="grid min-w-64 flex-1 gap-1.5">
               <label htmlFor="export-reason" className="text-xs text-muted-foreground">Reason (kept in the audit log)</label>
-              <input id="export-reason" name="reason" required minLength={3} maxLength={300} placeholder="For example: customer asked for a copy by email" className="h-10 rounded-xl border border-input bg-background px-3 text-sm" />
+              <Input id="export-reason" name="reason" required minLength={3} maxLength={300} placeholder="For example: customer asked for a copy by email" />
             </div>
-            <button type="submit" className="h-10 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">Download</button>
+            <Button type="submit">Download</Button>
           </form>
         </CardContent>
       </Card>

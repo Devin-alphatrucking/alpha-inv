@@ -48,7 +48,7 @@ export function ConfirmDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" showCloseButton={false}>
         <DialogHeader className="gap-2">
           <div className="flex items-start gap-3">
             {variant === "destructive" && (
@@ -58,17 +58,16 @@ export function ConfirmDialog({
             )}
             <div className="space-y-1">
               <DialogTitle className="text-base font-semibold">{title}</DialogTitle>
-              <DialogDescription className="text-xs leading-relaxed text-muted-foreground">
+              <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
                 {description}
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
-        <DialogFooter className="mt-4 flex flex-row justify-end gap-2 border-t pt-3">
+        <DialogFooter className="mt-2">
           <Button
             type="button"
             variant="outline"
-            size="sm"
             disabled={pending}
             onClick={() => onOpenChange(false)}
           >
@@ -77,12 +76,11 @@ export function ConfirmDialog({
           <Button
             type="button"
             variant={variant}
-            size="sm"
             disabled={pending}
             onClick={handleConfirm}
             className="gap-1.5"
           >
-            {pending && <Loader2 className="size-3.5 animate-spin" />}
+            {pending && <Loader2 className="size-4 animate-spin" />}
             {confirmLabel}
           </Button>
         </DialogFooter>

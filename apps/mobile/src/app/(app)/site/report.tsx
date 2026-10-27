@@ -110,7 +110,7 @@ export default function ReportScreen() {
   return (
     <Screen style={{ paddingBottom: 0 }}>
       <Stack.Screen options={{ title: params.projectName ? String(params.projectName) : "Daily report" }} />
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: space.lg, gap: space.lg, paddingBottom: space.xl * 2 }} keyboardShouldPersistTaps="handled">
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <Pressable accessibilityRole="button" accessibilityLabel="Previous day" onPress={() => setDate(shift(date, -1))} style={{ padding: space.md }}><Text style={{ color: t.text, fontSize: 22 }}>‹</Text></Pressable>

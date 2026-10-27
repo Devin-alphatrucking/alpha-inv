@@ -88,7 +88,7 @@ export function ResetCodeForm({ email }: { email: string }) {
       </div>
       {error && !error.field && <p role="alert" className="text-sm text-destructive">{error.message}</p>}
       {note && <p className="text-sm text-emerald-700">{note}</p>}
-      <Button type="submit" className="h-11 w-full" disabled={pending || code.length !== 6 || !password}>
+      <Button type="submit" className="w-full" disabled={pending || code.length !== 6 || !password}>
         {pending && <Loader2 className="size-4 animate-spin" />}
         Change password
       </Button>

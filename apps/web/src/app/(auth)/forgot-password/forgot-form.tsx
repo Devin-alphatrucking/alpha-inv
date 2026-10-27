@@ -44,7 +44,7 @@ export function ForgotForm() {
         <Input id="fp-email" type="email" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
-      <Button type="submit" className="h-11 w-full" disabled={pending}>
+      <Button type="submit" className="w-full" disabled={pending}>
         {pending && <Loader2 className="size-4 animate-spin" />}
         Send reset link
       </Button>

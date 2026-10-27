@@ -344,7 +344,7 @@ export function UploadDropzone({
               value={newCategoryName}
               disabled={busy || batchBusy || creatingCategory}
               placeholder="e.g. Tile Adhesive"
-              className="h-11 flex-1 rounded-xl"
+              className="flex-1"
               onChange={(e) => setNewCategoryName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -356,7 +356,7 @@ export function UploadDropzone({
             <Button
               type="button"
               variant="outline"
-              className="h-11 shrink-0 gap-1.5 rounded-xl px-4 font-medium"
+              className="shrink-0 gap-1.5 px-4 font-medium"
               disabled={busy || batchBusy || creatingCategory || !newCategoryName.trim()}
               onClick={handleCreateCategory}
             >
@@ -522,7 +522,7 @@ export function UploadDropzone({
                 type="button"
                 variant="secondary"
                 size="sm"
-                className="h-9 gap-1.5 rounded-xl px-3.5 text-xs font-medium"
+                className="gap-1.5 font-medium"
                 onClick={(e) => {
                   e.stopPropagation();
                   inputRef.current?.click();
@@ -535,7 +535,7 @@ export function UploadDropzone({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-9 gap-1.5 rounded-xl px-3.5 text-xs font-medium"
+                className="gap-1.5 font-medium"
                 onClick={(e) => {
                   e.stopPropagation();
                   cameraRef.current?.click();
@@ -585,7 +585,7 @@ export function UploadDropzone({
         <Button
           type="button"
           size="lg"
-          className="h-12 w-full gap-2 rounded-xl text-sm font-semibold shadow-sm transition-all"
+          className="h-12 w-full gap-2 text-sm font-semibold shadow-sm transition-all"
           disabled={!canExtract}
           onClick={() => void handleUpload()}
         >

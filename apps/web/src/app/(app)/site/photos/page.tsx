@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PhotoGrid } from "../photo-grid";
 import { PhotoUploader } from "../photo-uploader";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export default async function PhotosPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
   const { user } = await pageOrg();
@@ -29,10 +30,10 @@ export default async function PhotosPage({ searchParams }: { searchParams: Promi
         </div>
         {scope.projects.length > 1 && (
           <form method="get" className="flex items-center gap-2">
-            <select name="project" defaultValue={projectId ?? ""} aria-label="Project" className="h-9 rounded-xl border border-input bg-background px-3 text-sm">
+            <NativeSelect name="project" defaultValue={projectId ?? ""} aria-label="Project">
               <option value="">All projects</option>
               {scope.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+            </NativeSelect>
             <Button type="submit" variant="outline" size="sm">Show</Button>
           </form>
         )}

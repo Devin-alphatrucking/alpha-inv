@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Input } from "@/components/ui/input";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "GST report" };
@@ -59,7 +61,6 @@ export default async function GstReportPage({ searchParams }: Props) {
       </CardHeader>
     </Card>
   );
-  const field = "h-9 rounded-md border border-input bg-background px-2.5 text-sm";
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -75,28 +76,28 @@ export default async function GstReportPage({ searchParams }: Props) {
           <form method="get" className="flex flex-wrap items-end gap-3">
             <label className="grid gap-1 text-xs text-muted-foreground">
               Financial year
-              <select name="fy" defaultValue={selectedFy} className={field}>
+              <NativeSelect name="fy" defaultValue={selectedFy}>
                 {period.custom && <option value="">Custom dates</option>}
                 {years.map((y) => (
                   <option key={y} value={y}>{financialYearRange(y).label}</option>
                 ))}
-              </select>
+              </NativeSelect>
             </label>
             <label className="grid gap-1 text-xs text-muted-foreground">
               Project
-              <select name="project" defaultValue={project?.id ?? ""} className={field}>
+              <NativeSelect name="project" defaultValue={project?.id ?? ""}>
                 <option value="">All projects</option>
                 {projects.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
-              </select>
+              </NativeSelect>
             </label>
             <Button type="submit" size="sm">Show</Button>
             <details className="text-xs text-muted-foreground">
               <summary className="cursor-pointer select-none py-2">Or pick exact dates</summary>
               <div className="mt-1 flex flex-wrap items-end gap-3">
-                <label className="grid gap-1">From<input type="date" name="from" defaultValue={period.custom ? period.from : ""} className={field} /></label>
-                <label className="grid gap-1">To<input type="date" name="to" defaultValue={period.custom ? period.to : ""} className={field} /></label>
+                <label className="grid gap-1">From<Input type="date" name="from" defaultValue={period.custom ? period.from : ""} className="w-auto" /></label>
+                <label className="grid gap-1">To<Input type="date" name="to" defaultValue={period.custom ? period.to : ""} className="w-auto" /></label>
                 <span className="pb-2">Dates win over the financial year when both are filled in.</span>
               </div>
             </details>

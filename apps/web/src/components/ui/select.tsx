@@ -41,13 +41,13 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "flex w-full items-center justify-between gap-2 rounded-xl border border-input bg-background py-2 pr-3 pl-3.5 text-sm shadow-xs transition-[color,box-shadow,border-color] outline-none select-none",
+        "flex w-full items-center justify-between gap-2 rounded-xl border border-input bg-background py-2 pr-3 pl-3.5 text-base md:text-sm shadow-xs transition-[color,box-shadow,border-color] outline-none select-none",
         "hover:border-foreground/20",
         "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40",
         "disabled:cursor-not-allowed disabled:opacity-50",
         "aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
         "data-placeholder:text-muted-foreground/80",
-        "data-[size=default]:h-10 data-[size=sm]:h-8 data-[size=lg]:h-12 data-[size=lg]:text-base",
+        "data-[size=default]:h-11 md:data-[size=default]:h-10 data-[size=sm]:h-10 md:data-[size=sm]:h-8 data-[size=lg]:h-12 data-[size=lg]:text-base",
         "dark:bg-input/30 dark:hover:bg-input/40 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
         "*:data-[slot=select-value]:min-w-0 *:data-[slot=select-value]:flex-1 *:data-[slot=select-value]:truncate",
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",

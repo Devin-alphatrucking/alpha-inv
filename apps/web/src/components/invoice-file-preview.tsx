@@ -111,7 +111,7 @@ export function InvoiceFilePreview({
               type="button"
               size="sm"
               variant="outline"
-              className="h-7 gap-1.5 rounded-lg px-2.5 text-xs"
+              className="gap-1.5"
               onClick={handleOpen}
             >
               <ZoomIn className="size-3.5" />
@@ -121,7 +121,7 @@ export function InvoiceFilePreview({
               type="button"
               size="sm"
               variant="ghost"
-              className="h-7 gap-1.5 rounded-lg px-2 text-xs"
+              className="gap-1.5"
               nativeButton={false}
               render={
                 <a href={serveUrl} target="_blank" rel="noreferrer" />
@@ -163,7 +163,7 @@ export function InvoiceFilePreview({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-8 gap-1.5 px-2.5 text-xs font-medium shrink-0 shadow-xs"
+                className="gap-1.5 font-medium shrink-0 shadow-xs"
                 onClick={handleClose}
               >
                 <ArrowLeft className="size-4" />
@@ -188,7 +188,7 @@ export function InvoiceFilePreview({
               type="button"
               variant="ghost"
               size="icon-sm"
-              className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
+              className="shrink-0 text-muted-foreground hover:text-foreground"
               onClick={handleClose}
               aria-label="Close preview"
             >
@@ -204,7 +204,7 @@ export function InvoiceFilePreview({
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="h-8 gap-1 px-2 text-xs"
+                  className="gap-1"
                   onClick={() => setZoom((z) => Math.max(0.5, Number((z - 0.25).toFixed(2))))}
                 >
                   <Minus className="size-3.5" />
@@ -214,7 +214,7 @@ export function InvoiceFilePreview({
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="h-8 gap-1 px-2 text-xs"
+                  className="gap-1"
                   onClick={() => setZoom((z) => Math.min(4, Number((z + 0.25).toFixed(2))))}
                 >
                   <Plus className="size-3.5" />
@@ -224,7 +224,7 @@ export function InvoiceFilePreview({
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="h-8 gap-1 px-2 text-xs font-medium"
+                  className="gap-1 font-medium"
                   onClick={() => setRotation((r) => (r + 90) % 360)}
                   title="Rotate clockwise 90°"
                 >
@@ -235,7 +235,7 @@ export function InvoiceFilePreview({
                   type="button"
                   size="sm"
                   variant="ghost"
-                  className="h-8 gap-1 px-2 text-xs"
+                  className="gap-1"
                   onClick={() => {
                     setZoom(1);
                     setRotation(0);
@@ -254,7 +254,7 @@ export function InvoiceFilePreview({
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="h-8 gap-1 px-2 text-xs font-medium"
+                  className="gap-1 font-medium"
                   onClick={() => setRotation((r) => (r + 90) % 360)}
                   title="Rotate clockwise 90°"
                 >
@@ -266,7 +266,7 @@ export function InvoiceFilePreview({
                     type="button"
                     size="sm"
                     variant="ghost"
-                    className="h-8 gap-1 px-2 text-xs"
+                    className="gap-1"
                     onClick={() => setRotation(0)}
                   >
                     <RotateCcw className="size-3.5" />
@@ -284,7 +284,7 @@ export function InvoiceFilePreview({
                 type="button"
                 size="sm"
                 variant="outline"
-                className="h-8 gap-1.5 text-xs"
+                className="gap-1.5"
                 nativeButton={false}
                 render={
                   <a href={serveUrl} download={cleanFileName} />
@@ -297,7 +297,7 @@ export function InvoiceFilePreview({
                 type="button"
                 size="sm"
                 variant="default"
-                className="h-8 gap-1.5 text-xs"
+                className="gap-1.5"
                 nativeButton={false}
                 render={
                   <a href={serveUrl} target="_blank" rel="noreferrer" />

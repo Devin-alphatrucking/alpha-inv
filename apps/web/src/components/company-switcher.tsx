@@ -39,10 +39,10 @@ export function CompanySwitcher({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="outline" size="sm" className="max-w-[180px] shrink-0 gap-1.5" disabled={pending} aria-label="Switch company">
+          <Button variant="outline" size="sm" className="max-w-[180px] shrink-0 gap-1.5 max-sm:aspect-square max-sm:px-0" disabled={pending} aria-label="Switch company">
             <Building2 className="size-4 shrink-0" />
-            <span className="truncate">{current?.name ?? "Company"}</span>
-            <ChevronsUpDown className="size-3.5 shrink-0 opacity-60" />
+            <span className="hidden truncate sm:inline">{current?.name ?? "Company"}</span>
+            <ChevronsUpDown className="hidden size-3.5 shrink-0 opacity-60 sm:block" />
           </Button>
         }
       />

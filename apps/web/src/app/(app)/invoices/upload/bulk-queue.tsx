@@ -175,17 +175,17 @@ export function BulkQueue({
 
       <div className="flex flex-wrap items-center gap-2">
         {running ? (
-          <Button type="button" variant="outline" className="h-11 gap-2 rounded-xl" onClick={() => (cancelled.current = true)}>
+          <Button type="button" variant="outline" className="gap-2" onClick={() => (cancelled.current = true)}>
             <Square className="size-4" aria-hidden /> Stop after the current ones
           </Button>
         ) : (
           <>
-            <Button type="button" size="lg" className="h-11 flex-1 gap-2 rounded-xl font-semibold" disabled={!canStart} onClick={() => void start()}>
+            <Button type="button" size="lg" className="flex-1 gap-2 font-semibold" disabled={!canStart} onClick={() => void start()}>
               <UploadCloud className="size-4" aria-hidden />
               {s.waiting === 0 ? "Nothing waiting" : !projectId ? "Select a project above" : !categoryId ? "Select a category above" : s.settled > 0 ? `Read ${s.waiting} more` : `Read ${s.waiting} invoice${s.waiting === 1 ? "" : "s"}`}
             </Button>
             {items.length < BULK_MAX_FILES && (
-              <Button type="button" variant="outline" className="h-11 gap-2 rounded-xl" onClick={() => inputRef.current?.click()}>
+              <Button type="button" variant="outline" className="gap-2" onClick={() => inputRef.current?.click()}>
                 <Plus className="size-4" aria-hidden /> Add files
               </Button>
             )}
@@ -205,7 +205,7 @@ export function BulkQueue({
       </div>
 
       {!running && s.done > 0 && (
-        <Button variant="secondary" className="h-11 rounded-xl" nativeButton={false} render={<Link href={reviewHref} />}>
+        <Button variant="secondary" nativeButton={false} render={<Link href={reviewHref} />}>
           Review the {s.done} invoice{s.done === 1 ? "" : "s"} now
         </Button>
       )}
