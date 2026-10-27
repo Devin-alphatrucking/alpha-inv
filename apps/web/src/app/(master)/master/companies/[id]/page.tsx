@@ -127,6 +127,8 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
           </CardTitle>
           <CardDescription>
             {health?.lastActiveAt ? `Last activity ${fmtDateTime(health.lastActiveAt)}.` : "No activity from this company yet."}
+            {sub?.trialEndingNoticeAt ? ` Trial-ending email sent ${fmtDate(sub.trialEndingNoticeAt)}.` : ""}
+            {sub?.trialEndedNoticeAt ? ` Trial-ended email sent ${fmtDate(sub.trialEndedNoticeAt)}.` : ""}
             {health && health.trialDaysLeft !== null ? ` Trial: ${health.trialDaysLeft} day${health.trialDaysLeft === 1 ? "" : "s"} left.` : ""}
           </CardDescription>
         </CardHeader>

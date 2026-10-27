@@ -1,7 +1,7 @@
-# Phase 17a: client care in the master console
+# Phase 17: client care in the master console (17a console, 17b trial emails)
 
 Our team can now see where every company is on the way from sign-up to paying, what needs attention, and keep notes
-and follow-up reminders. Customer emails (trial-ending notices) are not part of this step.
+and follow-up reminders. Part 17b (bottom of this page) adds the automatic trial emails.
 
 ## The funnel
 
@@ -50,8 +50,29 @@ Each company gets a level (Healthy / Watch / At risk) with the reasons in words:
   counted, filters, overview counts, notes and follow-ups (valid, refused, done/reopened, pressed twice), audit entries,
   and that a company connection cannot read or write them.
 
+## 17b: trial emails
+
+Administrators of a company on a trial get two emails, from the platform's mail settings, in the company's own name and colour:
+
+- **Trial ending**: once, when 3 days or less are left ("your trial ends in 3 days"), with a Choose a plan button.
+- **Trial ended**: once, after it ends without a plan. Only for trials that ended in the last 7 days, so switching this on
+  never writes to long-gone trials.
+
+Both say nothing is deleted. Who gets them: verified, undeleted administrators (not staff, not unverified). Not sent for
+paying, suspended or closed companies.
+
+- A scheduler calls `POST /api/jobs/trial-notices` every hour with `Authorization: Bearer <JOBS_SECRET>`, the same pass as the
+  daily digest (`lib/jobs-auth.ts`). Closed unless `JOBS_SECRET` (16+ characters) is set.
+- Once per trial: the notice is claimed in the database before it is sent (columns `trialEndingNoticeAt`,
+  `trialEndedNoticeAt`), so overlapping runs send one email. If nobody could be told or the mail server is down, the claim
+  is handed back and the next hourly run tries again.
+- **Extending a trial** in the master console clears both marks, so the new end date is announced again.
+- The company page shows when each email was sent.
+- Rules: `lib/plans/trial-notice.ts` (tested in `trial-notice.test.ts`); sending: `lib/flows/trial-notices.ts`
+  (`tests/trial-notices.test.ts`: recipients, once only, five at once, ended after ending, extension starts again).
+
 ## Not done yet
 
-- Emails to customers (trial ending, check-in) and revenue history: Phase 17b, once the wording and sending address
-  are decided.
-- The new pages were type-checked and linted but not looked at in a browser (needs an operator sign-in with two-step).
+- Revenue history and a "check-in" email for quiet companies, if wanted.
+- The new console pages were type-checked and linted but not looked at in a browser (needs an operator sign-in with two-step).
+- The hourly call must be set up on the host (it does nothing until a scheduler calls it).

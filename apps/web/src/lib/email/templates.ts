@@ -224,6 +224,52 @@ function budgetHtml(budgets: DigestBudget[]) {
   );
 }
 
+/** Sent to administrators when a trial has 3 days or less left. */
+export function trialEndingMail(to: string, d: { name: string; company: string; days: number; link: string; brand: MailBrand }): Mail {
+  const when = d.days <= 1 ? "tomorrow or sooner" : `in ${d.days} days`;
+  return {
+    to,
+    subject: `${d.company}: your trial ends ${when}`,
+    text: `Hi ${d.name},
+
+The trial of ${d.company} on ${d.brand.name} ends ${when}. To keep working without a break, choose a plan:
+${d.link}
+
+Nothing is deleted if you do not. Your data stays safe and the company opens again as soon as a plan is active.`,
+    html: layout(
+      d.brand,
+      "Your trial is ending",
+      P(`Hi ${esc(d.name)},`) +
+        P(`The trial of <strong>${esc(d.company)}</strong> ends <strong>${esc(when)}</strong>. To keep working without a break, choose a plan.`) +
+        P("Nothing is deleted if you do not. Your data stays safe and the company opens again as soon as a plan is active."),
+      { label: "Choose a plan", url: d.link },
+      "You get this because you are an administrator of this company.",
+    ),
+  };
+}
+
+/** Sent once, to administrators, after a trial has ended without a plan. */
+export function trialEndedMail(to: string, d: { name: string; company: string; link: string; brand: MailBrand }): Mail {
+  return {
+    to,
+    subject: `${d.company}: your trial has ended`,
+    text: `Hi ${d.name},
+
+The trial of ${d.company} on ${d.brand.name} has ended, so the company is paused. Your data is safe and nothing was deleted.
+Choose a plan to open it again:
+${d.link}`,
+    html: layout(
+      d.brand,
+      "Your trial has ended",
+      P(`Hi ${esc(d.name)},`) +
+        P(`The trial of <strong>${esc(d.company)}</strong> has ended, so the company is paused. Your data is safe and nothing was deleted.`) +
+        P("Choose a plan to open it again."),
+      { label: "Choose a plan", url: d.link },
+      "You get this because you are an administrator of this company.",
+    ),
+  };
+}
+
 export function digestMail(
   to: string,
   d: { name: string; company: string; overdue: DigestSection; dueSoon: DigestSection; drafts: number; budgets?: DigestBudget[]; link: string; brand: MailBrand },

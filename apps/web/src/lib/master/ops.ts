@@ -72,7 +72,7 @@ export async function extendTrial(admin: PlatformAdmin, orgId: string, days: unk
   await withBillingLock(org.id, async (tx) => {
     await tx.subscription.update({
       where: { organizationId: org.id },
-      data: { trialEndsAt, ...(sub.billing !== "RAZORPAY" && sub.status !== "ACTIVE" ? { status: "TRIALING" as const } : {}) },
+      data: { trialEndsAt, trialEndingNoticeAt: null, trialEndedNoticeAt: null, ...(sub.billing !== "RAZORPAY" && sub.status !== "ACTIVE" ? { status: "TRIALING" as const } : {}) },
     });
     if (sub.billing === "RAZORPAY") await recomputeSubscription(tx, org.id);
   });

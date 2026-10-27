@@ -631,6 +631,8 @@ model Subscription {
   // the company's purchases (BillingPurchase) plus `extraQuantity` (free project plans granted by an operator).
   billing                String             @default("MANUAL")
   extraQuantity          Int                @default(0)
+  trialEndingNoticeAt    DateTime? // when we told the company its trial is about to end (cleared when the trial is extended)
+  trialEndedNoticeAt     DateTime? // when we told it the trial has ended
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 
