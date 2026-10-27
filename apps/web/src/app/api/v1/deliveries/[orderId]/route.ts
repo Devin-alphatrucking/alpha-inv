@@ -17,5 +17,6 @@ export const GET = route<Ctx>("/api/v1/deliveries/[orderId]", async (req, ctx) =
 export const POST = route<Ctx>("/api/v1/deliveries/[orderId]", async (req, ctx) => {
   const me = await requireMobile(req);
   need(me, "delivery:write");
-  return flow(await recordReceipt(me, (await ctx.params).orderId, await readJson(req)), 201);
+  const body = (await readJson(req)) as Record<string, unknown>;
+  return flow(await recordReceipt(me, (await ctx.params).orderId, body, body.clientRef), 201);
 });

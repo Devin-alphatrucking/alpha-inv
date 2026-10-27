@@ -8,6 +8,7 @@ import { REQUEST_NAME, requestTone } from "@/lib/purchase-labels";
 import { space, useTheme } from "@/lib/theme";
 import { Badge, Button, Card, Chips, ErrorBox, Loading, Muted, Screen, Title } from "@/components/ui";
 import { PlanBanner } from "@/components/plan-banner";
+import { PendingBar } from "@/components/pending-bar";
 
 const FILTERS = [
   { id: "", name: "All" },
@@ -55,6 +56,7 @@ export default function Purchase() {
           <View style={{ gap: space.md, marginBottom: space.sm }}>
             <Title>Purchase</Title>
             {me ? <PlanBanner plan={me.plan} /> : null}
+            <PendingBar />
             {can(perms, "request:write") ? <Button label="New material request" onPress={() => router.push("/purchase/request-new")} /> : null}
             {can(perms, "delivery:view") ? <Button label="Deliveries (record what arrived)" variant="outline" onPress={() => router.push("/purchase/deliveries")} /> : null}
             {can(perms, "request:approve") && waiting > 0 ? <Muted>{waiting} {waiting === 1 ? "request is" : "requests are"} waiting for your approval.</Muted> : null}

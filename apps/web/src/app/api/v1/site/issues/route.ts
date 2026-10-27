@@ -22,5 +22,5 @@ export const POST = route("/api/v1/site/issues", async (req) => {
   const me = await requireMobile(req);
   need(me, "site:write");
   const body = (await readJson(req)) as Record<string, unknown>;
-  return flow(await createIssue(me, typeof body.projectId === "string" ? body.projectId : "", body), 201);
+  return flow(await createIssue(me, typeof body.projectId === "string" ? body.projectId : "", body, body.clientRef), 201);
 });

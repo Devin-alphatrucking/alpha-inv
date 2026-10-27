@@ -12,6 +12,7 @@ import {
   type IssueState, type ReportStatus,
 } from "@/lib/site/rules";
 import type { FlowResult } from "@/lib/flows/schemas";
+import { BAD_REF, REF_TAKEN, clientRefOf, isUniqueViolation } from "@/lib/idempotency";
 
 /**
  * Site work: the daily report, photos and issues of a project. Everything starts from "which project may this person see":
@@ -175,7 +176,7 @@ export async function listPhotos(user: SiteUser, opts: { projectId?: string | nu
   return photoViews(user, rows as never);
 }
 
-export type NewPhotos = { projectId: string; reportId?: string | null; issueId?: string | null; receiptId?: string | null; area?: unknown; caption?: unknown; files: { name: string; bytes: Buffer }[] };
+export type NewPhotos = { projectId: string; reportId?: string | null; issueId?: string | null; receiptId?: string | null; clientRef?: unknown; area?: unknown; caption?: unknown; files: { name: string; bytes: Buffer }[] };
 
 /** Adds up to 10 photos. A photo of a submitted report is refused unless the person can manage site work. */
 export async function addPhotos(user: SiteUser, input: NewPhotos): Promise<FlowResult<{ added: number; skipped: string[] }>> {
@@ -211,10 +212,22 @@ export async function addPhotos(user: SiteUser, input: NewPhotos): Promise<FlowR
   }
   const area = cleanLabel(input.area, 120);
   const caption = cleanLabel(input.caption, 200);
+  const baseRef = clientRefOf(input.clientRef);
+  if (baseRef === false) return BAD_REF;
 
   let added = 0;
   const skipped: string[] = [];
-  for (const file of input.files) {
+  for (const [index, file] of input.files.entries()) {
+    // One reference per file (the phone's reference plus the file's place in the batch), so a batch sent again adds only what is missing.
+    const ref = baseRef ? `${baseRef.slice(0, 58)}-${index}` : null;
+    if (ref) {
+      const already = await db.sitePhoto.findFirst({ where: { clientRef: ref }, select: { id: true, uploadedById: true } });
+      if (already) {
+        if (already.uploadedById !== user.id) return REF_TAKEN;
+        added++;
+        continue;
+      }
+    }
     const stored = await storePhoto(project.id, file.bytes);
     if (!stored.ok) {
       skipped.push(`${file.name.slice(0, 60)}: ${stored.error}`);
@@ -222,13 +235,18 @@ export async function addPhotos(user: SiteUser, input: NewPhotos): Promise<FlowR
     }
     try {
       const row = await db.sitePhoto.create({
-        data: { organizationId: user.orgId, projectId: project.id, reportId, issueId, receiptId, takenOn: toDate(takenOn), caption, area, fileUrl: stored.fileUrl, contentType: stored.contentType, sizeBytes: stored.sizeBytes, uploadedById: user.id },
+        data: { organizationId: user.orgId, projectId: project.id, reportId, issueId, receiptId, takenOn: toDate(takenOn), caption, area, fileUrl: stored.fileUrl, contentType: stored.contentType, sizeBytes: stored.sizeBytes, uploadedById: user.id, clientRef: ref },
         select: { id: true },
       });
       added++;
       await logActivity({ userId: user.id, organizationId: user.orgId, action: "SITE_PHOTO_ADDED", module: "SITE", entityId: row.id, details: { project: project.name } });
     } catch (error) {
       await removePhotos([stored.fileUrl]);
+      // the same photo arrived twice at the same moment: the other copy won, which is just as good
+      if (ref && isUniqueViolation(error)) {
+        added++;
+        continue;
+      }
       throw error;
     }
   }
@@ -312,20 +330,37 @@ async function checkAssignee(user: SiteUser, projectId: string, assigneeId: stri
   return (await assignableUsers(user, projectId)).some((u) => u.id === assigneeId);
 }
 
-export async function createIssue(user: SiteUser, projectId: string, raw: unknown): Promise<FlowResult<{ id: string }>> {
+export async function createIssue(user: SiteUser, projectId: string, raw: unknown, clientRefRaw?: unknown): Promise<FlowResult<{ id: string }>> {
   if (!can(user, "site:write")) return { ok: false, error: "You do not have permission to raise site issues." };
   const project = await visibleProject(user, projectId);
   if (!project) return { ok: false, error: "Project not found." };
+  const ref = clientRefOf(clientRefRaw);
+  if (ref === false) return BAD_REF;
+  if (ref) {
+    // The same save sent again (a lost reply, a retry from the phone): give back the issue already made.
+    const existing = await dbFor(user.orgId).siteIssue.findFirst({ where: { clientRef: ref }, select: { id: true, raisedById: true, projectId: true } });
+    if (existing) return existing.raisedById === user.id && existing.projectId === project.id ? { ok: true, id: existing.id } : REF_TAKEN;
+  }
   const parsed = parseIssue(raw);
   if (!parsed.ok) return parsed;
   if (!(await checkAssignee(user, project.id, parsed.value.assigneeId))) return { ok: false, error: "Choose someone who works on this project.", field: "assigneeId" };
   const busy = await throttle(user, "issue", 40, 600);
   if (busy) return { ok: false, error: busy };
   const v = parsed.value;
-  const created = await dbFor(user.orgId).siteIssue.create({
-    data: { organizationId: user.orgId, projectId: project.id, title: v.title, description: v.description, area: v.area, severity: v.severity, dueDate: v.dueDate ? toDate(v.dueDate) : null, assigneeId: v.assigneeId, raisedById: user.id },
-    select: { id: true },
-  });
+  let created: { id: string };
+  try {
+    created = await dbFor(user.orgId).siteIssue.create({
+      data: { organizationId: user.orgId, projectId: project.id, title: v.title, description: v.description, area: v.area, severity: v.severity, dueDate: v.dueDate ? toDate(v.dueDate) : null, assigneeId: v.assigneeId, raisedById: user.id, clientRef: ref },
+      select: { id: true },
+    });
+  } catch (error) {
+    // Two copies of the same save arrived at the same moment: the second finds the first.
+    if (ref && isUniqueViolation(error)) {
+      const won = await dbFor(user.orgId).siteIssue.findFirst({ where: { clientRef: ref, raisedById: user.id }, select: { id: true } });
+      if (won) return { ok: true, id: won.id };
+    }
+    throw error;
+  }
   await logActivity({ userId: user.id, organizationId: user.orgId, action: "SITE_ISSUE_RAISED", module: "SITE", entityId: created.id, details: { project: project.name, title: v.title, severity: v.severity } });
   return { ok: true, id: created.id };
 }

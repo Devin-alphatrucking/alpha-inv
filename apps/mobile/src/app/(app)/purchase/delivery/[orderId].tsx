@@ -2,6 +2,9 @@ import { useCallback, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
 import { Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { ApiError, type DeliveryView, type PhotoView } from "@/lib/client";
+import { useOffline } from "@/lib/offline/provider";
+import type { LocalFile } from "@/lib/offline/queue";
+import { LocalPhotos } from "@/components/local-photos";
 import { PROGRESS_NAME } from "@/lib/purchase-labels";
 import { useSession } from "@/lib/session";
 import { can } from "@/lib/roles";
@@ -15,6 +18,8 @@ type Entry = { quantity: string; rejected: string; remark: string };
 export default function DeliveryScreen() {
   const t = useTheme();
   const { client, me } = useSession();
+  const offline = useOffline();
+  const [newPhotos, setNewPhotos] = useState<LocalFile[]>([]);
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
   const [d, setD] = useState<DeliveryView | null>(null);
   const [today, setToday] = useState("");
@@ -49,14 +54,25 @@ export default function DeliveryScreen() {
     setFormError(null);
     setBusy(true);
     try {
-      await client.recordDelivery(d.orderId, { receivedOn: today, challanNo, note, lines: d.lines.map((l) => ({ orderLineId: l.id, ...get(l.id) })) });
+      const o = await offline.save({
+        kind: "delivery",
+        label: `${d.number} · ${d.vendorName}`,
+        projectId: d.projectId,
+        orderId: d.orderId,
+        body: { receivedOn: today, challanNo, note, lines: d.lines.map((l) => ({ orderLineId: l.id, ...get(l.id) })) },
+        photos: newPhotos,
+        photoArea: "Delivery",
+      });
+      if (o.kind === "rejected") return setFormError(o.message);
       setEntries({});
       setChallanNo("");
       setNote("");
-      Alert.alert("Delivery recorded", "Now add photos of the challan and the goods to it below.");
+      setNewPhotos([]);
+      if (o.kind === "sent") Alert.alert("Delivery recorded", o.skipped.length ? `Some photos were not added:\n${o.skipped.join("\n")}` : "You can add more photos to it below.");
+      else Alert.alert("Saved on this phone", "There is no connection right now. The delivery will be recorded as soon as there is. You can leave this screen.");
       await load();
     } catch (e) {
-      setFormError(e instanceof ApiError ? e.message : "Could not record the delivery. Please try again.");
+      setFormError(e instanceof ApiError || e instanceof Error ? e.message : "Could not record the delivery. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -120,6 +136,7 @@ export default function DeliveryScreen() {
                       <Field label="Remark" value={get(l.id).remark} onChangeText={(v) => set(l.id, "remark", v)} maxLength={200} placeholder="optional" />
                     </View>
                   ))}
+                  <LocalPhotos value={newPhotos} onChange={setNewPhotos} />
                   <Field label="Note" multiline value={note} onChangeText={setNote} style={{ minHeight: 70, textAlignVertical: "top", paddingTop: 12 }} />
                   {formError ? <Text accessibilityRole="alert" style={{ color: t.danger, fontSize: 14 }}>{formError}</Text> : null}
                   <Button label="Record delivery" onPress={record} busy={busy} />

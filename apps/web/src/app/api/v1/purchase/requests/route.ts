@@ -21,7 +21,7 @@ export const POST = route("/api/v1/purchase/requests", async (req) => {
   const me = await requireMobile(req);
   need(me, "request:write");
   const body = (await readJson(req)) as Record<string, unknown>;
-  const saved = await saveRequest(me, { projectId: typeof body.projectId === "string" ? body.projectId : "", data: body });
+  const saved = await saveRequest(me, { projectId: typeof body.projectId === "string" ? body.projectId : "", data: body, clientRef: body.clientRef });
   if (!saved.ok) return flow(saved);
   if (body.submit === true) {
     const sent = await submitRequest(me, saved.id);

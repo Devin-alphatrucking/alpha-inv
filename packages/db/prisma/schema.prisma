@@ -843,6 +843,7 @@ model SiteReport {
 model SitePhoto {
   id             String   @id @default(cuid())
   organizationId String // company that owns this row
+  clientRef      String? // set by the phone app so a save that is sent twice (a lost reply, a retry) is made only once
   projectId      String
   reportId       String?
   issueId        String?
@@ -862,6 +863,7 @@ model SitePhoto {
   receipt    GoodsReceipt? @relation(fields: [receiptId], references: [id], onDelete: SetNull)
   uploadedBy User?         @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
 
+  @@unique([organizationId, clientRef])
   @@index([projectId, takenOn])
   @@index([organizationId])
   @@index([reportId])
@@ -873,6 +875,7 @@ model SitePhoto {
 model SiteIssue {
   id             String        @id @default(cuid())
   organizationId String // company that owns this row
+  clientRef      String? // set by the phone app so a save that is sent twice (a lost reply, a retry) is made only once
   projectId      String
   title          String
   description    String?
@@ -891,6 +894,7 @@ model SiteIssue {
   raisedBy User?       @relation("SiteIssueRaiser", fields: [raisedById], references: [id], onDelete: SetNull)
   photos   SitePhoto[]
 
+  @@unique([organizationId, clientRef])
   @@index([projectId, status])
   @@index([organizationId, status])
   @@index([assigneeId])
@@ -933,6 +937,7 @@ model DocumentCounter {
 model MaterialRequest {
   id             String        @id @default(cuid())
   organizationId String // company that owns this row
+  clientRef      String? // set by the phone app so a save that is sent twice (a lost reply, a retry) is made only once
   projectId      String
   number         String
   status         RequestStatus @default(DRAFT)
@@ -953,6 +958,7 @@ model MaterialRequest {
   orders      PurchaseOrder[]
 
   @@unique([organizationId, number])
+  @@unique([organizationId, clientRef])
   @@index([projectId, status])
   @@index([organizationId, status])
 }
@@ -1037,6 +1043,7 @@ model PurchaseOrderLine {
 model GoodsReceipt {
   id             String   @id @default(cuid())
   organizationId String // company that owns this row
+  clientRef      String? // set by the phone app so a save that is sent twice (a lost reply, a retry) is made only once
   orderId        String
   receivedOn     DateTime @db.Date
   challanNo      String?
@@ -1049,6 +1056,7 @@ model GoodsReceipt {
   lines      GoodsReceiptLine[]
   photos     SitePhoto[]
 
+  @@unique([organizationId, clientRef])
   @@index([orderId])
   @@index([organizationId])
 }

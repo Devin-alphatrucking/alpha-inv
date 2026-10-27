@@ -9,6 +9,7 @@ import { todayIn } from "@/lib/invoices/status";
 import { lineProgress, matchInvoice, matchLine, orderProgress, parseReceipt, type LineProgress, type MatchResult, type OrderProgress } from "@/lib/purchase/delivery-rules";
 import { isOpenForGoods, milliToString, OPEN_FOR_GOODS, statusForProgress, type OrderState } from "@/lib/purchase/rules";
 import type { FlowResult } from "@/lib/flows/schemas";
+import { BAD_REF, REF_TAKEN, clientRefOf, isUniqueViolation } from "@/lib/idempotency";
 
 /**
  * Delivery check: what actually arrived on site against a sent purchase order, and whether a bill matches what was ordered and received.
@@ -122,8 +123,16 @@ export async function listDeliveries(user: DeliveryUser, opts: { includeComplete
   return opts.includeComplete ? out : out.filter((r) => r.progress !== "RECEIVED");
 }
 
-export async function recordReceipt(user: DeliveryUser, orderId: string, raw: unknown): Promise<FlowResult<{ id: string }>> {
+export async function recordReceipt(user: DeliveryUser, orderId: string, raw: unknown, clientRefRaw?: unknown): Promise<FlowResult<{ id: string }>> {
   if (!can(user, "delivery:write")) return { ok: false, error: "You do not have permission to record deliveries." };
+  const ref = clientRefOf(clientRefRaw);
+  if (ref === false) return BAD_REF;
+  const refValue: string | null = ref;
+  if (ref) {
+    // The same save sent again (a lost reply, a retry from the phone): give back the delivery already recorded, never a second one.
+    const existing = await dbFor(user.orgId).goodsReceipt.findFirst({ where: { clientRef: ref }, select: { id: true, receivedById: true, orderId: true } });
+    if (existing) return existing.receivedById === user.id && existing.orderId === orderId ? { ok: true, id: existing.id } : REF_TAKEN;
+  }
   const view = await getDelivery(user, orderId);
   if (!view) return { ok: false, error: "Order not found." };
   if (!view.canRecord) return { ok: false, error: isOpenForGoods(view.status) ? "You cannot record deliveries here." : "Deliveries can only be recorded against an order that was sent to the supplier and is not closed or cancelled." };
@@ -135,15 +144,27 @@ export async function recordReceipt(user: DeliveryUser, orderId: string, raw: un
   ]);
   if (!busy.allowed) return { ok: false, error: retryMessage(busy.retryAfterSeconds) };
   const v = parsed.value;
-  const created = await dbFor(user.orgId).$transaction(async (tx) => {
+  let created: { id: string } | null;
+  try {
+    created = await recordInTransaction();
+  } catch (error) {
+    if (ref && isUniqueViolation(error)) {
+      const won = await dbFor(user.orgId).goodsReceipt.findFirst({ where: { clientRef: ref, receivedById: user.id }, select: { id: true } });
+      if (won) return { ok: true, id: won.id };
+    }
+    throw error;
+  }
+  async function recordInTransaction() {
+    return dbFor(user.orgId).$transaction(async (tx) => {
     // The order must still be open for goods: it may have been cancelled or closed while this form was open.
     const live = await tx.purchaseOrder.count({ where: { id: orderId, status: { in: OPEN_FOR_GOODS } } });
     if (live === 0) return null;
-    const row = await tx.goodsReceipt.create({ data: { organizationId: user.orgId, orderId, receivedOn: toDate(v.receivedOn), challanNo: v.challanNo, note: v.note, receivedById: user.id }, select: { id: true } });
+    const row = await tx.goodsReceipt.create({ data: { organizationId: user.orgId, orderId, receivedOn: toDate(v.receivedOn), challanNo: v.challanNo, note: v.note, receivedById: user.id, clientRef: refValue }, select: { id: true } });
     await tx.goodsReceiptLine.createMany({ data: v.lines.map((l) => ({ organizationId: user.orgId, receiptId: row.id, orderLineId: l.orderLineId, quantity: milliToString(l.quantityMilli), rejected: milliToString(l.rejectedMilli), remark: l.remark })) });
     await syncOrderStatus(tx, orderId);
     return row;
   });
+  }
   if (!created) return { ok: false, error: "This order was cancelled just now." };
   await logActivity({ userId: user.id, organizationId: user.orgId, action: "DELIVERY_RECORDED", module: "PURCHASE", entityId: created.id, details: { order: view.number, challan: v.challanNo, lines: v.lines.length } });
   return { ok: true, id: created.id };

@@ -10,6 +10,7 @@ import {
   type OrderAction, type OrderState, type RequestAction, type RequestState,
 } from "@/lib/purchase/rules";
 import type { FlowResult } from "@/lib/flows/schemas";
+import { BAD_REF, REF_TAKEN, clientRefOf, isUniqueViolation } from "@/lib/idempotency";
 
 /**
  * Purchase: material requests (an engineer asks, a manager approves) and purchase orders (the purchase officer orders from a supplier).
@@ -104,11 +105,18 @@ export async function listRequests(user: PurchaseUser, opts: { projectId?: strin
 }
 
 /** Creates a request (no `requestId`) or replaces a draft's contents (with `requestId`). */
-export async function saveRequest(user: PurchaseUser, input: { requestId?: string | null; projectId: string; data: unknown }): Promise<FlowResult<{ id: string; number: string }>> {
+export async function saveRequest(user: PurchaseUser, input: { requestId?: string | null; projectId: string; data: unknown; clientRef?: unknown }): Promise<FlowResult<{ id: string; number: string }>> {
   if (!can(user, "request:write")) return { ok: false, error: "You do not have permission to raise material requests." };
   const project = await visibleProject(user, input.projectId);
   if (!project) return { ok: false, error: "Project not found." };
   if (project.status !== "ACTIVE") return { ok: false, error: "Requests can only be raised for active projects." };
+  const ref = input.requestId ? null : clientRefOf(input.clientRef);
+  if (ref === false) return BAD_REF;
+  if (ref) {
+    // The same save sent again (a lost reply, a retry from the phone): give back the request already made, never a second one.
+    const existing = await dbFor(user.orgId).materialRequest.findFirst({ where: { clientRef: ref }, select: { id: true, number: true, requestedById: true, projectId: true } });
+    if (existing) return existing.requestedById === user.id && existing.projectId === project.id ? { ok: true, id: existing.id, number: existing.number } : REF_TAKEN;
+  }
   const parsed = parseRequest(input.data, await today(user.orgId));
   if (!parsed.ok) return parsed;
   const busy = await throttle(user, "request", 40, 1000);
@@ -134,12 +142,21 @@ export async function saveRequest(user: PurchaseUser, input: { requestId?: strin
   }
 
   const year = Number((await today(user.orgId)).slice(0, 4));
-  const created = await db.$transaction(async (tx) => {
-    const number = await nextNumber(tx, user.orgId, "MR", year);
-    const row = await tx.materialRequest.create({ data: { organizationId: user.orgId, projectId: project.id, number, neededBy: v.neededBy ? toDate(v.neededBy) : null, note: v.note, requestedById: user.id }, select: { id: true, number: true } });
-    await tx.materialRequestLine.createMany({ data: lineData(row.id) });
-    return row;
-  });
+  let created: { id: string; number: string };
+  try {
+    created = await db.$transaction(async (tx) => {
+      const number = await nextNumber(tx, user.orgId, "MR", year);
+      const row = await tx.materialRequest.create({ data: { organizationId: user.orgId, projectId: project.id, number, neededBy: v.neededBy ? toDate(v.neededBy) : null, note: v.note, requestedById: user.id, clientRef: ref }, select: { id: true, number: true } });
+      await tx.materialRequestLine.createMany({ data: lineData(row.id) });
+      return row;
+    });
+  } catch (error) {
+    if (ref && isUniqueViolation(error)) {
+      const won = await db.materialRequest.findFirst({ where: { clientRef: ref, requestedById: user.id }, select: { id: true, number: true } });
+      if (won) return { ok: true, id: won.id, number: won.number };
+    }
+    throw error;
+  }
   await logActivity({ userId: user.id, organizationId: user.orgId, action: "REQUEST_SAVED", module: "PURCHASE", entityId: created.id, details: { number: created.number, project: project.name, created: true } });
   return { ok: true, id: created.id, number: created.number };
 }

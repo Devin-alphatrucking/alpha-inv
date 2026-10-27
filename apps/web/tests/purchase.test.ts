@@ -203,6 +203,13 @@ async function main() {
     await assert.rejects(() => rawDb.purchaseOrder.create({ data: { organizationId: "o_pur_a", projectId: "p_pa1", vendorId: "v_a", number: "PO-X", orderDate: new Date() } }), /row-level security|violates/i);
   });
 
+  // The earlier approvals depend on which of two racing decisions won, so make one approved request that is certainly still waiting to be ordered.
+  const waiting = await f.saveRequest(eng, { projectId: "p_pa1", data: { lines: [lines[0]] } });
+  assert.ok(waiting.ok);
+  if (waiting.ok) {
+    await f.submitRequest(eng, waiting.id);
+    assert.ok((await f.decideRequest(mgr, waiting.id, true, "")).ok);
+  }
   const overview = await f.purchaseOverview(admin);
   await check("the overview counts what needs attention", () => {
     assert.ok(overview.approvedToOrder >= 1);

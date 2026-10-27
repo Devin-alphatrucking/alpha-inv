@@ -26,6 +26,7 @@ export async function uploadSitePhotos(request: Request, user: SiteUser): Promis
     reportId: text("reportId") || null,
     issueId: text("issueId") || null,
     receiptId: text("receiptId") || null,
+    clientRef: text("clientRef") || null,
     area: text("area"),
     caption: text("caption"),
     files,

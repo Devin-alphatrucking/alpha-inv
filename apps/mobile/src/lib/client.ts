@@ -106,7 +106,7 @@ export type IssueView = {
   assigneeId: string | null; assigneeName: string | null; raisedByName: string | null; dueDate: string | null; photoCount: number; canEdit: boolean; next: IssueState[];
 };
 export type IssueCounts = { open: number; inProgress: number; fixed: number; closed: number; stillOpenHigh: number; overdue: number };
-export type IssueInput = { projectId: string; title: string; description?: string; area?: string; severity: "LOW" | "MEDIUM" | "HIGH"; dueDate?: string; assigneeId?: string };
+export type IssueInput = { projectId: string; title: string; description?: string; area?: string; severity: "LOW" | "MEDIUM" | "HIGH"; dueDate?: string; assigneeId?: string; /** Makes a retry safe: the server keeps the first record made with it. */ clientRef?: string };
 
 export type RequestState = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED" | "ORDERED" | "CANCELLED";
 export type RequestAction = "edit" | "submit" | "withdraw" | "approve" | "reject" | "cancel" | "order";
@@ -114,7 +114,7 @@ export type RequestView = {
   id: string; number: string; projectId: string; projectName: string; status: RequestState; neededBy: string | null; note: string | null; requestedByName: string | null;
   decidedByName: string | null; decisionNote: string | null; lines: { id: string; description: string; unit: string; quantity: string }[]; actions: RequestAction[];
 };
-export type RequestInput = { projectId: string; neededBy?: string; note?: string; lines: { description: string; unit: string; quantity: string }[]; submit?: boolean };
+export type RequestInput = { projectId: string; neededBy?: string; note?: string; lines: { description: string; unit: string; quantity: string }[]; submit?: boolean; clientRef?: string };
 
 export type DeliveryRow = { orderId: string; number: string; vendorName: string; projectName: string; deliveryDate: string | null; progress: "NOT_RECEIVED" | "PARTLY" | "RECEIVED"; late: boolean };
 export type DeliveryView = {
@@ -123,7 +123,7 @@ export type DeliveryView = {
   progress: "NOT_RECEIVED" | "PARTLY" | "RECEIVED"; canRecord: boolean;
   receipts: { id: string; receivedOn: string; challanNo: string | null; note: string | null; receivedByName: string | null; photoCount: number; canDelete: boolean; lines: { description: string; unit: string; quantity: string; rejected: string; remark: string | null }[] }[];
 };
-export type ReceiptInput = { receivedOn?: string; challanNo?: string; note?: string; lines: { orderLineId: string; quantity: string; rejected?: string; remark?: string }[] };
+export type ReceiptInput = { receivedOn?: string; challanNo?: string; note?: string; lines: { orderLineId: string; quantity: string; rejected?: string; remark?: string }[]; clientRef?: string };
 
 export type DocumentRevision = { id: string; revision: string; note: string | null; issuedOn: string; fileName: string; formatLabel: string; opensInPage: boolean; sizeBytes: number; uploadedByName: string | null; isCurrent: boolean };
 export type DocumentView = {
@@ -131,7 +131,7 @@ export type DocumentView = {
   current: DocumentRevision | null; revisionCount: number; revisions: DocumentRevision[];
 };
 
-export type PhotoTarget = { projectId: string; reportId?: string; issueId?: string; receiptId?: string; area?: string; caption?: string };
+export type PhotoTarget = { projectId: string; reportId?: string; issueId?: string; receiptId?: string; area?: string; caption?: string; clientRef?: string };
 export type PhotoUploadResult = { ok: true; added: number; skipped: string[] };
 
 export type ClientOptions = {

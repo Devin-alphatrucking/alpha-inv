@@ -12,6 +12,7 @@ export default function AppLayout() {
   return (
     <Stack screenOptions={{ headerTintColor: t.text, headerStyle: { backgroundColor: t.bg }, headerShadowVisible: false, contentStyle: { backgroundColor: t.bg }, headerBackTitle: "Back" }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="pending" options={{ title: "Waiting to send" }} />
       <Stack.Screen name="invoice/[id]" options={{ title: "Invoice" }} />
       <Stack.Screen name="site/report" options={{ title: "Daily report" }} />
       <Stack.Screen name="site/issues" options={{ title: "Issues" }} />

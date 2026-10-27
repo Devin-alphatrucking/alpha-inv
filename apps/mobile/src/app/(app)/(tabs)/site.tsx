@@ -7,6 +7,7 @@ import { can } from "@/lib/roles";
 import { space } from "@/lib/theme";
 import { Badge, Button, Card, ErrorBox, Loading, Muted, Screen, SectionTitle, Title } from "@/components/ui";
 import { PlanBanner } from "@/components/plan-banner";
+import { PendingBar } from "@/components/pending-bar";
 
 /** Site work home: for each project, today's report and the open issues. */
 export default function Site() {
@@ -37,6 +38,7 @@ export default function Site() {
       <ScrollView contentContainerStyle={{ padding: space.lg, gap: space.lg }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }} />}>
         <Title>Site work</Title>
         {me ? <PlanBanner plan={me.plan} /> : null}
+        <PendingBar />
         {error ? <ErrorBox message={error} onRetry={load} /> : null}
         {data?.projects.length === 0 ? <Muted>You are not on any active project yet. Ask an administrator to assign you.</Muted> : null}
         {data?.projects.map((p) => (

@@ -7,6 +7,7 @@ import { useSession } from "@/lib/session";
 import { space, useTheme } from "@/lib/theme";
 import { Badge, Card, ErrorBox, Muted, Screen, Title } from "@/components/ui";
 import { PlanBanner } from "@/components/plan-banner";
+import { PendingBar } from "@/components/pending-bar";
 
 const FILTERS = [
   { value: "", label: "All" },
@@ -101,6 +102,7 @@ export default function Invoices() {
         </ScrollView>
       </View>
       {me ? <PlanBanner plan={me.plan} /> : null}
+      <PendingBar />
 
       {error && items.length === 0 ? (
         <ErrorBox message={error} onRetry={() => load(1, true)} />

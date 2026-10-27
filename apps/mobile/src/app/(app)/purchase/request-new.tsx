@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { ApiError } from "@/lib/client";
+import { useOffline } from "@/lib/offline/provider";
 import { useSession } from "@/lib/session";
 import { space, useTheme } from "@/lib/theme";
 import { Button, Card, Chips, Field, Loading, Muted, Screen, type Option } from "@/components/ui";
@@ -15,6 +16,7 @@ export default function RequestNew() {
   const t = useTheme();
   const router = useRouter();
   const { client } = useSession();
+  const offline = useOffline();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const [projects, setProjects] = useState<Option[]>([]);
   const [projectId, setProjectId] = useState("");
@@ -59,9 +61,14 @@ export default function RequestNew() {
         if (send) await client.actOnRequest(String(id), "submit");
         router.replace({ pathname: "/purchase/request/[id]", params: { id: String(id) } });
       } else {
-        const r = await client.raiseRequest({ projectId, neededBy, note, lines, submit: send });
-        if (r.warning) Alert.alert("Saved as a draft", r.warning);
-        router.replace({ pathname: "/purchase/request/[id]", params: { id: r.id } });
+        const o = await offline.save({ kind: "request", label: lines.find((l) => l.description.trim())?.description.trim() ?? "Material request", projectId, body: { projectId, neededBy, note, lines, submit: send }, photos: [] });
+        if (o.kind === "rejected") return setError(o.message);
+        if (o.kind !== "sent") {
+          Alert.alert("Saved on this phone", send ? "There is no connection right now. The request will be sent for approval as soon as there is." : "There is no connection right now. The draft will be saved to the server as soon as there is.");
+          return router.back();
+        }
+        if (o.warning) Alert.alert("Saved as a draft", o.warning);
+        router.replace({ pathname: "/purchase/request/[id]", params: { id: o.serverId } });
       }
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Could not save. Please try again.");

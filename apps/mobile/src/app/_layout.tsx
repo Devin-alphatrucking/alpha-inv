@@ -2,6 +2,7 @@ import { Slot } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { SessionProvider, useSession } from "@/lib/session";
+import { OfflineProvider } from "@/lib/offline/provider";
 import { Loading } from "@/components/ui";
 
 function Gate() {
@@ -15,7 +16,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <SessionProvider>
         <StatusBar style="dark" />
-        <Gate />
+        <OfflineProvider>
+          <Gate />
+        </OfflineProvider>
       </SessionProvider>
     </SafeAreaProvider>
   );

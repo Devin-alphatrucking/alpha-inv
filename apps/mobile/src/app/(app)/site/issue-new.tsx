@@ -1,18 +1,23 @@
 import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { ApiError } from "@/lib/client";
+import { Alert } from "react-native";
+import { useOffline } from "@/lib/offline/provider";
+import type { LocalFile } from "@/lib/offline/queue";
+import { LocalPhotos } from "@/components/local-photos";
 import { useSession } from "@/lib/session";
 import { space, useTheme } from "@/lib/theme";
 import { Button, Chips, Field, Screen, type Option } from "@/components/ui";
 
 const SEVERITIES: Option[] = [{ id: "LOW", name: "Low" }, { id: "MEDIUM", name: "Medium" }, { id: "HIGH", name: "High" }];
 
-/** Raise an issue (snag) on a project. Photos are added from the issue's own screen afterwards. */
+/** Raise an issue (snag) on a project, with photos. Works without a connection: it is kept on the phone and sent later. */
 export default function NewIssue() {
   const t = useTheme();
   const router = useRouter();
   const { client } = useSession();
+  const offline = useOffline();
+  const [photos, setPhotos] = useState<LocalFile[]>([]);
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -32,10 +37,15 @@ export default function NewIssue() {
     setError(null);
     setBusy(true);
     try {
-      const r = await client.raiseIssue({ projectId: String(projectId), title, description, area, severity: severity as "LOW" | "MEDIUM" | "HIGH", dueDate, assigneeId });
-      router.replace({ pathname: "/site/issue/[id]", params: { id: r.id } });
+      const o = await offline.save({ kind: "issue", label: title.trim() || "Issue", projectId: String(projectId), body: { projectId: String(projectId), title, description, area, severity, dueDate, assigneeId }, photos, photoArea: area });
+      if (o.kind === "sent") router.replace({ pathname: "/site/issue/[id]", params: { id: o.serverId } });
+      else if (o.kind === "rejected") setError(o.message);
+      else {
+        Alert.alert("Saved on this phone", o.kind === "offline" ? "There is no connection right now. The issue will be sent as soon as there is." : "Please sign in again. The issue will be sent after you do.");
+        router.back();
+      }
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Could not raise the issue. Please try again.");
+      setError(e instanceof Error ? e.message : "Could not raise the issue. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -51,6 +61,7 @@ export default function NewIssue() {
           <Field label="Where on site" value={area} onChangeText={setArea} placeholder="Tower A, level 3" />
           <Chips label="How serious" options={SEVERITIES} value={severity} onChange={setSeverity} />
           <Field label="Fix by (YYYY-MM-DD)" value={dueDate} onChangeText={setDueDate} keyboardType="numbers-and-punctuation" placeholder="2026-11-30" maxLength={10} />
+          <LocalPhotos value={photos} onChange={setPhotos} />
           {people.length > 1 ? <Chips label="Given to" options={people} value={assigneeId} onChange={setAssigneeId} /> : null}
           {error ? <Text accessibilityRole="alert" style={{ color: t.danger, fontSize: 14 }}>{error}</Text> : null}
           <Button label="Raise issue" onPress={send} busy={busy} />
