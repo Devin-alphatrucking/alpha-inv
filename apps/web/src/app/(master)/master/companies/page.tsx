@@ -3,7 +3,8 @@ import { listCompanies, PAGE_SIZE } from "@/lib/master/queries";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CompanyStatusBadge, FilterBar, PageTitle, Pager, StateBadge, STATE_LABEL, fmtDate } from "../master-ui";
+import { CompanyStatusBadge, FilterBar, HealthLabel, PageTitle, Pager, StageBadge, StateBadge, STATE_LABEL, fmtDate } from "../master-ui";
+import { STAGES, STAGE_LABEL, type Stage } from "@/lib/master/health";
 import type { PlanState } from "@/lib/plans/rules";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Button } from "@/components/ui/button";
@@ -11,14 +12,16 @@ import { Button } from "@/components/ui/button";
 export const metadata = { title: "Companies | Master console" };
 export const dynamic = "force-dynamic";
 
-type SP = Promise<{ q?: string; state?: string; page?: string }>;
+type SP = Promise<{ q?: string; state?: string; stage?: string; attention?: string; page?: string }>;
 
 export default async function CompaniesPage({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const q = sp.q?.trim() ?? "";
   const state = sp.state && sp.state in STATE_LABEL ? sp.state : "";
+  const stage = STAGES.includes(sp.stage as Stage) ? (sp.stage as Stage) : "";
+  const attention = sp.attention === "1";
   const page = Math.max(1, Number(sp.page) || 1);
-  const { rows, total, counts, capped } = await listCompanies({ q, state, page });
+  const { rows, total, counts, stageCounts, capped } = await listCompanies({ q, state, stage, attention, page });
 
   return (
     <>
@@ -43,6 +46,21 @@ export default async function CompaniesPage({ searchParams }: { searchParams: SP
             ))}
           </NativeSelect>
         </div>
+        <div className="grid gap-1.5">
+          <label htmlFor="stage" className="text-xs text-muted-foreground">Stage</label>
+          <NativeSelect id="stage" name="stage" defaultValue={stage}>
+            <option value="">All stages</option>
+            {STAGES.map((s) => (
+              <option key={s} value={s}>
+                {STAGE_LABEL[s].label}{stageCounts[s] ? ` (${stageCounts[s]})` : ""}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+        <label className="flex items-center gap-2 pb-2 text-sm">
+          <input type="checkbox" name="attention" value="1" defaultChecked={attention} className="size-4" />
+          Needs attention only
+        </label>
       </FilterBar>
 
       {capped && <p className="text-sm text-amber-600">Showing the newest 5000 companies only. Narrow the search.</p>}
@@ -59,7 +77,7 @@ export default async function CompaniesPage({ searchParams }: { searchParams: SP
                     <Link href={`/master/companies/${c.id}`} className="grid gap-1 p-4 hover:bg-muted/40">
                       <span className="flex items-center justify-between gap-2">
                         <span className="font-medium">{c.name}</span>
-                        <StateBadge state={c.state} />
+                        <span className="flex items-center gap-2"><HealthLabel level={c.level} /><StageBadge stage={c.stage} /></span>
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {c.slug} · {c.quantity} plan{c.quantity === 1 ? "" : "s"} · {c.projects} project{c.projects === 1 ? "" : "s"} · {c.members} people
@@ -73,11 +91,13 @@ export default async function CompaniesPage({ searchParams }: { searchParams: SP
                   <TableHeader>
                     <TableRow>
                       <TableHead>Company</TableHead>
+                      <TableHead>Stage</TableHead>
                       <TableHead>Plan state</TableHead>
                       <TableHead className="text-right">Plans</TableHead>
                       <TableHead className="text-right">Projects</TableHead>
                       <TableHead className="text-right">People</TableHead>
                       <TableHead>Billing</TableHead>
+                      <TableHead>Last active</TableHead>
                       <TableHead>Joined</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -90,6 +110,10 @@ export default async function CompaniesPage({ searchParams }: { searchParams: SP
                           </Link>
                           <p className="text-xs text-muted-foreground">{c.slug}</p>
                         </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <StageBadge stage={c.stage} />
+                          <p className="mt-0.5"><HealthLabel level={c.level} />{c.reasons[0] ? <span className="ml-1.5 text-xs text-muted-foreground">{c.reasons[0].text}</span> : null}</p>
+                        </TableCell>
                         <TableCell className="space-x-1.5 whitespace-nowrap">
                           <StateBadge state={c.state} />
                           {c.status !== "ACTIVE" && c.status !== "TRIAL" && <CompanyStatusBadge status={c.status} />}
@@ -98,6 +122,7 @@ export default async function CompaniesPage({ searchParams }: { searchParams: SP
                         <TableCell className="text-right tabular-nums">{c.projects}</TableCell>
                         <TableCell className="text-right tabular-nums">{c.members}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{c.billing === "RAZORPAY" ? "Razorpay" : "By hand"}</TableCell>
+                        <TableCell className="whitespace-nowrap text-muted-foreground">{fmtDate(c.lastActiveAt)}</TableCell>
                         <TableCell className="whitespace-nowrap text-muted-foreground">{fmtDate(c.createdAt)}</TableCell>
                       </TableRow>
                     ))}
@@ -108,7 +133,7 @@ export default async function CompaniesPage({ searchParams }: { searchParams: SP
           )}
         </CardContent>
       </Card>
-      <Pager basePath="/master/companies" params={{ q, state }} page={page} total={total} pageSize={PAGE_SIZE} />
+      <Pager basePath="/master/companies" params={{ q, state, stage, attention: attention ? "1" : undefined }} page={page} total={total} pageSize={PAGE_SIZE} />
     </>
   );
 }

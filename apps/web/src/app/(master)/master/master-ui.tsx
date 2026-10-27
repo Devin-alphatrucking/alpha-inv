@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatMoney } from "@/lib/billing/rules";
 import type { PlanState } from "@/lib/plans/rules";
+import { STAGE_LABEL, type DueTone, type Level, type Stage } from "@/lib/master/health";
 
 const dt = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" });
 const d = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeZone: "UTC" });
@@ -94,3 +95,34 @@ export function FilterBar({ children, action }: { children: React.ReactNode; act
     </form>
   );
 }
+
+const STAGE_VARIANT: Record<Stage, "default" | "secondary" | "destructive" | "outline"> = { signed_up: "outline", set_up: "secondary", using: "default", paying: "default", lost: "destructive" };
+
+export function StageBadge({ stage }: { stage: Stage }) {
+  return <Badge variant={STAGE_VARIANT[stage]}>{STAGE_LABEL[stage].label}</Badge>;
+}
+
+const LEVEL_TEXT: Record<Level, { label: string; className: string }> = {
+  ok: { label: "Healthy", className: "text-emerald-600" },
+  watch: { label: "Watch", className: "text-amber-600" },
+  risk: { label: "At risk", className: "text-red-600" },
+};
+
+/** A coloured word (never colour alone) for how a company is doing. */
+export function HealthLabel({ level }: { level: Level }) {
+  const l = LEVEL_TEXT[level];
+  return <span className={`text-xs font-semibold ${l.className}`}>{l.label}</span>;
+}
+
+const DUE_TEXT: Record<DueTone, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  overdue: { label: "Overdue", variant: "destructive" },
+  today: { label: "Today", variant: "default" },
+  soon: { label: "Soon", variant: "secondary" },
+  later: { label: "Later", variant: "outline" },
+};
+
+export function DueBadge({ tone }: { tone: DueTone }) {
+  return <Badge variant={DUE_TEXT[tone].variant}>{DUE_TEXT[tone].label}</Badge>;
+}
+
+export const isoDay = (v: Date) => v.toISOString().slice(0, 10);

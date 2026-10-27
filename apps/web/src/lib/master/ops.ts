@@ -5,6 +5,7 @@ import { logActivity, type ActivityAction } from "@/lib/activity";
 import { recomputeSubscription, reconcile, withBillingLock } from "@/lib/billing/service";
 import { parseOverrides } from "@/lib/plans/rules";
 import { platformTx } from "./db";
+import { cleanText, parseDueDate, todayUtc } from "./health";
 import { clearLockCache } from "@/lib/plans/lock";
 import type { PlatformAdmin } from "./guard";
 
@@ -157,4 +158,42 @@ export async function reconcileNow(admin: PlatformAdmin, orgId?: string) {
   const r = await reconcile(orgId);
   await audit(admin, orgId ?? null, "MASTER_RECONCILED", r);
   return r;
+}
+
+
+// ---- Client care: notes and follow-ups our team keeps about a company
+
+export const NOTE_MAX = 2000;
+export const TASK_MAX = 200;
+
+export async function addNote(admin: PlatformAdmin, orgId: string, body: unknown) {
+  const text = cleanText(body, NOTE_MAX);
+  if (!text) return refuse(`Write the note (up to ${NOTE_MAX} characters).`);
+  const org = await company(orgId);
+  const note = await platformTx((tx) => tx.clientNote.create({ data: { organizationId: org.id, authorId: admin.id, authorEmail: admin.email, body: text } }));
+  await audit(admin, org.id, "MASTER_ADDED_NOTE", { note: note.id });
+  return note.id;
+}
+
+export async function addFollowUp(admin: PlatformAdmin, orgId: string, input: { task: unknown; dueOn: unknown }, now: Date = new Date()) {
+  const task = cleanText(input.task, TASK_MAX);
+  if (!task) return refuse(`Say what to do (up to ${TASK_MAX} characters).`);
+  const due = parseDueDate(input.dueOn, todayUtc(now));
+  if (!due.ok) return refuse(due.error);
+  const org = await company(orgId);
+  const row = await platformTx((tx) => tx.clientFollowUp.create({ data: { organizationId: org.id, task, dueOn: due.date, createdByEmail: admin.email } }));
+  await audit(admin, org.id, "MASTER_ADDED_FOLLOWUP", { followUp: row.id, dueOn: input.dueOn });
+  return row.id;
+}
+
+/** Marks a follow-up done (or, with done = false, open again). Two people pressing it at once is harmless. */
+export async function setFollowUpDone(admin: PlatformAdmin, followUpId: string, done: boolean) {
+  const found = await platformTx(async (tx) => {
+    const row = await tx.clientFollowUp.findUnique({ where: { id: String(followUpId) }, select: { id: true, organizationId: true } });
+    if (!row) return null;
+    await tx.clientFollowUp.update({ where: { id: row.id }, data: done ? { doneAt: new Date(), doneByEmail: admin.email } : { doneAt: null, doneByEmail: null } });
+    return row;
+  });
+  if (!found) throw new AppError("NOT_FOUND_001", "Follow-up not found.");
+  await audit(admin, found.organizationId, "MASTER_DONE_FOLLOWUP", { followUp: found.id, done });
 }

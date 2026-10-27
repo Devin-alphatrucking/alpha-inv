@@ -112,7 +112,7 @@ Phase 1 to 10 are done (section 2). Proposed next phases, each ending with tests
 |---|---|---|
 | 11b | **One-time codes (OTP)** (BUILT, see PHASE-11B-ONE-TIME-CODES.md) | A 6-digit code replaces or backs up the email links: sign-up confirmation, password reset, joining by invitation, and a "confirm it is you" step before risky actions (change email or password, remove a person, close the company, record a payment run). Codes expire in 10 minutes, are single use, limited to 5 tries, and work in the phone app without leaving it. |
 | 11c | **Create another company** (BUILT, see PHASE-11C-OWN-COMPANY.md) | A signed-in person (for example an employee) creates their own company from the company switcher, with its own trial, without a new password. |
-| 17 | **Client management (master console)** | A funnel and health view of every client, notes, reminders, trial-ending emails and revenue, so our team can manage clients after onboarding. See the master console section of the chat summary. |
+| 17 | **Client management (master console)** (17a BUILT: funnel, health, notes, follow-ups, see PHASE-17-CLIENT-CARE.md; customer emails still to do) | A funnel and health view of every client, notes, reminders, trial-ending emails and revenue, so our team can manage clients after onboarding. See the master console section of the chat summary. |
 
 ## 6. Open decisions for you
 

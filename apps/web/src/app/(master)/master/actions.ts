@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { isAppError } from "@/lib/errors";
 import { requirePlatformAdmin } from "@/lib/master/guard";
-import { editPlan, extendTrial, reconcileNow, setCompanyStatus, setLimits, setProjectPlans, setTicketStatus } from "@/lib/master/ops";
+import { addFollowUp, addNote, editPlan, extendTrial, reconcileNow, setCompanyStatus, setLimits, setFollowUpDone, setProjectPlans, setTicketStatus } from "@/lib/master/ops";
 import { createCompanyByHand, resetTwoStep } from "@/lib/master/setup-ops";
 
 // Every action re-checks, in the database, that the caller is a platform operator. Nothing here trusts the browser.
@@ -96,4 +96,16 @@ export async function reconcileAction(orgId?: string): Promise<MasterResult> {
     console.error("[master reconcile]", error instanceof Error ? error.message : error);
     return { ok: false, error: "Could not reach the payment service." };
   }
+}
+
+export async function addNoteAction(orgId: string, f: Form) {
+  return run(`/master/companies/${orgId}`, "Note saved.", async () => addNote(await requirePlatformAdmin(), orgId, f.body));
+}
+
+export async function addFollowUpAction(orgId: string, f: Form) {
+  return run("/master", "Follow-up added.", async () => addFollowUp(await requirePlatformAdmin(), orgId, { task: f.task, dueOn: f.dueOn }));
+}
+
+export async function setFollowUpDoneAction(followUpId: string, done: boolean) {
+  return run("/master", done ? "Marked done." : "Opened again.", async () => setFollowUpDone(await requirePlatformAdmin(), followUpId, done));
 }

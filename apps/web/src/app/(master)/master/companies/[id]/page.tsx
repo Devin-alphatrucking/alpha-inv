@@ -7,7 +7,9 @@ import { parseOverrides } from "@/lib/plans/rules";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { UsageMeter } from "@/components/usage-meter";
-import { CompanyStatusBadge, PageTitle, StateBadge, fmtDate, fmtDateTime, money } from "../../master-ui";
+import { CompanyStatusBadge, DueBadge, HealthLabel, PageTitle, StageBadge, StateBadge, fmtDate, fmtDateTime, isoDay, money } from "../../master-ui";
+import { DoneButton, FollowUpForm, NoteForm } from "../../care-client";
+import { dueTone, todayUtc } from "@/lib/master/health";
 import { ActionForm, ReconcileButton, ResetTwoStepControl } from "../../master-client";
 import { extendTrialAction, setCompanyStatusAction, setLimitsAction, setProjectPlansAction } from "../../actions";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -22,7 +24,8 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const d = await companyDetail(id);
   if (!d) notFound();
-  const { org, entitlements: e, purchases, payments, members, projects, activity, tickets, invoices } = d;
+  const { org, entitlements: e, purchases, payments, members, projects, activity, tickets, invoices, notes, followUps, health } = d;
+  const today = todayUtc();
   const sub = org.subscription;
   const o = parseOverrides(sub?.overrides);
   const razorpay = sub?.billing === "RAZORPAY";
@@ -110,6 +113,69 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+            Client care
+            {health && (
+              <>
+                <StageBadge stage={health.stage} />
+                <HealthLabel level={health.level} />
+              </>
+            )}
+          </CardTitle>
+          <CardDescription>
+            {health?.lastActiveAt ? `Last activity ${fmtDateTime(health.lastActiveAt)}.` : "No activity from this company yet."}
+            {health && health.trialDaysLeft !== null ? ` Trial: ${health.trialDaysLeft} day${health.trialDaysLeft === 1 ? "" : "s"} left.` : ""}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-8 lg:grid-cols-2">
+          <section className="grid content-start gap-4">
+            {health && health.reasons.length > 0 && (
+              <ul className="grid gap-1 text-sm">
+                {health.reasons.map((r) => (
+                  <li key={r.text} className="flex items-center gap-2">
+                    <span aria-hidden className={`size-2 rounded-full ${r.severity === "high" ? "bg-red-500" : r.severity === "medium" ? "bg-amber-500" : "bg-slate-400"}`} />
+                    {r.text}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <h3 className="text-sm font-semibold">Follow-ups</h3>
+            <div className="grid gap-2">
+              {followUps.length === 0 && <p className="text-sm text-muted-foreground">Nothing planned.</p>}
+              {followUps.map((f) => (
+                <div key={f.id} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm">
+                  <div className="min-w-0">
+                    <p className={f.doneAt ? "text-muted-foreground line-through" : "font-medium"}>{f.task}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {f.doneAt ? `Done ${fmtDate(f.doneAt)} by ${f.doneByEmail}` : `${fmtDate(f.dueOn)} · added by ${f.createdByEmail}`}
+                    </p>
+                  </div>
+                  <span className="flex shrink-0 items-center gap-2">
+                    {!f.doneAt && <DueBadge tone={dueTone(f.dueOn, today)} />}
+                    <DoneButton id={f.id} done={!!f.doneAt} />
+                  </span>
+                </div>
+              ))}
+            </div>
+            <FollowUpForm orgId={org.id} today={isoDay(today)} />
+          </section>
+          <section className="grid content-start gap-4">
+            <h3 className="text-sm font-semibold">Notes ({notes.length})</h3>
+            <NoteForm orgId={org.id} />
+            <div className="grid gap-2">
+              {notes.map((n) => (
+                <div key={n.id} className="rounded-lg border px-3 py-2 text-sm">
+                  <p className="whitespace-pre-wrap break-words">{n.body}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{n.authorEmail} · {fmtDateTime(n.createdAt)}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

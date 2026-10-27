@@ -15,6 +15,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 const NAV = [
   { href: "/master", label: "Overview", exact: true },
   { href: "/master/companies", label: "Companies" },
+  { href: "/master/follow-ups", label: "Follow-ups" },
   { href: "/master/billing", label: "Billing" },
   { href: "/master/plans", label: "Plans" },
   { href: "/master/tickets", label: "Tickets" },

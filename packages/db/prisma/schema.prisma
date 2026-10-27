@@ -481,6 +481,8 @@ model Organization {
   subscription     Subscription?
   billingPurchases BillingPurchase[]
   supportTickets   SupportTicket[]
+  clientNotes      ClientNote[]
+  followUps        ClientFollowUp[]
   memberships      Membership[]
   projects         Project[]
   categories       Category[]
@@ -1133,5 +1135,39 @@ model DocumentRevision {
 
   @@unique([documentId, revision])
   @@index([documentId])
+  @@index([organizationId])
+}
+
+// ---------------------------------------------------------------------------
+// Client care (Phase 17): what our own team writes about a company and what it plans to do next.
+// Platform-only: company users can never read these (the policy only opens when app.platform = on).
+// ---------------------------------------------------------------------------
+
+model ClientNote {
+  id             String   @id @default(cuid())
+  organizationId String
+  authorId       String?
+  authorEmail    String
+  body           String
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+}
+
+model ClientFollowUp {
+  id             String    @id @default(cuid())
+  organizationId String
+  dueOn          DateTime  @db.Date
+  task           String
+  createdByEmail String
+  createdAt      DateTime  @default(now())
+  doneAt         DateTime?
+  doneByEmail    String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([doneAt, dueOn])
   @@index([organizationId])
 }
