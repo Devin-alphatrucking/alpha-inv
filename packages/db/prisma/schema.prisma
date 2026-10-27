@@ -58,6 +58,8 @@ model User {
   assignedIssues     SiteIssue[]         @relation("SiteIssueAssignee")
   materialRequests   MaterialRequest[]   @relation("RequestAuthor")
   goodsReceipts      GoodsReceipt[]
+  createdDocuments   ProjectDocument[]   @relation("DocumentAuthor")
+  documentRevisions  DocumentRevision[]  @relation("RevisionAuthor")
   decidedRequests    MaterialRequest[]   @relation("RequestDecider")
   purchaseOrders     PurchaseOrder[]     @relation("OrderAuthor")
   payments           Payment[]           @relation("PaidBy")
@@ -107,6 +109,7 @@ model Project {
   siteReports      SiteReport[]
   sitePhotos       SitePhoto[]
   siteIssues       SiteIssue[]
+  documents        ProjectDocument[]
   materialRequests MaterialRequest[]
   purchaseOrders   PurchaseOrder[]
 
@@ -909,6 +912,9 @@ enum RequestStatus {
 enum OrderStatus {
   DRAFT
   SENT
+  PART_DELIVERED
+  DELIVERED
+  CLOSED
   CANCELLED
 }
 
@@ -984,6 +990,9 @@ model PurchaseOrder {
   sentAt          DateTime?
   cancelledAt     DateTime?
   cancelReason    String?
+  deliveredAt     DateTime? // when the last item arrived (moves back to empty if a delivery is removed)
+  closedAt        DateTime?
+  closeReason     String?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -1058,5 +1067,63 @@ model GoodsReceiptLine {
 
   @@index([receiptId])
   @@index([orderLineId])
+  @@index([organizationId])
+}
+
+// ---------------------------------------------------------------------------
+// Technical module: drawings and documents with revisions (Phase 13b)
+// ---------------------------------------------------------------------------
+
+enum DocumentCategory {
+  ARCHITECTURAL
+  STRUCTURAL
+  MEP
+  SITE_PLAN
+  SPECIFICATION
+  CONTRACT
+  OTHER
+}
+
+// One drawing or document of a project (for example "S-101 Foundation plan"). Its files are kept as revisions: the newest is the one to build from.
+model ProjectDocument {
+  id             String           @id @default(cuid())
+  organizationId String // company that owns this row
+  projectId      String
+  title          String
+  number         String? // drawing number, unique within the project when given
+  category       DocumentCategory @default(OTHER)
+  description    String?
+  archivedAt     DateTime?
+  createdById    String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  project   Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User?              @relation("DocumentAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  revisions DocumentRevision[]
+
+  @@unique([projectId, number])
+  @@index([organizationId, projectId])
+}
+
+model DocumentRevision {
+  id             String   @id @default(cuid())
+  organizationId String // company that owns this row
+  documentId     String
+  revision       String // "A", "B", "R2", "0"...
+  note           String? // what changed
+  issuedOn       DateTime @db.Date
+  fileUrl        String
+  fileName       String
+  contentType    String
+  sizeBytes      Int
+  uploadedById   String?
+  createdAt      DateTime @default(now())
+
+  document   ProjectDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  uploadedBy User?           @relation("RevisionAuthor", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@unique([documentId, revision])
+  @@index([documentId])
   @@index([organizationId])
 }

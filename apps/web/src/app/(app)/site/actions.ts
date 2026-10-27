@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePermission, requireUser } from "@/lib/permissions";
+import { setArchived } from "@/lib/flows/documents";
 import { createIssue, deletePhoto, reopenReport, saveReport, setIssueStatus, submitReport, updateIssue } from "@/lib/flows/site";
 
 // The person and the company come from the signed session, never from the browser; the flows check the project and the role again.
@@ -51,6 +52,13 @@ export async function updateIssueAction(issueId: string, input: unknown) {
 export async function setIssueStatusAction(issueId: string, to: string) {
   const user = await requirePermission("site:write");
   const r = await setIssueStatus(user, issueId, to);
+  if (r.ok) revalidatePath("/site", "layout");
+  return r;
+}
+
+export async function archiveDocumentAction(documentId: string, archived: boolean) {
+  const user = await requirePermission("document:write");
+  const r = await setArchived(user, documentId, archived);
   if (r.ok) revalidatePath("/site", "layout");
   return r;
 }

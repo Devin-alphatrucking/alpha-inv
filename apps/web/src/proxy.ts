@@ -16,6 +16,7 @@ const PUBLIC_PATHS = [
   "/reset-password",
   "/accept-invite",
   "/operator-login",
+  "/api/site/documents/dl", // phone download links: signed, five minutes, one file (checked in the route)
   "/api/branding/public",
   "/api/branding/logo",
   "/api/billing/razorpay/webhook",

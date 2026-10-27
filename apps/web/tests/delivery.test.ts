@@ -160,6 +160,25 @@ async function main() {
     assert.equal((await d.invoiceMatch(acct, "dl_inv2"))?.result?.status, "OK");
   });
 
+  await check("the order's status follows the deliveries: part delivered, delivered, and back again when one is removed", async () => {
+    const status = async () => (await q<{ status: string; d: Date | null }>(`SELECT status::text, "deliveredAt" AS d FROM "PurchaseOrder" WHERE id=$1`, [orderId]))[0];
+    assert.equal((await status()).status, "PART_DELIVERED", "30 + 10 of the cement came, no steel yet");
+    assert.equal((await p.getOrder(buyer, orderId))?.actions.join(), "close", "once goods arrived the order can no longer be cancelled");
+    assert.equal((await p.cancelOrder(buyer, orderId, "Too late")).ok, false);
+    const v = (await d.getDelivery(admin, orderId))!;
+    const steel = v.lines[1].id;
+    const rec = await d.recordReceipt(mgr, orderId, { lines: [{ orderLineId: steel, quantity: "1000" }] });
+    assert.ok(rec.ok);
+    const done = await status();
+    assert.equal(done.status, "DELIVERED");
+    assert.ok(done.d, "the day it was delivered in full is kept");
+    if (rec.ok) assert.ok((await d.deleteReceipt(buyer, rec.id)).ok);
+    const back = await status();
+    assert.deepEqual([back.status, back.d], ["PART_DELIVERED", null], "removing the delivery undoes it");
+    const listed = (await d.listDeliveries(admin)).find((r) => r.orderId === orderId);
+    assert.equal(listed?.progress, "PARTLY");
+  });
+
   await check("an item that is not on the order is flagged; unlinking removes the check", async () => {
     assert.ok((await d.linkInvoice(admin, "dl_inv3", orderId)).ok);
     const m = await d.invoiceMatch(admin, "dl_inv3");
@@ -187,6 +206,37 @@ async function main() {
     assert.equal((await d.recordReceipt(eng, orderId, { lines: [{ orderLineId: v.lines[0].id, quantity: "1" }] })).ok, false);
     assert.equal((await dbFor("o_dl_b").goodsReceipt.findMany()).length, 0);
     assert.equal((await dbFor("o_dl_b").goodsReceiptLine.findMany()).length, 0);
+  });
+
+  await check("closing an order: short needs a reason, full does not; closed orders take no deliveries; only the office closes", async () => {
+    const make = async () => {
+      const r = await p.createOrder(buyer, { projectId: "p_dl1", data: { vendorId: "v_dl1", lines: [{ description: "Sand", unit: "cft", quantity: "100", rate: "50", gstPercent: "5" }] } });
+      assert.ok(r.ok);
+      if (!r.ok) throw new Error("order");
+      assert.ok((await p.sendOrder(buyer, r.id)).ok);
+      return r.id;
+    };
+    const short = await make();
+    const line = (await d.getDelivery(admin, short))!.lines[0].id;
+    assert.ok((await d.recordReceipt(eng, short, { lines: [{ orderLineId: line, quantity: "60" }] })).ok);
+    assert.equal((await p.closeOrder(eng, short, "x")).ok, false, "engineers cannot close");
+    assert.equal((await p.closeOrder(mgr, short, "x")).ok, false, "managers do not close orders either");
+    assert.equal((await p.closeOrder(buyer, short, "")).ok, false, "short: a reason is needed");
+    assert.ok((await p.closeOrder(buyer, short, "Supplier cannot supply the rest")).ok);
+    const closed = (await p.getOrder(buyer, short))!;
+    assert.deepEqual([closed.status, closed.closeReason], ["CLOSED", "Supplier cannot supply the rest"]);
+    assert.equal((await d.recordReceipt(eng, short, { lines: [{ orderLineId: line, quantity: "5" }] })).ok, false, "closed: no more deliveries");
+    assert.equal((await p.closeOrder(buyer, short, "again")).ok, false);
+    assert.equal((await p.cancelOrder(buyer, short, "no")).ok, false);
+
+    const full = await make();
+    const l2 = (await d.getDelivery(admin, full))!.lines[0].id;
+    assert.ok((await d.recordReceipt(eng, full, { lines: [{ orderLineId: l2, quantity: "100" }] })).ok);
+    assert.equal((await p.getOrder(buyer, full))?.status, "DELIVERED");
+    assert.ok((await p.closeOrder(buyer, full, "")).ok, "fully delivered: no reason needed");
+    // a bill can still be linked to a closed order
+    await addInvoice("dl_inv_closed", "SC-9", 5000, [["Sand", 100, 50]]);
+    assert.ok((await d.linkInvoice(acct, "dl_inv_closed", full)).ok);
   });
 
   await owner.end();

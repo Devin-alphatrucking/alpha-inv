@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { OrderBadge } from "../badges";
 
-const FILTERS = ["DRAFT", "SENT", "CANCELLED"] as const;
+const FILTERS = ["DRAFT", "SENT", "PART_DELIVERED", "DELIVERED", "CLOSED", "CANCELLED"] as const;
 
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const { user } = await pageOrg();

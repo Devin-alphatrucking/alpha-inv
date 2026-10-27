@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AlertTriangle, Camera, ClipboardList, HardHat } from "lucide-react";
+import { AlertTriangle, Camera, ClipboardList, FileText, HardHat } from "lucide-react";
 import { pageOrg } from "@/lib/org/page";
 import { hasPermission } from "@/lib/roles";
 import { listIssues, listPhotos, listReports, siteOverview } from "@/lib/flows/site";
@@ -31,6 +31,7 @@ export default async function SitePage() {
           <p className="text-sm text-muted-foreground">Daily reports, photos and issues from site, for the projects you work on.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/site/drawings" />}><FileText className="size-4" aria-hidden /> Drawings</Button>
           <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/site/photos" />}><Camera className="size-4" aria-hidden /> Photos</Button>
           <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/site/issues" />}><AlertTriangle className="size-4" aria-hidden /> Issues</Button>
         </div>

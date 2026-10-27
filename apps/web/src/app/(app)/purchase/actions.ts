@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/lib/permissions";
 import { deleteReceipt, linkInvoice, recordReceipt } from "@/lib/flows/delivery";
-import { cancelOrder, cancelRequest, createOrder, decideRequest, saveRequest, sendOrder, submitRequest, updateOrder, withdrawRequest } from "@/lib/flows/purchase";
+import { cancelOrder, closeOrder, cancelRequest, createOrder, decideRequest, saveRequest, sendOrder, submitRequest, updateOrder, withdrawRequest } from "@/lib/flows/purchase";
 
 // The person and the company come from the signed session, never from the browser; the flows check the project, the role and the status again.
 const refresh = () => revalidatePath("/purchase", "layout");
@@ -72,6 +72,13 @@ export async function sendOrderAction(orderId: string) {
 export async function cancelOrderAction(orderId: string, reason: string) {
   const user = await requirePermission("order:write");
   const r = await cancelOrder(user, orderId, reason);
+  if (r.ok) refresh();
+  return r;
+}
+
+export async function closeOrderAction(orderId: string, reason: string) {
+  const user = await requirePermission("order:write");
+  const r = await closeOrder(user, orderId, reason);
   if (r.ok) refresh();
   return r;
 }

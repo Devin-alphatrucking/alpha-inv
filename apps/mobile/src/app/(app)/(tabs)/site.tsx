@@ -48,6 +48,7 @@ export default function Site() {
             <Muted>{p.openIssues} open {p.openIssues === 1 ? "issue" : "issues"}{p.overdueIssues > 0 ? ` · ${p.overdueIssues} overdue` : ""}</Muted>
             <Button label={p.todayReport ? "Open today's report" : canWrite ? "Write today's report" : "No report yet"} disabled={!p.todayReport && !canWrite} onPress={() => router.push({ pathname: "/site/report", params: { projectId: p.id, projectName: p.name, date: data.today } })} />
             <View style={{ flexDirection: "row", gap: space.sm }}>
+              <View style={{ flex: 1 }}><Button label="Drawings" variant="outline" onPress={() => router.push({ pathname: "/site/drawings", params: { projectId: p.id, projectName: p.name } })} /></View>
               <View style={{ flex: 1 }}><Button label="Issues" variant="outline" onPress={() => router.push({ pathname: "/site/issues", params: { projectId: p.id, projectName: p.name } })} /></View>
               <View style={{ flex: 1 }}><Button label="Photos" variant="outline" onPress={() => router.push({ pathname: "/site/photos", params: { projectId: p.id, projectName: p.name } })} /></View>
             </View>

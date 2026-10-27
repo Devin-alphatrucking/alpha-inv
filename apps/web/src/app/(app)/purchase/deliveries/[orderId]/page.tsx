@@ -34,7 +34,7 @@ export default async function DeliveryPage({ params }: { params: Promise<{ order
         <Button variant="ghost" size="sm" className="-ml-2 mb-1" nativeButton={false} render={<Link href="/purchase/deliveries" />}><ArrowLeft className="size-4" aria-hidden /> Deliveries</Button>
         <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight">{d.number} <Badge variant={d.progress === "RECEIVED" ? "default" : d.progress === "PARTLY" ? "secondary" : "outline"}>{PROGRESS_LABEL[d.progress]}</Badge></h1>
         <p className="text-sm text-muted-foreground">{d.vendorName} · {d.projectName}{d.deliveryDate && ` · due ${date(d.deliveryDate)}`}</p>
-        {d.status !== "SENT" && <p className="mt-1 text-sm text-destructive">This order is {d.status === "CANCELLED" ? "cancelled" : "still a draft, not sent to the supplier"}, so deliveries cannot be recorded.</p>}
+        {(d.status === "DRAFT" || d.status === "CANCELLED" || d.status === "CLOSED") && <p className="mt-1 text-sm text-destructive">This order is {d.status === "CANCELLED" ? "cancelled" : d.status === "CLOSED" ? "closed" : "still a draft, not sent to the supplier"}, so deliveries cannot be recorded.</p>}
       </div>
 
       <Card>

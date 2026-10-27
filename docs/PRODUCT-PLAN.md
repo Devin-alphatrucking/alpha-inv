@@ -44,9 +44,9 @@ The value of the three together: an order is raised from a site need, the delive
 | Reference data | Categories, Rate Sheet (materials and average rates), activity log, error log, data export to Excel or JSON |
 
 ### Module 2, Technical (site work): FIRST VERSION BUILT (web)
-Daily site report, site photos and issues are built (see PHASE-13-TECHNICAL-SITE-WORK.md). Not built yet: progress percent, drawings and documents, offline saving and the mobile app screens.
+Daily site report, site photos and issues are built (see PHASE-13-TECHNICAL-SITE-WORK.md). Drawings and documents with revisions are built too (PHASE-13B-DRAWINGS-AND-ORDER-STATUS.md). Not built yet: progress percent and offline saving.
 ### Module 3, Purchase (orders): FIRST VERSION BUILT (web)
-Material requests, approval and purchase orders are built (see PHASE-12-PURCHASE.md). Delivery check and matching a bill to its order are built too (Phase 14). Not built yet: quotes, emails.
+Material requests, approval and purchase orders are built (see PHASE-12-PURCHASE.md). Delivery check and matching a bill to its order are built too (Phase 14). Order status now follows the deliveries (part delivered, delivered, closed). Not built yet: quotes, emails.
 
 ## 3. How people sign in and work (today, and what changes)
 

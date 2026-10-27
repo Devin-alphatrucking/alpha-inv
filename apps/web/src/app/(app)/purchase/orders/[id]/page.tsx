@@ -62,7 +62,9 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
       </div>
 
       {order.status === "CANCELLED" && <Card className="border-destructive/40 print:hidden"><CardContent className="py-4 text-sm"><span className="font-medium">Cancelled:</span> {order.cancelReason}</CardContent></Card>}
-      {delivery && order.status === "SENT" && (
+      {order.status === "DELIVERED" && order.deliveredAt && <Card className="print:hidden"><CardContent className="py-4 text-sm"><span className="font-medium">Delivered in full</span> on {fmt.date(order.deliveredAt)}. Close the order once the bill is in.</CardContent></Card>}
+      {order.status === "CLOSED" && <Card className="print:hidden"><CardContent className="py-4 text-sm"><span className="font-medium">Closed{order.closedAt ? ` on ${fmt.date(order.closedAt)}` : ""}.</span>{order.closeReason ? ` ${order.closeReason}` : ""}</CardContent></Card>}
+      {delivery && (order.status === "SENT" || order.status === "PART_DELIVERED" || order.status === "DELIVERED") && (
         <Card className="print:hidden">
           <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4 text-sm">
             <span><span className="font-medium">Delivery:</span> {PROGRESS_LABEL[delivery.progress].toLowerCase()}{delivery.receipts.length > 0 && ` in ${delivery.receipts.length} ${delivery.receipts.length === 1 ? "delivery" : "deliveries"}`}</span>
@@ -70,7 +72,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
           </CardContent>
         </Card>
       )}
-      <div className="print:hidden"><OrderActions orderId={order.id} actions={order.actions} editHref={`/purchase/orders/${order.id}?edit=1`} /></div>
+      <div className="print:hidden"><OrderActions orderId={order.id} actions={order.actions} editHref={`/purchase/orders/${order.id}?edit=1`} shortClose={order.status === "PART_DELIVERED"} /></div>
 
       {/* The order as the supplier sees it: this block is what prints. */}
       <Card className="print:border-0 print:shadow-none print:ring-0">

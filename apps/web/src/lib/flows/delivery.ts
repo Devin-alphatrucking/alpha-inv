@@ -7,7 +7,7 @@ import { invoiceAccessWhere } from "@/lib/invoices/access";
 import { companyTimeZone } from "@/lib/invoices/company-tz";
 import { todayIn } from "@/lib/invoices/status";
 import { lineProgress, matchInvoice, matchLine, orderProgress, parseReceipt, type LineProgress, type MatchResult, type OrderProgress } from "@/lib/purchase/delivery-rules";
-import { milliToString } from "@/lib/purchase/rules";
+import { isOpenForGoods, milliToString, OPEN_FOR_GOODS, statusForProgress, type OrderState } from "@/lib/purchase/rules";
 import type { FlowResult } from "@/lib/flows/schemas";
 
 /**
@@ -27,6 +27,24 @@ async function today(orgId: string) {
   return todayIn(await companyTimeZone(orgId));
 }
 
+/**
+ * Keeps the order's status in step with what arrived: sent (nothing yet), part delivered, delivered. Run inside the same transaction that
+ * records or removes a delivery, so the two can never disagree. A closed or cancelled order is left alone.
+ */
+type Tx = Parameters<Parameters<ReturnType<typeof dbFor>["$transaction"]>[0]>[0];
+export async function syncOrderStatus(tx: Tx, orderId: string) {
+  const o = await tx.purchaseOrder.findFirst({
+    where: { id: orderId, status: { in: OPEN_FOR_GOODS } },
+    select: { status: true, lines: { select: { id: true, quantity: true } }, receipts: { select: { receivedOn: true, lines: { select: { orderLineId: true, quantity: true } } } } },
+  });
+  if (!o) return;
+  const got: Record<string, number> = {};
+  for (const r of o.receipts) for (const l of r.lines) got[l.orderLineId] = (got[l.orderLineId] ?? 0) + milli(l.quantity);
+  const target = statusForProgress(orderProgress(o.lines.map((l) => ({ orderedMilli: milli(l.quantity), receivedMilli: got[l.id] ?? 0 }))));
+  if (target === o.status) return;
+  await tx.purchaseOrder.updateMany({ where: { id: orderId, status: { in: OPEN_FOR_GOODS } }, data: { status: target, deliveredAt: target === "DELIVERED" ? new Date() : null } });
+}
+
 // ---------------------------------------------------------------- the delivery screen
 
 export type DeliveryLine = { id: string; description: string; unit: string; ordered: string; received: string; rejected: string; remaining: string; progress: LineProgress };
@@ -35,7 +53,7 @@ export type ReceiptView = {
   lines: { description: string; unit: string; quantity: string; rejected: string; remark: string | null }[];
 };
 export type DeliveryView = {
-  orderId: string; number: string; status: "DRAFT" | "SENT" | "CANCELLED"; vendorName: string; projectId: string; projectName: string; deliveryDate: string | null;
+  orderId: string; number: string; status: OrderState; vendorName: string; projectId: string; projectName: string; deliveryDate: string | null;
   lines: DeliveryLine[]; progress: OrderProgress; receipts: ReceiptView[]; canRecord: boolean;
 };
 
@@ -71,14 +89,14 @@ export async function getDelivery(user: DeliveryUser, orderId: string): Promise<
   const orderLike = lines.map((l) => ({ orderedMilli: milli({ toString: () => l.ordered }), receivedMilli: milli({ toString: () => l.received }) }));
   const manage = can(user, "order:write");
   return {
-    orderId: o.id, number: o.number, status: o.status as DeliveryView["status"], vendorName: o.vendor.name, projectId: o.projectId, projectName: o.project.name, deliveryDate: o.deliveryDate ? ymd(o.deliveryDate) : null,
+    orderId: o.id, number: o.number, status: o.status as OrderState, vendorName: o.vendor.name, projectId: o.projectId, projectName: o.project.name, deliveryDate: o.deliveryDate ? ymd(o.deliveryDate) : null,
     lines, progress: orderProgress(orderLike),
     receipts: o.receipts.map((r) => ({
       id: r.id, receivedOn: ymd(r.receivedOn), challanNo: r.challanNo, note: r.note, receivedByName: r.receivedBy?.name ?? null, photoCount: r._count.photos, createdAt: r.createdAt,
       canDelete: can(user, "delivery:write") && (manage || (r.receivedById === user.id && Date.now() - r.createdAt.getTime() < 24 * 3600_000)),
       lines: r.lines.map((l) => ({ description: names.get(l.orderLineId)?.description ?? "", unit: names.get(l.orderLineId)?.unit ?? "", quantity: num(l.quantity), rejected: num(l.rejected), remark: l.remark })),
     })),
-    canRecord: o.status === "SENT" && can(user, "delivery:write"),
+    canRecord: isOpenForGoods(o.status) && can(user, "delivery:write"),
   };
 }
 
@@ -89,7 +107,7 @@ export async function listDeliveries(user: DeliveryUser, opts: { includeComplete
   if (!can(user, "delivery:view")) return [];
   const t = await today(user.orgId);
   const rows = await dbFor(user.orgId).purchaseOrder.findMany({
-    where: { status: "SENT", project: projectAccessWhere(user) },
+    where: { status: { in: OPEN_FOR_GOODS }, project: projectAccessWhere(user) },
     orderBy: [{ deliveryDate: "asc" }, { createdAt: "desc" }],
     take: 200,
     select: { id: true, number: true, deliveryDate: true, project: { select: { name: true } }, vendor: { select: { name: true } }, lines: { select: { id: true, quantity: true } }, receipts: { select: { lines: { select: { orderLineId: true, quantity: true } } } } },
@@ -108,7 +126,7 @@ export async function recordReceipt(user: DeliveryUser, orderId: string, raw: un
   if (!can(user, "delivery:write")) return { ok: false, error: "You do not have permission to record deliveries." };
   const view = await getDelivery(user, orderId);
   if (!view) return { ok: false, error: "Order not found." };
-  if (!view.canRecord) return { ok: false, error: view.status === "SENT" ? "You cannot record deliveries here." : "Deliveries can only be recorded against an order that was sent to the supplier." };
+  if (!view.canRecord) return { ok: false, error: isOpenForGoods(view.status) ? "You cannot record deliveries here." : "Deliveries can only be recorded against an order that was sent to the supplier and is not closed or cancelled." };
   const parsed = parseReceipt(raw, await today(user.orgId), view.lines.map((l) => l.id));
   if (!parsed.ok) return parsed;
   const busy = await hitAll([
@@ -118,11 +136,12 @@ export async function recordReceipt(user: DeliveryUser, orderId: string, raw: un
   if (!busy.allowed) return { ok: false, error: retryMessage(busy.retryAfterSeconds) };
   const v = parsed.value;
   const created = await dbFor(user.orgId).$transaction(async (tx) => {
-    // The order must still be "sent": it may have been cancelled while this form was open.
-    const live = await tx.purchaseOrder.count({ where: { id: orderId, status: "SENT" } });
+    // The order must still be open for goods: it may have been cancelled or closed while this form was open.
+    const live = await tx.purchaseOrder.count({ where: { id: orderId, status: { in: OPEN_FOR_GOODS } } });
     if (live === 0) return null;
     const row = await tx.goodsReceipt.create({ data: { organizationId: user.orgId, orderId, receivedOn: toDate(v.receivedOn), challanNo: v.challanNo, note: v.note, receivedById: user.id }, select: { id: true } });
     await tx.goodsReceiptLine.createMany({ data: v.lines.map((l) => ({ organizationId: user.orgId, receiptId: row.id, orderLineId: l.orderLineId, quantity: milliToString(l.quantityMilli), rejected: milliToString(l.rejectedMilli), remark: l.remark })) });
+    await syncOrderStatus(tx, orderId);
     return row;
   });
   if (!created) return { ok: false, error: "This order was cancelled just now." };
@@ -137,7 +156,10 @@ export async function deleteReceipt(user: DeliveryUser, receiptId: string): Prom
   const receipt = view?.receipts.find((x) => x.id === receiptId);
   if (!view || !receipt) return { ok: false, error: "Delivery not found." };
   if (!receipt.canDelete) return { ok: false, error: "Only the person who recorded a delivery (within a day) or the purchase officer can remove it." };
-  await dbFor(user.orgId).goodsReceipt.deleteMany({ where: { id: r.id } });
+  await dbFor(user.orgId).$transaction(async (tx) => {
+    await tx.goodsReceipt.deleteMany({ where: { id: r.id } });
+    await syncOrderStatus(tx, r.orderId);
+  });
   await logActivity({ userId: user.id, organizationId: user.orgId, action: "DELIVERY_DELETED", module: "PURCHASE", entityId: r.id, details: { order: view.number } });
   return { ok: true };
 }
@@ -170,7 +192,7 @@ export async function invoiceMatch(user: DeliveryUser, invoiceId: string): Promi
 
   if (!inv.purchaseOrderId) {
     const open = await db.purchaseOrder.findMany({
-      where: { vendorId: inv.vendorId, projectId: inv.projectId, status: "SENT", project: projectAccessWhere(user) },
+      where: { vendorId: inv.vendorId, projectId: inv.projectId, status: { in: [...OPEN_FOR_GOODS, "CLOSED"] }, project: projectAccessWhere(user) },
       orderBy: { createdAt: "desc" },
       take: 20,
       select: { id: true, number: true, deliveryDate: true, lines: { select: { quantity: true, rate: true, gstPercent: true } } },
@@ -231,7 +253,7 @@ export async function linkInvoice(user: DeliveryUser, invoiceId: string, orderId
     if (!order) return { ok: false, error: "Order not found." };
     if (order.vendorId !== inv.vendorId) return { ok: false, error: "That order is for a different supplier." };
     if (order.projectId !== inv.projectId) return { ok: false, error: "That order is for a different project." };
-    if (order.status !== "SENT") return { ok: false, error: "A bill can only be linked to an order that was sent to the supplier." };
+    if (!isOpenForGoods(order.status) && order.status !== "CLOSED") return { ok: false, error: "A bill can only be linked to an order that was sent to the supplier." };
   }
   await db.invoice.updateMany({ where: { id: inv.id }, data: { purchaseOrderId: orderId } });
   await logActivity({ userId: user.id, organizationId: user.orgId, action: "INVOICE_ORDER_LINKED", module: "PURCHASE", entityId: inv.id, details: { orderId } });

@@ -18,6 +18,8 @@ export default function AppLayout() {
       <Stack.Screen name="site/issue/[id]" options={{ title: "Issue" }} />
       <Stack.Screen name="site/issue-new" options={{ title: "Raise an issue" }} />
       <Stack.Screen name="site/photos" options={{ title: "Photos" }} />
+      <Stack.Screen name="site/drawings" options={{ title: "Drawings" }} />
+      <Stack.Screen name="site/drawing/[id]" options={{ title: "Drawing" }} />
       <Stack.Screen name="purchase/request-new" options={{ title: "New request" }} />
       <Stack.Screen name="purchase/request/[id]" options={{ title: "Request" }} />
       <Stack.Screen name="purchase/deliveries" options={{ title: "Deliveries" }} />

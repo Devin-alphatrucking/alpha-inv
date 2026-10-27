@@ -118,12 +118,18 @@ export type RequestInput = { projectId: string; neededBy?: string; note?: string
 
 export type DeliveryRow = { orderId: string; number: string; vendorName: string; projectName: string; deliveryDate: string | null; progress: "NOT_RECEIVED" | "PARTLY" | "RECEIVED"; late: boolean };
 export type DeliveryView = {
-  orderId: string; number: string; status: "DRAFT" | "SENT" | "CANCELLED"; vendorName: string; projectId: string; projectName: string; deliveryDate: string | null;
+  orderId: string; number: string; status: "DRAFT" | "SENT" | "PART_DELIVERED" | "DELIVERED" | "CLOSED" | "CANCELLED"; vendorName: string; projectId: string; projectName: string; deliveryDate: string | null;
   lines: { id: string; description: string; unit: string; ordered: string; received: string; rejected: string; remaining: string; progress: "NONE" | "PARTLY" | "FULL" | "OVER" }[];
   progress: "NOT_RECEIVED" | "PARTLY" | "RECEIVED"; canRecord: boolean;
   receipts: { id: string; receivedOn: string; challanNo: string | null; note: string | null; receivedByName: string | null; photoCount: number; canDelete: boolean; lines: { description: string; unit: string; quantity: string; rejected: string; remark: string | null }[] }[];
 };
 export type ReceiptInput = { receivedOn?: string; challanNo?: string; note?: string; lines: { orderLineId: string; quantity: string; rejected?: string; remark?: string }[] };
+
+export type DocumentRevision = { id: string; revision: string; note: string | null; issuedOn: string; fileName: string; formatLabel: string; opensInPage: boolean; sizeBytes: number; uploadedByName: string | null; isCurrent: boolean };
+export type DocumentView = {
+  id: string; projectId: string; projectName: string; title: string; number: string | null; category: string; description: string | null;
+  current: DocumentRevision | null; revisionCount: number; revisions: DocumentRevision[];
+};
 
 export type PhotoTarget = { projectId: string; reportId?: string; issueId?: string; receiptId?: string; area?: string; caption?: string };
 export type PhotoUploadResult = { ok: true; added: number; skipped: string[] };
@@ -332,6 +338,17 @@ export function createClient(opts: ClientOptions) {
       if (!t) throw new ApiError(401, "unauthenticated", "Please sign in again.");
       return { uri: `${base}/api/v1/site/photos/${encodeURIComponent(id)}`, headers: { Authorization: `Bearer ${t}` } };
     },
+
+    // ---- Drawings and documents (read only on the phone)
+    documents: (q: { projectId?: string; category?: string; q?: string } = {}) => {
+      const sp = new URLSearchParams();
+      for (const [k, v] of Object.entries(q)) if (v) sp.set(k, v);
+      const s = sp.toString();
+      return request<{ documents: DocumentView[] }>(`/api/v1/site/documents${s ? `?${s}` : ""}`);
+    },
+    document: (id: string) => request<{ document: DocumentView }>(`/api/v1/site/documents/${encodeURIComponent(id)}`),
+    /** A five-minute address that opens one revision in the phone's browser (the browser cannot send the sign-in header). */
+    documentLink: (revisionId: string) => request<{ url: string; expiresInSeconds: number }>(`/api/v1/site/documents/revisions/${encodeURIComponent(revisionId)}/link`, { method: "POST", json: {} }),
 
     // ---- Material requests
     requests: (q: { projectId?: string; status?: string } = {}) => {

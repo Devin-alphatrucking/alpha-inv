@@ -79,6 +79,13 @@ assert.equal(open("ENGINEER", "/api/site/photos/abc"), true);
 assert.equal(open("STAFF", "/site"), false);
 assert.equal(open("STAFF", "/api/site/photos/abc"), false);
 
+// ---- drawings
+for (const x of ["ADMIN", "MANAGER"] as RoleName[]) assert.equal(hasPermission(x, "document:write"), true, `${x} issues drawings`);
+for (const x of ["ENGINEER", "PURCHASE", "ACCOUNTANT", "VIEWER", "STAFF"] as RoleName[]) assert.equal(hasPermission(x, "document:write"), false, `${x} only reads drawings`);
+assert.equal(open("ENGINEER", "/site/drawings/abc"), true);
+assert.equal(open("ENGINEER", "/api/site/documents/file/abc"), true);
+assert.equal(open("STAFF", "/site/drawings"), false);
+
 // ---- purchase
 for (const r of ["ADMIN", "ACCOUNTANT", "PURCHASE", "MANAGER", "ENGINEER", "VIEWER"] as RoleName[]) assert.equal(hasPermission(r, "request:view"), true, `${r} sees requests`);
 assert.equal(hasPermission("STAFF", "request:view"), false);

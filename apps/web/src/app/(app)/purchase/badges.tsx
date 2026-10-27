@@ -7,5 +7,6 @@ export function RequestBadge({ status }: { status: RequestState }) {
 }
 
 export function OrderBadge({ status }: { status: OrderState }) {
-  return <Badge variant={status === "SENT" ? "default" : status === "CANCELLED" ? "destructive" : "secondary"}>{ORDER_LABEL[status]}</Badge>;
+  const variant = status === "DELIVERED" || status === "CLOSED" ? "default" : status === "CANCELLED" ? "destructive" : status === "DRAFT" ? "outline" : "secondary";
+  return <Badge variant={variant}>{ORDER_LABEL[status]}</Badge>;
 }

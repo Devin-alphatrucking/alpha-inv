@@ -6,7 +6,7 @@ import { projectAccessWhere, type ProjectUser } from "@/lib/projects/access";
 import { companyTimeZone } from "@/lib/invoices/company-tz";
 import { todayIn } from "@/lib/invoices/status";
 import {
-  documentNumber, milliToString, minorToString, orderActions, parseCancelReason, parseDecision, parseOrder, parseRequest, requestActions, lineAmount,
+  documentNumber, milliToString, minorToString, orderActions, parseClose, parseCancelReason, parseDecision, parseOrder, parseRequest, requestActions, lineAmount,
   type OrderAction, type OrderState, type RequestAction, type RequestState,
 } from "@/lib/purchase/rules";
 import type { FlowResult } from "@/lib/flows/schemas";
@@ -170,20 +170,20 @@ export type OrderLineView = { id: string; description: string; unit: string; qua
 export type OrderView = {
   id: string; number: string; projectId: string; projectName: string; vendorId: string; vendorName: string; vendorGstin: string | null; vendorAddress: string | null; vendorContact: string | null;
   requestId: string | null; requestNumber: string | null; status: OrderState; orderDate: string; deliveryDate: string | null; deliveryAddress: string | null; paymentTerms: string | null; note: string | null;
-  createdByName: string | null; sentAt: Date | null; cancelledAt: Date | null; cancelReason: string | null; createdAt: Date;
+  createdByName: string | null; sentAt: Date | null; cancelledAt: Date | null; cancelReason: string | null; deliveredAt: Date | null; closedAt: Date | null; closeReason: string | null; createdAt: Date;
   lines: OrderLineView[]; subtotalMinor: number; gstMinor: number; totalMinor: number; actions: OrderAction[];
 };
 
 const orderSelect = {
   id: true, number: true, projectId: true, vendorId: true, requestId: true, status: true, orderDate: true, deliveryDate: true, deliveryAddress: true, paymentTerms: true, note: true,
-  sentAt: true, cancelledAt: true, cancelReason: true, createdAt: true,
+  sentAt: true, cancelledAt: true, cancelReason: true, deliveredAt: true, closedAt: true, closeReason: true, createdAt: true,
   project: { select: { name: true } }, vendor: { select: { name: true, gstin: true, address: true, contact: true } }, request: { select: { number: true } }, createdBy: { select: { name: true } },
   lines: { orderBy: { position: "asc" as const }, select: { id: true, description: true, unit: true, quantity: true, rate: true, gstPercent: true, materialId: true } },
 } as const;
 
 type OrderRow = {
   id: string; number: string; projectId: string; vendorId: string; requestId: string | null; status: string; orderDate: Date; deliveryDate: Date | null; deliveryAddress: string | null; paymentTerms: string | null; note: string | null;
-  sentAt: Date | null; cancelledAt: Date | null; cancelReason: string | null; createdAt: Date; project: { name: string };
+  sentAt: Date | null; cancelledAt: Date | null; cancelReason: string | null; deliveredAt: Date | null; closedAt: Date | null; closeReason: string | null; createdAt: Date; project: { name: string };
   vendor: { name: string; gstin: string | null; address: string | null; contact: string | null }; request: { number: string } | null; createdBy: { name: string | null } | null;
   lines: { id: string; description: string; unit: string; quantity: { toString(): string }; rate: { toString(): string }; gstPercent: { toString(): string }; materialId: string | null }[];
 };
@@ -199,7 +199,7 @@ function orderView(user: PurchaseUser, o: OrderRow): OrderView {
   return {
     id: o.id, number: o.number, projectId: o.projectId, projectName: o.project.name, vendorId: o.vendorId, vendorName: o.vendor.name, vendorGstin: o.vendor.gstin, vendorAddress: o.vendor.address, vendorContact: o.vendor.contact,
     requestId: o.requestId, requestNumber: o.request?.number ?? null, status: o.status as OrderState, orderDate: ymd(o.orderDate), deliveryDate: o.deliveryDate ? ymd(o.deliveryDate) : null,
-    deliveryAddress: o.deliveryAddress, paymentTerms: o.paymentTerms, note: o.note, createdByName: o.createdBy?.name ?? null, sentAt: o.sentAt, cancelledAt: o.cancelledAt, cancelReason: o.cancelReason, createdAt: o.createdAt,
+    deliveryAddress: o.deliveryAddress, paymentTerms: o.paymentTerms, note: o.note, createdByName: o.createdBy?.name ?? null, sentAt: o.sentAt, cancelledAt: o.cancelledAt, cancelReason: o.cancelReason, deliveredAt: o.deliveredAt, closedAt: o.closedAt, closeReason: o.closeReason, createdAt: o.createdAt,
     lines, ...totals, totalMinor: totals.subtotalMinor + totals.gstMinor, actions: orderActions(o.status as OrderState, can(user, "order:write")),
   };
 }
@@ -323,18 +323,32 @@ export async function cancelOrder(user: PurchaseUser, orderId: string, reasonRaw
   return { ok: true };
 }
 
+/** Closes an order that goods have arrived for: when everything came, or short (the rest is not coming, with a reason). */
+export async function closeOrder(user: PurchaseUser, orderId: string, reasonRaw: unknown): Promise<FlowResult> {
+  const order = await getOrder(user, orderId);
+  if (!order) return { ok: false, error: "Order not found." };
+  if (!order.actions.includes("close")) return { ok: false, error: "This order cannot be closed." };
+  const reason = parseClose(order.status === "PART_DELIVERED", reasonRaw);
+  if (!reason.ok) return reason;
+  const n = await dbFor(user.orgId).purchaseOrder.updateMany({ where: { id: order.id, status: order.status }, data: { status: "CLOSED", closedAt: new Date(), closeReason: reason.reason } });
+  if (n.count === 0) return { ok: false, error: "This order was changed just now. Reload and try again." };
+  await logActivity({ userId: user.id, organizationId: user.orgId, action: "ORDER_CLOSED", module: "PURCHASE", entityId: order.id, details: { number: order.number, short: order.status === "PART_DELIVERED", reason: reason.reason } });
+  return { ok: true };
+}
+
 // ---------------------------------------------------------------- overview
 
 export type PurchaseOverview = { waitingForApproval: number; approvedToOrder: number; draftOrders: number; sentOrders: number; sentValueMinor: number };
 
 export async function purchaseOverview(user: PurchaseUser): Promise<PurchaseOverview> {
-  const [reqs, orders] = await Promise.all([listRequests(user, { status: ["SUBMITTED", "APPROVED"], take: 300 }), listOrders(user, { status: ["DRAFT", "SENT"], take: 300 })]);
+  const [reqs, orders] = await Promise.all([listRequests(user, { status: ["SUBMITTED", "APPROVED"], take: 300 }), listOrders(user, { status: ["DRAFT", "SENT", "PART_DELIVERED"], take: 300 })]);
   return {
     waitingForApproval: reqs.filter((r) => r.status === "SUBMITTED").length,
     approvedToOrder: reqs.filter((r) => r.status === "APPROVED").length,
     draftOrders: orders.filter((o) => o.status === "DRAFT").length,
-    sentOrders: orders.filter((o) => o.status === "SENT").length,
-    sentValueMinor: orders.filter((o) => o.status === "SENT").reduce((s, o) => s + o.totalMinor, 0),
+    // "On order": sent to the supplier and not yet fully delivered.
+    sentOrders: orders.filter((o) => o.status === "SENT" || o.status === "PART_DELIVERED").length,
+    sentValueMinor: orders.filter((o) => o.status === "SENT" || o.status === "PART_DELIVERED").reduce((s, o) => s + o.totalMinor, 0),
   };
 }
 

@@ -239,6 +239,41 @@ async function main() {
     assert.equal((await call("eng", del, "DELETE", `/api/v1/deliveries/receipts/${receiptId}`, { ctx: { id: receiptId } })).status, 200);
   });
 
+  await check("drawings on the phone: list, detail with history, a short-lived link to open the file; role and company checks", async () => {
+    const docs = await import("@/lib/flows/documents");
+    const mgrUser = { id: "mm_mgr", role: "MANAGER" as never, orgId: "o_mm_a" };
+    const pdf = Buffer.concat([Buffer.from("%PDF-1.7\n"), Buffer.alloc(200, 1)]);
+    const made = await docs.createDocument(mgrUser, { projectId: "p_mm1", data: { title: "Foundation plan", number: "S-101", category: "STRUCTURAL", revision: "A" }, file: { name: "s101.pdf", bytes: pdf } });
+    assert.ok(made.ok);
+    if (!made.ok) return;
+    assert.ok((await docs.addRevision(mgrUser, made.id, { data: { revision: "B", note: "Beam changed" }, file: { name: "s101b.pdf", bytes: pdf } })).ok);
+    const list = await call("eng", await r("site/documents"), "GET", "/api/v1/site/documents?projectId=p_mm1");
+    assert.equal(list.status, 200);
+    assert.equal(list.body!.documents.length, 1);
+    assert.equal(list.body!.documents[0].current.revision, "B");
+    assert.equal((await call("eng2", await r("site/documents"), "GET", "/api/v1/site/documents")).body!.documents.length, 0);
+    assert.equal((await call("staff", await r("site/documents"), "GET", "/api/v1/site/documents")).status, 403);
+    const one = await r("site/documents/[id]");
+    const detail = await call("eng", one, "GET", `/api/v1/site/documents/${made.id}`, { ctx: { id: made.id } });
+    assert.deepEqual(detail.body!.document.revisions.map((x: { revision: string }) => x.revision), ["B", "A"]);
+    assert.equal((await call("eng2", one, "GET", `/api/v1/site/documents/${made.id}`, { ctx: { id: made.id } })).status, 404);
+    assert.equal((await call("other", one, "GET", `/api/v1/site/documents/${made.id}`, { ctx: { id: made.id } })).status, 404);
+    const rid = detail.body!.document.current.id;
+    const link = await r("site/documents/revisions/[rid]/link");
+    const got = await call("eng", link, "POST", `/api/v1/site/documents/revisions/${rid}/link`, { body: {}, ctx: { rid } });
+    assert.equal(got.status, 200, JSON.stringify(got.body));
+    assert.match(got.body!.url, /\/api\/site\/documents\/dl\?token=/);
+    assert.equal(got.body!.expiresInSeconds, 300);
+    assert.equal((await call("eng2", link, "POST", `/api/v1/site/documents/revisions/${rid}/link`, { body: {}, ctx: { rid } })).status, 404, "no link for a drawing the person cannot see");
+    assert.equal((await call(null, link, "POST", `/api/v1/site/documents/revisions/${rid}/link`, { body: {}, ctx: { rid } })).status, 401);
+    // the link opens the file without any sign-in header
+    const dl = await import("@/app/api/site/documents/dl/route");
+    const opened = await dl.GET(new Request(got.body!.url));
+    assert.equal(opened.status, 200);
+    assert.equal(opened.headers.get("content-type"), "application/pdf");
+    assert.equal((await dl.GET(new Request("http://app.test/api/site/documents/dl?token=broken"))).status, 410);
+  });
+
   await check("a company's phone user never reaches another company's records", async () => {
     for (const [mod, path, ctx] of [
       ["site/issues/[id]", `/api/v1/site/issues/${issueId}`, { id: issueId }],

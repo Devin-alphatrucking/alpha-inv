@@ -46,7 +46,7 @@ export default async function PurchasePage({ searchParams }: { searchParams: Pro
         {[
           ["Waiting for approval", String(overview.waitingForApproval), q("SUBMITTED")],
           ["Approved, not ordered yet", String(overview.approvedToOrder), q("APPROVED")],
-          ...(canOrders ? [["Draft orders", String(overview.draftOrders), "/purchase/orders?status=DRAFT"], ["Sent, value", fmt.money(overview.sentValueMinor / 100), "/purchase/orders?status=SENT"]] : []),
+          ...(canOrders ? [["Draft orders", String(overview.draftOrders), "/purchase/orders?status=DRAFT"], ["On order, value", fmt.money(overview.sentValueMinor / 100), "/purchase/orders"]] : []),
         ].map(([label, value, href]) => (
           <Link key={label} href={href} className="block rounded-xl focus-visible:outline-2">
             <Card className="h-full transition-colors hover:bg-muted/40"><CardHeader className="pb-2"><CardDescription>{label}</CardDescription><CardTitle className="text-2xl tabular-nums">{value}</CardTitle></CardHeader></Card>

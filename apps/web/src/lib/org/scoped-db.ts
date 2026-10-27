@@ -41,6 +41,8 @@ export const COMPANY_SCOPED_MODELS: ReadonlySet<string> = new Set([
   "SiteReport",
   "SitePhoto",
   "SiteIssue",
+  "ProjectDocument",
+  "DocumentRevision",
   "DocumentCounter",
   "MaterialRequest",
   "MaterialRequestLine",

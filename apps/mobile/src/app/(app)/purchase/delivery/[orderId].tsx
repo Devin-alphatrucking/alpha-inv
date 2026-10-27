@@ -93,7 +93,7 @@ export default function DeliveryScreen() {
                 <Title>{d.number}</Title>
                 <View style={{ flexDirection: "row" }}><Badge label={PROGRESS_NAME[d.progress]} tone={d.progress === "RECEIVED" ? "ok" : d.progress === "PARTLY" ? "warn" : "neutral"} /></View>
                 <Muted>{[d.vendorName, d.projectName, d.deliveryDate ? `due ${d.deliveryDate}` : null].filter(Boolean).join(" · ")}</Muted>
-                {d.status !== "SENT" ? <Text style={{ color: t.danger, fontSize: 14 }}>This order is {d.status === "CANCELLED" ? "cancelled" : "not sent to the supplier yet"}, so deliveries cannot be recorded.</Text> : null}
+                {!d.canRecord && (d.status === "DRAFT" || d.status === "CANCELLED" || d.status === "CLOSED") ? <Text style={{ color: t.danger, fontSize: 14 }}>This order is {d.status === "CANCELLED" ? "cancelled" : d.status === "CLOSED" ? "closed" : "not sent to the supplier yet"}, so deliveries cannot be recorded.</Text> : null}
               </View>
 
               <Card style={{ gap: space.sm }}>

@@ -1,6 +1,6 @@
 // Run with: npm run test:unit (from the repo root)
 import assert from "node:assert/strict";
-import { documentNumber, lineAmount, orderActions, orderTotals, parseCancelReason, parseDecision, parseGst, parseMoney, parseOrder, parseQuantity, parseRequest, requestActions } from "./rules";
+import { documentNumber, isOpenForGoods, lineAmount, orderActions, parseClose, statusForProgress, orderTotals, parseCancelReason, parseDecision, parseGst, parseMoney, parseOrder, parseQuantity, parseRequest, requestActions } from "./rules";
 
 const TODAY = "2026-10-26";
 
@@ -78,6 +78,19 @@ assert.ok(!parseOrder({ vendorId: "v1", lines: [] }, TODAY).ok);
 assert.deepEqual(orderActions("DRAFT", true), ["edit", "send", "cancel"]);
 assert.deepEqual(orderActions("SENT", true), ["cancel"]);
 assert.deepEqual(orderActions("CANCELLED", true), []);
+assert.deepEqual(orderActions("PART_DELIVERED", true), ["close"], "once goods arrive it cannot be cancelled, only closed");
+assert.deepEqual(orderActions("DELIVERED", true), ["close"]);
+assert.deepEqual(orderActions("CLOSED", true), []);
+assert.deepEqual(orderActions("DELIVERED", false), []);
+assert.equal(statusForProgress("NOT_RECEIVED"), "SENT");
+assert.equal(statusForProgress("PARTLY"), "PART_DELIVERED");
+assert.equal(statusForProgress("RECEIVED"), "DELIVERED");
+for (const s of ["SENT", "PART_DELIVERED", "DELIVERED"]) assert.equal(isOpenForGoods(s), true, s);
+for (const s of ["DRAFT", "CLOSED", "CANCELLED"]) assert.equal(isOpenForGoods(s), false, s);
+assert.ok(!parseClose(true, "").ok, "closing short needs a reason");
+assert.ok(parseClose(true, "Supplier cannot supply the rest").ok);
+assert.ok(parseClose(false, "").ok, "a fully delivered order closes without one");
+assert.ok(!parseClose(false, "x".repeat(301)).ok);
 assert.deepEqual(orderActions("DRAFT", false), []);
 assert.ok(!parseCancelReason("").ok);
 assert.ok(parseCancelReason("Supplier out of stock").ok);

@@ -191,16 +191,36 @@ export function parseOrder(raw: unknown, today: string): { ok: true; value: Orde
   return { ok: true, value: { vendorId, orderDate, deliveryDate, deliveryAddress: address.value, paymentTerms: terms.value, note: note.value, lines: lines.value } };
 }
 
-export type OrderState = "DRAFT" | "SENT" | "CANCELLED";
-export type OrderAction = "edit" | "send" | "cancel";
-export const ORDER_LABEL: Record<OrderState, string> = { DRAFT: "Draft", SENT: "Sent to supplier", CANCELLED: "Cancelled" };
+export type OrderState = "DRAFT" | "SENT" | "PART_DELIVERED" | "DELIVERED" | "CLOSED" | "CANCELLED";
+export type OrderAction = "edit" | "send" | "cancel" | "close";
+export const ORDER_LABEL: Record<OrderState, string> = { DRAFT: "Draft", SENT: "Sent to supplier", PART_DELIVERED: "Part delivered", DELIVERED: "Delivered", CLOSED: "Closed", CANCELLED: "Cancelled" };
 
-/** A draft can be changed and sent; a draft or a sent order can be cancelled (with a reason). Nothing changes a cancelled one. */
+/** Statuses of an order the supplier has (goods can arrive, bills can be linked). The delivery check moves it between the first three. */
+export const OPEN_FOR_GOODS: OrderState[] = ["SENT", "PART_DELIVERED", "DELIVERED"];
+export const isOpenForGoods = (status: string) => (OPEN_FOR_GOODS as string[]).includes(status);
+
+/** What the order's status should be once goods have arrived (or been removed again): nothing yet, some, or all. */
+export const statusForProgress = (progress: "NOT_RECEIVED" | "PARTLY" | "RECEIVED"): "SENT" | "PART_DELIVERED" | "DELIVERED" =>
+  progress === "RECEIVED" ? "DELIVERED" : progress === "PARTLY" ? "PART_DELIVERED" : "SENT";
+
+/**
+ * A draft can be changed and sent; a draft or an order nothing has arrived for can be cancelled (with a reason).
+ * Once goods have arrived it can only be closed: when everything came, or short (the rest is not coming), with a reason.
+ */
 export function orderActions(status: OrderState, canWrite: boolean): OrderAction[] {
   if (!canWrite) return [];
   if (status === "DRAFT") return ["edit", "send", "cancel"];
   if (status === "SENT") return ["cancel"];
+  if (status === "PART_DELIVERED" || status === "DELIVERED") return ["close"];
   return [];
+}
+
+/** Closing short (part delivered) needs a reason; closing a fully delivered order does not. */
+export function parseClose(short: boolean, raw: unknown): { ok: true; reason: string | null } | Fail {
+  const reason = oneLine(raw);
+  if (chars(reason) > LIMITS.reason) return bad(`Keep the reason under ${LIMITS.reason} characters.`, "reason");
+  if (short && chars(reason) < 3) return bad("Say why the rest is not coming.", "reason");
+  return { ok: true, reason: reason || null };
 }
 
 export function parseCancelReason(raw: unknown): { ok: true; reason: string } | Fail {
