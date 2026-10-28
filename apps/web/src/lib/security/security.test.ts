@@ -66,12 +66,13 @@ async function main() {
   assert.ok(STARTER_CATEGORIES.length >= 5 && new Set(STARTER_CATEGORIES.map((c) => c.name)).size === STARTER_CATEGORIES.length);
 
   // ---- form schemas
-  const good = { companyName: "Acme Builders", name: "Ann Lee", email: "ANN@Acme.TEST ", password: "correct horse battery", country: "AU", acceptTerms: true };
+  const good = { companyName: "Acme Builders", name: "Ann Lee", email: "ANN@Acme.TEST ", password: "correct horse battery", phone: "0412 345 678", country: "AU", acceptTerms: true };
   const ok = signUpSchema.safeParse(good);
   assert.ok(ok.success && ok.data.email === "ann@acme.test");
+  assert.equal(signUpSchema.safeParse({ ...good, phone: undefined }).success, false, "a mobile number is required");
   for (const bad of [
     { companyName: "A" }, { name: "" }, { email: "nope" }, { password: "short" }, { country: "XX" },
-    { acceptTerms: false }, { password: "annabel-rocks-1", email: "annabel@acme.test" },
+    { phone: "" }, { phone: "12345" }, { acceptTerms: false }, { password: "annabel-rocks-1", email: "annabel@acme.test" },
   ]) assert.equal(signUpSchema.safeParse({ ...good, ...bad }).success, false, JSON.stringify(bad));
   assert.equal(inviteSchema.safeParse({ email: "b@x.test", role: "OWNER", projectIds: [] }).success, false, "only ADMIN or STAFF can be invited");
   assert.ok(inviteSchema.safeParse({ email: "B@X.test", role: "STAFF" }).success);

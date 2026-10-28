@@ -35,11 +35,16 @@ import {
 } from "@/components/ui/table";
 import { createUser, deleteUser, updateUser } from "./actions";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { PasswordDialog } from "./password-dialog";
+import { formatPhone } from "@/lib/security/phone";
+import { KeyRound } from "lucide-react";
 
 export type UserRow = {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
+  sharedWithOtherCompanies: boolean;
   role: RoleName;
   projectIds: string[];
   projectNames: string[];
@@ -50,6 +55,7 @@ export type ProjectOption = { id: string; name: string };
 type FormState = {
   name: string;
   email: string;
+  phone: string;
   password: string;
   role: RoleName;
   projectIds: string[];
@@ -58,6 +64,7 @@ type FormState = {
 const emptyForm: FormState = {
   name: "",
   email: "",
+  phone: "",
   password: "",
   role: "STAFF",
   projectIds: [],
@@ -79,6 +86,7 @@ export function UsersManager({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [stepUpFor, setStepUpFor] = useState<UserRow | null>(null);
   const [userToDelete, setUserToDelete] = useState<UserRow | null>(null);
+  const [passwordFor, setPasswordFor] = useState<UserRow | null>(null);
 
   function openCreate() {
     setEditing(null);
@@ -91,6 +99,7 @@ export function UsersManager({
     setForm({
       name: user.name,
       email: user.email,
+      phone: user.phone ?? "",
       password: "",
       role: user.role,
       projectIds: user.projectIds,
@@ -115,7 +124,7 @@ export function UsersManager({
             id: editing.id,
             name: form.name,
             email: form.email,
-            password: form.password || undefined,
+            phone: form.phone,
             role: form.role,
             projectIds: form.projectIds,
           });
@@ -128,6 +137,7 @@ export function UsersManager({
           await createUser({
             name: form.name,
             email: form.email,
+            phone: form.phone,
             password: form.password,
             role: form.role,
             projectIds: form.projectIds,
@@ -203,6 +213,7 @@ export function UsersManager({
                 <p className="truncate text-sm text-muted-foreground">
                   {user.email}
                 </p>
+                {user.phone && <p className="truncate text-sm text-muted-foreground">{formatPhone(user.phone)}</p>}
               </div>
               <Badge variant={user.role === "ADMIN" ? "default" : "secondary"}>
                 {ROLE_INFO[user.role].label}
@@ -224,6 +235,10 @@ export function UsersManager({
               >
                 <Pencil className="size-3.5" />
                 Edit
+              </Button>
+              <Button type="button" size="sm" variant="outline" className="gap-1" onClick={() => setPasswordFor(user)}>
+                <KeyRound className="size-3.5" />
+                Password
               </Button>
               <Button
                 type="button"
@@ -260,6 +275,7 @@ export function UsersManager({
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Mobile</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Projects</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -270,6 +286,7 @@ export function UsersManager({
               <TableRow key={user.id}>
                 <TableCell className="font-medium">{user.name}</TableCell>
                 <TableCell>{user.email}</TableCell>
+                <TableCell className="whitespace-nowrap">{user.phone ? formatPhone(user.phone) : "—"}</TableCell>
                 <TableCell>
                   <Badge
                     variant={user.role === "ADMIN" ? "default" : "secondary"}
@@ -292,6 +309,10 @@ export function UsersManager({
                     >
                       <Pencil className="size-3.5" />
                       Edit
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => setPasswordFor(user)}>
+                      <KeyRound className="size-3.5" />
+                      Password
                     </Button>
                     <Button
                       type="button"
@@ -325,7 +346,7 @@ export function UsersManager({
             <DialogTitle>{editing ? "Edit user" : "Add user"}</DialogTitle>
             <DialogDescription>
               {editing
-                ? "Update profile, role, and project access. Leave password blank to keep the current one."
+                ? "Update profile, role, and project access."
                 : "Create an admin or staff account. Staff should be assigned to projects."}
             </DialogDescription>
           </DialogHeader>
@@ -353,19 +374,17 @@ export function UsersManager({
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="user-password">
-                Password{editing ? " (optional)" : ""}
-              </Label>
-              <Input
-                id="user-password"
-                type="password"
-                autoComplete="new-password"
-                value={form.password}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, password: e.target.value }))
-                }
-              />
+              <Label htmlFor="user-phone">Mobile number (optional)</Label>
+              <Input id="user-phone" type="tel" inputMode="tel" autoComplete="off" placeholder="98765 43210" value={form.phone} onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))} />
             </div>
+            {editing ? (
+              <p className="text-xs text-muted-foreground">To change their password use the Password button in the list.</p>
+            ) : (
+              <div className="grid gap-2">
+                <Label htmlFor="user-password">Password</Label>
+                <Input id="user-password" type="password" autoComplete="new-password" value={form.password} onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))} />
+              </div>
+            )}
             <div className="grid gap-2">
               <Label>Role</Label>
               <Select
@@ -447,6 +466,11 @@ export function UsersManager({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PasswordDialog
+        target={passwordFor ? { id: passwordFor.id, name: passwordFor.name, email: passwordFor.email, sharedWithOtherCompanies: passwordFor.sharedWithOtherCompanies } : null}
+        onClose={() => setPasswordFor(null)}
+      />
 
       <ConfirmDialog
         open={Boolean(userToDelete)}

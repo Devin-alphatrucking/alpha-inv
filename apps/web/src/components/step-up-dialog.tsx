@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { CodeInput } from "@/components/code-input";
 import { sendStepUpCodeAction } from "@/app/(app)/step-up-actions";
 
-export type StepUpAction = "Remove a person from the company" | "Close the company" | "Delete your account" | "Record a payment run";
+export type StepUpAction = "Remove a person from the company" | "Close the company" | "Delete your account" | "Record a payment run" | "Change a colleague's password";
 
 /**
  * "Confirm it is you": emails a code when it opens, then hands the typed code to `onConfirm`, which runs the risky action again

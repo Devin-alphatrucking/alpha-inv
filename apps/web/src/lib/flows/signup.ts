@@ -9,6 +9,7 @@ import { accountExistsMail, verifyEmailMail } from "@/lib/email/templates";
 import { absoluteUrl } from "@/lib/app-url";
 import { PRODUCT_NAME } from "@/lib/brand/product";
 import { uniqueSlug } from "@/lib/org/starter-data";
+import { normalizePhone } from "@/lib/security/phone";
 import { provisionCompany } from "@/lib/org/provision";
 import { trialDays } from "@/lib/plans/entitlements";
 import { firstIssue, signUpSchema, type FlowResult } from "@/lib/flows/schemas";
@@ -47,6 +48,7 @@ export async function signUp(raw: unknown, ctx: { ip: string }): Promise<FlowRes
   }
 
   const passwordHash = await hashPassword(v.password);
+  const phone = normalizePhone(v.phone, v.country); // already checked by the schema
   const slug = await uniqueSlug(v.companyName, async (s) => Boolean(await rawDb.organization.findUnique({ where: { slug: s }, select: { id: true } })));
 
   let created: Awaited<ReturnType<typeof createCompanyAndAdmin>>;
@@ -60,7 +62,7 @@ export async function signUp(raw: unknown, ctx: { ip: string }): Promise<FlowRes
 
   async function createCompanyAndAdmin() {
     return rawDb.$transaction((tx) =>
-      provisionCompany(tx, { companyName: v.companyName, slug, country: v.country, adminName: v.name, adminEmail: v.email, passwordHash, termsAccepted: true, mode: { kind: "trial", days: trialDays() } }),
+      provisionCompany(tx, { companyName: v.companyName, slug, country: v.country, adminName: v.name, adminEmail: v.email, adminPhone: phone.ok ? phone.phone : null, passwordHash, termsAccepted: true, mode: { kind: "trial", days: trialDays() } }),
     );
   }
 

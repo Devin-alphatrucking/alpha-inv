@@ -67,7 +67,7 @@ async function main() {
     return /token=([A-Za-z0-9_-]+)/.exec(found[found.length - 1].text)![1];
   };
   const makeCompany = async (name: string, email: string) => {
-    assert.ok((await signUp({ companyName: name, name: `${name} Admin`, email, password: PW, country: "IN", acceptTerms: true }, { ip: ip() })).ok);
+    assert.ok((await signUp({ companyName: name, name: `${name} Admin`, email, password: PW, country: "IN", phone: "9876543210", acceptTerms: true }, { ip: ip() })).ok);
     assert.ok((await confirmEmail(lastToken(email, "Confirm your email"))).ok);
     const [org] = await q<{ id: string; slug: string }>(`SELECT o.id, o.slug FROM "Organization" o JOIN "Membership" m ON m."organizationId"=o.id JOIN "User" u ON u.id=m."userId" WHERE u.email=$1`, [email]);
     const [user] = await q<{ id: string }>(`SELECT id FROM "User" WHERE email=$1`, [email]);
@@ -154,12 +154,12 @@ async function main() {
     const extra = await addMember(acme.orgId, "extra");
     const token = lastToken("p1@plan-acme.test", "invited you");
     assert.ok(await describeInvite(token));
-    const r = await acceptInvite({ token, name: "P One", password: PW, acceptTerms: true }, null);
+    const r = await acceptInvite({ token, name: "P One", password: PW, phone: "9876543210", acceptTerms: true }, null);
     assert.ok(!r.ok && /reached its user limit/.test(r.error), JSON.stringify(r));
     assert.ok(await peekToken(token, "INVITE"), "the invitation is still valid");
     assert.equal((await q(`SELECT 1 FROM "User" WHERE email='p1@plan-acme.test'`)).length, 0, "no account was created");
     await q(`DELETE FROM "Membership" WHERE "userId"=$1`, [extra]);
-    const ok = await acceptInvite({ token, name: "P One", password: PW, acceptTerms: true }, null);
+    const ok = await acceptInvite({ token, name: "P One", password: PW, phone: "9876543210", acceptTerms: true }, null);
     assert.ok(ok.ok, JSON.stringify(ok));
   });
   await check("people: a deleted account does not use a seat", async () => {

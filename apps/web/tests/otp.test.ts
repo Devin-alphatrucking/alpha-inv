@@ -121,7 +121,7 @@ async function main() {
 
   // ---------------------------------------------------------------- sign-up
   await check("sign-up emails a code and a link, and the code confirms the address", async () => {
-    assert.ok((await signUp({ companyName: "Code Co", name: "Code Admin", email: "admin@code-co.test", password: PW, country: "IN", acceptTerms: true }, { ip: ip() })).ok);
+    assert.ok((await signUp({ companyName: "Code Co", name: "Code Admin", email: "admin@code-co.test", password: PW, country: "IN", phone: "9876543210", acceptTerms: true }, { ip: ip() })).ok);
     const mail = mails().filter((m) => m.to === "admin@code-co.test").at(-1)!;
     assert.match(mail.subject, /Confirm your email: your .* code is \d{3} \d{3}/);
     assert.match(mail.text, /token=[A-Za-z0-9_-]+/, "the link is still there");
@@ -141,7 +141,7 @@ async function main() {
   });
 
   await check("the link in the same email still works when the code is not used", async () => {
-    assert.ok((await signUp({ companyName: "Link Co", name: "Link Admin", email: "admin@link-co.test", password: PW, country: "IN", acceptTerms: true }, { ip: ip() })).ok);
+    assert.ok((await signUp({ companyName: "Link Co", name: "Link Admin", email: "admin@link-co.test", password: PW, country: "IN", phone: "9876543210", acceptTerms: true }, { ip: ip() })).ok);
     const mail = mails().filter((m) => m.to === "admin@link-co.test").at(-1)!;
     assert.ok((await confirmEmail(/token=([A-Za-z0-9_-]+)/.exec(mail.text)![1])).ok);
     const [row] = await q<{ emailVerifiedAt: Date | null }>(`SELECT "emailVerifiedAt" FROM "User" WHERE email='admin@link-co.test'`);
@@ -149,7 +149,7 @@ async function main() {
   });
 
   await check("asking for another confirmation code: a new one after 30 seconds, nothing new (and no hint) before", async () => {
-    assert.ok((await signUp({ companyName: "Again Co", name: "Again Admin", email: "admin@again-co.test", password: PW, country: "IN", acceptTerms: true }, { ip: ip() })).ok);
+    assert.ok((await signUp({ companyName: "Again Co", name: "Again Admin", email: "admin@again-co.test", password: PW, country: "IN", phone: "9876543210", acceptTerms: true }, { ip: ip() })).ok);
     const count = () => mails().filter((m) => m.to === "admin@again-co.test").length;
     assert.equal(count(), 1);
     const soon = await resendVerification("admin@again-co.test", { ip: ip() });

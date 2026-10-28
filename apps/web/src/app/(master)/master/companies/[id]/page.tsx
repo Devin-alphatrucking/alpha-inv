@@ -10,6 +10,7 @@ import { UsageMeter } from "@/components/usage-meter";
 import { CompanyStatusBadge, DueBadge, HealthLabel, PageTitle, StageBadge, StateBadge, fmtDate, fmtDateTime, isoDay, money } from "../../master-ui";
 import { DoneButton, FollowUpForm, NoteForm } from "../../care-client";
 import { dueTone, todayUtc } from "@/lib/master/health";
+import { formatPhone } from "@/lib/security/phone";
 import { ActionForm, ReconcileButton, ResetTwoStepControl } from "../../master-client";
 import { extendTrialAction, setCompanyStatusAction, setLimitsAction, setProjectPlansAction } from "../../actions";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -285,7 +286,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
               return (
                 <div key={m.id} className="flex flex-wrap items-center justify-between gap-2">
                   <span className="min-w-0 truncate">
-                    {m.user.deletedAt ? <span className="text-muted-foreground">(deleted account)</span> : `${m.user.name} · ${m.user.email}`}
+                    {m.user.deletedAt ? <span className="text-muted-foreground">(deleted account)</span> : `${m.user.name} · ${m.user.email}${m.user.phone ? ` · ${formatPhone(m.user.phone)}` : ""}`}
                   </span>
                   <span className="flex shrink-0 items-center gap-1">
                     {!m.user.emailVerifiedAt && !m.user.deletedAt && <Badge variant="outline">unverified</Badge>}

@@ -43,7 +43,7 @@ async function main() {
 
   const PW = "correct horse battery staple";
   const makeUser = async (name: string, email: string) => {
-    assert.ok((await signUp({ companyName: name, name: `${name} Admin`, email, password: PW, country: "IN", acceptTerms: true }, { ip: ip() })).ok);
+    assert.ok((await signUp({ companyName: name, name: `${name} Admin`, email, password: PW, country: "IN", phone: "9876543210", acceptTerms: true }, { ip: ip() })).ok);
     const found = mails().filter((x) => x.to === email && x.subject.includes("Confirm your email"));
     assert.ok((await confirmEmail(/token=([A-Za-z0-9_-]+)/.exec(found[found.length - 1].text)![1])).ok);
     const [u] = await q<{ id: string }>(`SELECT id FROM "User" WHERE email=$1`, [email]);

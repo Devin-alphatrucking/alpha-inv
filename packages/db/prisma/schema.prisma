@@ -25,11 +25,12 @@ enum Role {
 }
 
 model User {
-  id           String @id @default(cuid())
+  id           String  @id @default(cuid())
   name         String
-  email        String @unique
+  email        String  @unique
   passwordHash String
-  role         Role   @default(STAFF)
+  role         Role    @default(STAFF)
+  phone        String? // mobile number in international format, for example +919876543210 (asked at sign-up)
 
   // Account lifecycle (step 2f)
   emailVerifiedAt DateTime? // set when the person proved they own the address

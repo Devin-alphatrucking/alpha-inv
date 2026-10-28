@@ -12,6 +12,7 @@ import { requireAdmin } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { checkPassword } from "@/lib/security/password";
 import { assertCanAddUsers } from "@/lib/plans/entitlements";
+import { normalizePhone } from "@/lib/security/phone";
 
 // Users are global people (one sign-in); what they may do in a company lives on
 // their Membership. Everything here is limited to the signed-in admin's company.
@@ -20,6 +21,7 @@ const createSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   email: z.string().trim().email("Valid email required"),
   password: z.string().min(1, "Enter a password"),
+  phone: z.string().optional(),
   role: z.enum(ROLES),
   projectIds: z.array(z.string()).default([]),
 });
@@ -28,10 +30,7 @@ const updateSchema = z.object({
   id: z.string().min(1),
   name: z.string().trim().min(1, "Name is required"),
   email: z.string().trim().email("Valid email required"),
-  password: z
-    .string()
-    .optional()
-    .transform((v) => (v && v.trim() ? v.trim() : undefined)),
+  phone: z.string().optional(),
   role: z.enum(ROLES),
   projectIds: z.array(z.string()).default([]),
 });
@@ -59,10 +58,20 @@ async function loadMember(orgId: string, userId: string) {
   return membership;
 }
 
+/** An optional number, read as one of the company's country when it has no + (see lib/security/phone.ts). Empty means none. */
+async function cleanPhone(orgId: string, raw: string | undefined): Promise<string | null> {
+  if (!raw || !raw.trim()) return null;
+  const org = await rawDb.organization.findUnique({ where: { id: orgId }, select: { country: true } });
+  const r = normalizePhone(raw, org?.country ?? "IN");
+  if (!r.ok) throw new AppError("VALIDATION_001", r.error);
+  return r.phone;
+}
+
 export async function createUser(input: {
   name: string;
   email: string;
   password: string;
+  phone?: string;
   role: RoleName;
   projectIds: string[];
 }) {
@@ -72,7 +81,13 @@ export async function createUser(input: {
 
   const email = parsed.email.toLowerCase();
   const existing = await rawDb.user.findUnique({ where: { email } });
-  if (existing) throw new AppError("VALIDATION_001", "A user with this email already exists");
+  if (existing) {
+    throw new AppError(
+      "VALIDATION_001",
+      "This email already has an account. Use Invite someone above: they accept with their own password and keep the other company they belong to.",
+    );
+  }
+  const phone = await cleanPhone(admin.orgId, parsed.phone);
 
   const problem = checkPassword(parsed.password, { email, name: parsed.name });
   if (problem) throw new AppError("VALIDATION_001", problem);
@@ -89,6 +104,7 @@ export async function createUser(input: {
       data: {
         name: parsed.name,
         email,
+        phone,
         passwordHash,
         role: parsed.role,
         emailVerifiedAt: new Date(), // created by an administrator, who vouches for the address
@@ -123,7 +139,7 @@ export async function updateUser(input: {
   id: string;
   name: string;
   email: string;
-  password?: string;
+  phone?: string;
   role: RoleName;
   projectIds: string[];
 }) {
@@ -140,12 +156,12 @@ export async function updateUser(input: {
   const otherCompanies = await rawDb.membership.count({
     where: { userId: user.id, organizationId: { not: admin.orgId } },
   });
-  const profileChange =
-    parsed.name !== user.name || email !== user.email || Boolean(parsed.password);
+  const phone = await cleanPhone(admin.orgId, parsed.phone);
+  const profileChange = parsed.name !== user.name || email !== user.email || phone !== (user.phone ?? null);
   if (otherCompanies > 0 && profileChange) {
     throw new AppError(
       "VALIDATION_001",
-      "This person also belongs to other companies. You can change their role and projects here; their name, email and password can only be changed by them."
+      "This person also belongs to other companies. You can change their role and projects here; their name, email and phone can only be changed by them."
     );
   }
 
@@ -164,13 +180,6 @@ export async function updateUser(input: {
   });
   if (emailTaken) throw new AppError("VALIDATION_001", "A user with this email already exists");
 
-  if (parsed.password) {
-    const problem = checkPassword(parsed.password, { email, name: parsed.name });
-    if (problem) throw new AppError("VALIDATION_001", problem);
-  }
-  const passwordHash = parsed.password
-    ? await bcrypt.hash(parsed.password, 12)
-    : undefined;
   const projectIds = needsProjects(parsed.role) ? parsed.projectIds : [];
   await assertProjectsInOrg(db, projectIds);
 
@@ -180,9 +189,9 @@ export async function updateUser(input: {
       data: {
         name: parsed.name,
         email,
+        ...(otherCompanies === 0 ? { phone } : {}),
         // legacy column: only for people who belong to this company alone (otherwise it would overwrite their role elsewhere)
         ...(otherCompanies === 0 ? { role: parsed.role } : {}),
-        ...(passwordHash ? { passwordHash, sessionVersion: { increment: 1 } } : {}),
       },
     });
     await tx.membership.update({

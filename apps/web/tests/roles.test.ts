@@ -45,7 +45,7 @@ async function main() {
   const q = async <T = Record<string, unknown>>(sql: string, params: unknown[] = []) => (await owner.query(sql, params)).rows as T[];
 
   const PW = "correct horse battery staple";
-  assert.ok((await signUp({ companyName: "Role Co", name: "Role Admin", email: "admin@role-co.test", password: PW, country: "IN", acceptTerms: true }, { ip: ip() })).ok);
+  assert.ok((await signUp({ companyName: "Role Co", name: "Role Admin", email: "admin@role-co.test", password: PW, country: "IN", phone: "9876543210", acceptTerms: true }, { ip: ip() })).ok);
   const found = mails().filter((x) => x.to === "admin@role-co.test" && x.subject.includes("Confirm your email"));
   assert.ok((await confirmEmail(/token=([A-Za-z0-9_-]+)/.exec(found[found.length - 1].text)![1])).ok);
   const [row] = await q<{ orgId: string; userId: string }>(`SELECT o.id AS "orgId", u.id AS "userId" FROM "Organization" o JOIN "Membership" m ON m."organizationId"=o.id JOIN "User" u ON u.id=m."userId" WHERE u.email='admin@role-co.test'`);
@@ -67,7 +67,7 @@ async function main() {
     assert.ok(r.ok, JSON.stringify(r));
     const mail = mails().filter((m) => m.to === email).at(-1)!;
     const token = /token=([A-Za-z0-9_-]+)/.exec(mail.text)![1];
-    const done = await acceptInvite({ token, name: `${role} Person`, password: PW, acceptTerms: true }, null);
+    const done = await acceptInvite({ token, name: `${role} Person`, password: PW, phone: "9876543210", acceptTerms: true }, null);
     assert.ok(done.ok, JSON.stringify(done));
     const [u] = await q<{ id: string }>(`SELECT id FROM "User" WHERE email=$1`, [email]);
     people[role] = { id: u.id, email };

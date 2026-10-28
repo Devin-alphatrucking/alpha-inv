@@ -49,13 +49,14 @@ async function seedCompany(tx: Tx, orgId: string, adminUserId: string, mode: Com
  */
 export async function provisionCompany(
   tx: Tx,
-  input: { companyName: string; slug: string; country: string; adminName: string; adminEmail: string; passwordHash: string; termsAccepted: boolean; mode: CompanyPlanMode },
+  input: { companyName: string; slug: string; country: string; adminName: string; adminEmail: string; adminPhone?: string | null; passwordHash: string; termsAccepted: boolean; mode: CompanyPlanMode },
 ) {
   const org = await createOrganization(tx, input);
   const user = await tx.user.create({
     data: {
       name: input.adminName,
       email: input.adminEmail,
+      phone: input.adminPhone ?? null,
       passwordHash: input.passwordHash,
       role: "ADMIN",
       // Sign-up ticks the box; a company our team sets up has not accepted anything yet.

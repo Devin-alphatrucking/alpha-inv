@@ -24,6 +24,7 @@ export default async function SignUpPage() {
           <Link href="/login" className="font-medium text-foreground underline underline-offset-2">
             Sign in
           </Link>
+          <span className="mt-1 block">Already work for another company on this app? Sign in, then use the company menu at the top: Start a company of your own. One sign-in, separate companies.</span>
         </>
       }
     >

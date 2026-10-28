@@ -14,7 +14,7 @@ import type { FlowResult } from "@/lib/flows/schemas";
  */
 
 /** A readable list of what needs a code, for the screens and for tests. */
-export const STEP_UP_ACTIONS = ["Remove a person from the company", "Close the company", "Delete your account", "Record a payment run"] as const;
+export const STEP_UP_ACTIONS = ["Remove a person from the company", "Close the company", "Delete your account", "Record a payment run", "Change a colleague's password"] as const;
 
 export type StepUpOutcome = { ok: true } | { ok: false; error: string; needsCode: true };
 

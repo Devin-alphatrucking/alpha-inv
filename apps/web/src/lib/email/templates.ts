@@ -144,6 +144,23 @@ export function passwordChangedMail(to: string, d: { name: string; brand: MailBr
   };
 }
 
+/** Said to the person when an administrator sets a new password for them, so a surprise change cannot go unnoticed. */
+export function passwordSetByAdminMail(to: string, d: { name: string; adminName: string; company: string; brand: MailBrand }): Mail {
+  return {
+    to,
+    subject: `Your ${d.company} password was changed by ${d.adminName}`,
+    text: `Hi ${d.name},\n\n${d.adminName}, an administrator of ${d.company}, set a new password for your account and signed you out of every device.\nAsk them for the new password. You can change it again yourself on your Account page.\nIf you did not expect this, contact ${d.adminName} or reset your password from the sign-in page.`,
+    html: layout(
+      d.brand,
+      "Your password was changed",
+      P(`Hi ${esc(d.name)},`) +
+        P(`<strong>${esc(d.adminName)}</strong>, an administrator of ${esc(d.company)}, set a new password for your account and signed you out of every device.`) +
+        P("Ask them for the new password. You can change it again yourself on your Account page.") +
+        P("If you did not expect this, contact them or reset your password from the sign-in page."),
+    ),
+  };
+}
+
 export function inviteMail(to: string, d: { inviterName: string; company: string; role: string; link: string; brand: MailBrand }): Mail {
   return {
     to,

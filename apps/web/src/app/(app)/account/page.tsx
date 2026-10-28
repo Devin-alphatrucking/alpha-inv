@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AccountPanels } from "./account-panels";
 import { TwoFactorPanel } from "./two-factor-panel";
 import { EmailPreferences } from "./email-preferences";
+import { PhonePanel } from "./phone-panel";
 import { twoFactorStatus } from "@/lib/flows/two-factor";
 
 export const metadata = { title: "My account" };
@@ -17,7 +18,7 @@ export default async function AccountPage() {
   const { session, orgId } = await pageOrg({ allowLocked: true });
   const tf = await twoFactorStatus(session.user.id);
   const [user, companies, org] = await Promise.all([
-    rawDb.user.findUniqueOrThrow({ where: { id: session.user.id }, select: { name: true, email: true, emailVerifiedAt: true, emailDigest: true } }),
+    rawDb.user.findUniqueOrThrow({ where: { id: session.user.id }, select: { name: true, email: true, phone: true, emailVerifiedAt: true, emailDigest: true } }),
     listMyCompanies(session.user.id),
     rawDb.organization.findUniqueOrThrow({ where: { id: orgId }, select: { name: true, displayName: true } }),
   ]);
@@ -50,6 +51,8 @@ export default async function AccountPage() {
           </p>
         </CardContent>
       </Card>
+
+      <PhonePanel initial={user.phone} />
 
       {session.user.role === "ADMIN" && <EmailPreferences initial={user.emailDigest} />}
 

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { ROLES } from "@/lib/roles";
 import { checkPassword } from "@/lib/security/password";
 import { COUNTRY_CODES } from "@/lib/org/starter-data";
+import { normalizePhone } from "@/lib/security/phone";
 
 // Input rules for the account flows. Pure, so they are unit-tested without a server.
 
@@ -20,12 +21,15 @@ export const signUpSchema = z
     name: person,
     email,
     password: z.string(),
+    phone: z.string({ message: "Enter your mobile number" }),
     country: z.enum(COUNTRY_CODES, { message: "Choose your country" }),
     acceptTerms: z.literal(true, { message: "Please accept the terms to continue" }),
   })
   .superRefine((v, issue) => {
     const problem = checkPassword(v.password, { email: v.email, name: v.name });
     if (problem) issue.addIssue({ code: "custom", path: ["password"], message: problem });
+    const phone = normalizePhone(v.phone, v.country);
+    if (!phone.ok) issue.addIssue({ code: "custom", path: ["phone"], message: phone.error });
   });
 
 export const emailOnlySchema = z.object({ email });
@@ -42,6 +46,7 @@ export const acceptInviteSchema = z.object({
   token: z.string().min(20).max(100),
   name: z.string().trim().max(80).optional(),
   password: z.string().optional(),
+  phone: z.string().max(40).optional(),
   acceptTerms: z.boolean().optional(),
 });
 

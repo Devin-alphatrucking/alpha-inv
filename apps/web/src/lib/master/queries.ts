@@ -156,7 +156,7 @@ export async function companyDetail(orgId: string) {
     getEntitlements(org.id),
     rawDb.billingPurchase.findMany({ where: { organizationId: org.id }, orderBy: { createdAt: "asc" } }),
     rawDb.billingPayment.findMany({ where: { organizationId: org.id }, orderBy: { paidAt: "desc" }, take: 20 }),
-    rawDb.membership.findMany({ where: { organizationId: org.id }, include: { user: { select: { name: true, email: true, deletedAt: true, emailVerifiedAt: true, totpEnabledAt: true, isPlatformAdmin: true } } }, orderBy: { createdAt: "asc" } }),
+    rawDb.membership.findMany({ where: { organizationId: org.id }, include: { user: { select: { name: true, email: true, phone: true, deletedAt: true, emailVerifiedAt: true, totpEnabledAt: true, isPlatformAdmin: true } } }, orderBy: { createdAt: "asc" } }),
     platformTx((tx) => tx.project.findMany({ where: { organizationId: org.id }, select: { id: true, name: true, status: true, monthlyPageLimit: true }, orderBy: { name: "asc" } })),
     platformTx((tx) => tx.activityLog.findMany({ where: { organizationId: org.id }, orderBy: { createdAt: "desc" }, take: 25, include: { user: { select: { email: true } } } })),
     platformTx((tx) => tx.supportTicket.findMany({ where: { organizationId: org.id }, orderBy: { createdAt: "desc" }, take: 10 })),

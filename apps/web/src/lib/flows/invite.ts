@@ -11,6 +11,7 @@ import { absoluteUrl } from "@/lib/app-url";
 import { assertCanAddUsers, assertCanInvite } from "@/lib/plans/entitlements";
 import { AppError } from "@/lib/errors";
 import { acceptInviteSchema, firstIssue, inviteSchema, type FlowResult } from "@/lib/flows/schemas";
+import { normalizePhone } from "@/lib/security/phone";
 
 export type Admin = { id: string; name: string; orgId: string };
 
@@ -139,6 +140,7 @@ export async function acceptInvite(raw: unknown, signedInUserId: string | null):
   const wantedProjects = ((row.payload ?? {}) as { projectIds?: string[] }).projectIds ?? [];
 
   let passwordHash: string | null = null;
+  let newPhone: string | null = null;
   if (invite.hasAccount) {
     if (signedInUserId !== invite.existingUserId) {
       return { ok: false, error: `Sign in as ${invite.email} to accept this invitation.` };
@@ -149,6 +151,10 @@ export async function acceptInvite(raw: unknown, signedInUserId: string | null):
     const problem = checkPassword(v.password ?? "", { email: invite.email, name: v.name });
     if (problem) return { ok: false, error: problem, field: "password" };
     passwordHash = await hashPassword(v.password!);
+    const org = await rawDb.organization.findUnique({ where: { id: orgId }, select: { country: true } });
+    const phone = normalizePhone(v.phone, org?.country ?? "IN");
+    if (!phone.ok) return { ok: false, error: phone.error, field: "phone" };
+    newPhone = phone.phone;
   }
 
   let outcome: { userId: string } | null;
@@ -170,6 +176,7 @@ export async function acceptInvite(raw: unknown, signedInUserId: string | null):
         data: {
           name: v.name!.trim(),
           email: invite.email,
+          phone: newPhone,
           passwordHash: passwordHash!,
           role,
           emailVerifiedAt: new Date(),

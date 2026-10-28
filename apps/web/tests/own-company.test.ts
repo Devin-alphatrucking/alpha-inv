@@ -44,7 +44,7 @@ async function main() {
 
   const PW = "correct horse battery staple";
   const makeCompany = async (name: string, email: string) => {
-    assert.ok((await signUp({ companyName: name, name: `${name} Admin`, email, password: PW, country: "IN", acceptTerms: true }, { ip: ip() })).ok);
+    assert.ok((await signUp({ companyName: name, name: `${name} Admin`, email, password: PW, country: "IN", phone: "9876543210", acceptTerms: true }, { ip: ip() })).ok);
     const found = mails().filter((x) => x.to === email && /Confirm your email/.test(x.subject));
     assert.ok((await confirmEmail(/token=([A-Za-z0-9_-]+)/.exec(found[found.length - 1].text)![1])).ok);
     const [row] = await q<{ orgId: string; userId: string }>(`SELECT o.id AS "orgId", u.id AS "userId" FROM "Organization" o JOIN "Membership" m ON m."organizationId"=o.id JOIN "User" u ON u.id=m."userId" WHERE u.email=$1`, [email]);
@@ -55,7 +55,7 @@ async function main() {
   // An employee: invited into the employer's company as staff.
   assert.ok((await createInvite({ id: boss.userId, name: "Boss", orgId: boss.orgId }, { email: "sam@employee.test", role: "STAFF", projectIds: [] })).ok);
   const inviteMail = mails().filter((m) => m.to === "sam@employee.test").at(-1)!;
-  assert.ok((await acceptInvite({ token: /token=([A-Za-z0-9_-]+)/.exec(inviteMail.text)![1], name: "Sam Employee", password: PW, acceptTerms: true }, null)).ok);
+  assert.ok((await acceptInvite({ token: /token=([A-Za-z0-9_-]+)/.exec(inviteMail.text)![1], name: "Sam Employee", password: PW, phone: "9876543210", acceptTerms: true }, null)).ok);
   const [sam] = await q<{ id: string }>(`SELECT id FROM "User" WHERE email='sam@employee.test'`);
 
   await check("an employee starts a company of their own: a trial, administrator, starter data, and nothing changes at the employer", async () => {

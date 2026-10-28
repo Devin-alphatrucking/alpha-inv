@@ -16,7 +16,7 @@ type Props = {
 };
 
 export function SignUpForm({ countries, termsUrl, privacyUrl }: Props) {
-  const [v, setV] = useState({ companyName: "", name: "", email: "", password: "", country: "IN", acceptTerms: false });
+  const [v, setV] = useState({ companyName: "", name: "", email: "", phone: "", password: "", country: "IN", acceptTerms: false });
   const [error, setError] = useState<{ message: string; field?: string } | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -66,6 +66,12 @@ export function SignUpForm({ countries, termsUrl, privacyUrl }: Props) {
         <Label htmlFor="su-email">Work email</Label>
         <Input id="su-email" type="email" inputMode="email" autoComplete="email" value={v.email} onChange={(e) => set("email", e.target.value)} required />
         {fieldError("email")}
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="su-phone">Mobile number</Label>
+        <Input id="su-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="98765 43210" value={v.phone} onChange={(e) => set("phone", e.target.value)} required />
+        <p className="text-xs text-muted-foreground">So your team and our support can reach you. Add the country code (+61...) if it is not from the country below.</p>
+        {fieldError("phone")}
       </div>
       <div className="grid gap-2">
         <Label htmlFor="su-password">Password</Label>

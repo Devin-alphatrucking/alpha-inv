@@ -160,7 +160,7 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
-            {companies.length > 1 && <CompanySwitcher companies={companies} currentOrgId={currentOrgId} />}
+            {!locked && <CompanySwitcher companies={companies} currentOrgId={currentOrgId} />}
             {isPlatformAdmin && (
               <Button variant="ghost" size="sm" className="hidden shrink-0 xl:inline-flex" render={<a href="/master" />} nativeButton={false}>
                 <ShieldCheck className="size-4" />

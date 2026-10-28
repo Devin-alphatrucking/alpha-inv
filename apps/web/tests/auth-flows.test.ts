@@ -57,7 +57,7 @@ async function main() {
   const q = async <T = Record<string, unknown>>(sql: string, params: unknown[] = []) => (await owner.query(sql, params)).rows as T[];
 
   const PW = "correct horse battery staple";
-  const signUpBase = { companyName: "Acme Co", name: "Ann Admin", email: "ann@acme-co.test", password: PW, country: "AU", acceptTerms: true };
+  const signUpBase = { companyName: "Acme Co", name: "Ann Admin", email: "ann@acme-co.test", password: PW, country: "AU", phone: "0412 345 678", acceptTerms: true };
 
   // =================================================================== sign-up
   await check("sign-up: creates the company (trial), admin, starter categories and a first project, and emails a confirmation link", async () => {
@@ -258,14 +258,14 @@ async function main() {
     const noTerms = await acceptInvite({ token, name: "Sam Staff", password: PW, acceptTerms: false }, null);
     assert.ok(!noTerms.ok && noTerms.field === "acceptTerms");
     assert.ok(await describeInvite(token), "refused attempts did not use the link up");
-    const r = await acceptInvite({ token, name: "Sam Staff", password: PW, acceptTerms: true }, null);
+    const r = await acceptInvite({ token, name: "Sam Staff", password: PW, phone: "9876543210", acceptTerms: true }, null);
     assert.ok(r.ok && r.slug === "acme-co" && r.joinedExisting === false);
     const [sam] = await q<{ id: string; emailVerifiedAt: Date | null }>(`SELECT id,"emailVerifiedAt" FROM "User" WHERE email='sam@staff.test'`);
     assert.ok(sam.emailVerifiedAt, "the link reached their inbox, so the address counts as confirmed");
     const [m] = await q<{ role: string }>(`SELECT role FROM "Membership" WHERE "userId"=$1 AND "organizationId"=$2`, [sam.id, acme.id]);
     assert.equal(m.role, "STAFF");
     assert.equal((await q(`SELECT 1 FROM "ProjectAssignment" WHERE "userId"=$1 AND "projectId"=$2`, [sam.id, acmeProject.id])).length, 1);
-    assert.equal((await acceptInvite({ token, name: "Sam Again", password: PW, acceptTerms: true }, null)).ok, false, "single use");
+    assert.equal((await acceptInvite({ token, name: "Sam Again", password: PW, phone: "9876543210", acceptTerms: true }, null)).ok, false, "single use");
   });
   await check("invite: someone who already has an account must be signed in as that account; they then join a second company", async () => {
     assert.ok((await createInvite(annAdmin, { email: "bea@beta-co.test", role: "ADMIN", projectIds: [] })).ok);
@@ -289,7 +289,7 @@ async function main() {
   await check("invite: an expired invitation is refused", async () => {
     const t = await issueToken({ type: "INVITE", email: "late@staff.test", organizationId: acme.id, role: "STAFF", ttlMs: -1000, payload: { projectIds: [] } });
     assert.equal(await describeInvite(t), null);
-    assert.equal((await acceptInvite({ token: t, name: "Late", password: PW, acceptTerms: true }, null)).ok, false);
+    assert.equal((await acceptInvite({ token: t, name: "Late", password: PW, phone: "9876543210", acceptTerms: true }, null)).ok, false);
   });
 
   // =================================================================== account

@@ -21,6 +21,7 @@ type Props = {
 export function AcceptInviteForm({ token, invite, signedInAsInvitee, signedInOther, termsUrl, privacyUrl }: Props) {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [error, setError] = useState<{ message: string; field?: string } | null>(null);
   const [joined, setJoined] = useState(false);
@@ -30,7 +31,7 @@ export function AcceptInviteForm({ token, invite, signedInAsInvitee, signedInOth
     e?.preventDefault();
     setError(null);
     start(async () => {
-      const r = await acceptInviteAction({ token, name, password, acceptTerms });
+      const r = await acceptInviteAction({ token, name, password, phone, acceptTerms });
       if (r.ok) setJoined(true);
       else setError({ message: r.error, field: r.field });
     });
@@ -96,6 +97,12 @@ export function AcceptInviteForm({ token, invite, signedInAsInvitee, signedInOth
         <Label htmlFor="ai-name">Your name</Label>
         <Input id="ai-name" value={name} maxLength={80} autoComplete="name" onChange={(e) => setName(e.target.value)} required />
         {fieldError("name")}
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="ai-phone">Mobile number</Label>
+        <Input id="ai-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="98765 43210" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+        <p className="text-xs text-muted-foreground">So your team can reach you. Add the country code (+61...) if it is not from the country of {invite.company}.</p>
+        {fieldError("phone")}
       </div>
       <div className="grid gap-2">
         <Label htmlFor="ai-password">Choose a password</Label>

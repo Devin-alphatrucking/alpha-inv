@@ -53,7 +53,7 @@ async function main() {
 
   const PW = "correct horse battery staple";
   const email = "admin@lock-test.test";
-  assert.ok((await signUp({ companyName: "Lock Test Co", name: "Lock Admin", email, password: PW, country: "IN", acceptTerms: true }, { ip: ip() })).ok);
+  assert.ok((await signUp({ companyName: "Lock Test Co", name: "Lock Admin", email, password: PW, country: "IN", phone: "9876543210", acceptTerms: true }, { ip: ip() })).ok);
   const found = mails().filter((x) => x.to === email && x.subject.includes("Confirm your email"));
   assert.ok((await confirmEmail(/token=([A-Za-z0-9_-]+)/.exec(found[found.length - 1].text)![1])).ok);
   const [{ id: orgId }] = await q<{ id: string }>(`SELECT o.id FROM "Organization" o JOIN "Membership" mm ON mm."organizationId"=o.id JOIN "User" u ON u.id=mm."userId" WHERE u.email=$1`, [email]);
@@ -116,7 +116,7 @@ async function main() {
 
   await check("isolation: one company's lock never affects another company", async () => {
     const other = "admin@lock-other.test";
-    assert.ok((await signUp({ companyName: "Lock Other Co", name: "Other", email: other, password: PW, country: "IN", acceptTerms: true }, { ip: ip() })).ok);
+    assert.ok((await signUp({ companyName: "Lock Other Co", name: "Other", email: other, password: PW, country: "IN", phone: "9876543210", acceptTerms: true }, { ip: ip() })).ok);
     const f2 = mails().filter((x) => x.to === other && x.subject.includes("Confirm your email"));
     assert.ok((await confirmEmail(/token=([A-Za-z0-9_-]+)/.exec(f2[f2.length - 1].text)![1])).ok);
     const [{ id: otherOrg }] = await q<{ id: string }>(`SELECT o.id FROM "Organization" o JOIN "Membership" mm ON mm."organizationId"=o.id JOIN "User" u ON u.id=mm."userId" WHERE u.email=$1`, [other]);

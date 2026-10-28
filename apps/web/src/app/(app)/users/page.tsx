@@ -14,6 +14,7 @@ import { getEntitlements } from "@/lib/plans/entitlements";
 import { checkAddUsers } from "@/lib/plans/rules";
 import { listPendingInvites } from "@/lib/flows/invite";
 import { isEmailConfigured } from "@/lib/email/transport";
+import { rawDb } from "@/lib/db";
 
 export default async function UsersPage() {
   const { session, db, orgId } = await pageOrg();
@@ -38,6 +39,9 @@ export default async function UsersPage() {
     }),
     db.project.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
+
+  // People who also belong to another company: their password and profile are theirs, so the Password dialog offers a reset link only.
+  const shared = new Set((await rawDb.membership.findMany({ where: { userId: { in: users.map((u) => u.id) }, organizationId: { not: orgId } }, select: { userId: true } })).map((m) => m.userId));
 
   return (
     <div className="flex flex-col gap-6">
@@ -82,6 +86,8 @@ export default async function UsersPage() {
               id: user.id,
               name: user.name,
               email: user.email,
+              phone: user.phone,
+              sharedWithOtherCompanies: shared.has(user.id),
               role: user.memberships[0]?.role ?? user.role,
               projectIds: user.projectAssignments.map((a) => a.projectId),
               projectNames: user.projectAssignments.map(

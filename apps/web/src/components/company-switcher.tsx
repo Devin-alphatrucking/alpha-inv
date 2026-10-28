@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { switchCompanyAction } from "@/app/(app)/account/actions";
 
-/** Shown only to people who belong to more than one company. */
+/** The company menu. Everyone has it: it lists the companies you belong to (switch between them) and starts a company of your own. */
 export function CompanySwitcher({
   companies,
   currentOrgId,
