@@ -120,7 +120,7 @@ export const ROUTE_PERMISSIONS: { prefix: string; permission: Permission | "ADMI
 ];
 
 /** What every signed-in person may open besides their permissions: the home screens, their account and support. */
-export const COMMON_PATHS = ["/dashboard", "/invoices", "/api/invoices", "/projects", "/account", "/support", "/locked", "/api/project-scope"];
+export const COMMON_PATHS = ["/dashboard", "/invoices", "/api/invoices", "/projects", "/account", "/support", "/settings", "/reports", "/locked", "/api/project-scope"];
 
 const startsWithPath = (pathname: string, prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`) || pathname.startsWith(`${prefix}?`);
 

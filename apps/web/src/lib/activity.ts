@@ -131,6 +131,14 @@ export async function logActivity(input: {
         userAgent: input.userAgent?.slice(0, 512) ?? null,
       }],
     });
+    // Keep "last active" on the company (our own operators' visits do not count), at most every 5 minutes per company.
+    if (input.organizationId && input.module !== "MASTER") {
+      const now = new Date();
+      await rawDb.organization.updateMany({
+        where: { id: input.organizationId, OR: [{ lastActiveAt: null }, { lastActiveAt: { lt: new Date(now.getTime() - 5 * 60_000) } }] },
+        data: { lastActiveAt: now },
+      });
+    }
   } catch {
     // Audit logging must not interrupt the request.
   }

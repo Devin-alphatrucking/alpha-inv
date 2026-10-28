@@ -7,7 +7,7 @@ const globalForPrisma = globalThis as unknown as {
   pool: Pool | undefined;
 };
 
-const pool =
+export const pool =
   globalForPrisma.pool ??
   new Pool({
     connectionString: process.env.DATABASE_URL,

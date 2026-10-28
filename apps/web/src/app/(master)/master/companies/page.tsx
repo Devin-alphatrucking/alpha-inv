@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listCompanies, PAGE_SIZE } from "@/lib/master/queries";
+import { listCompanies, PAGE_SIZE, SORTS, type CompanySort } from "@/lib/master/queries";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 export const metadata = { title: "Companies | Master console" };
 export const dynamic = "force-dynamic";
 
-type SP = Promise<{ q?: string; state?: string; stage?: string; attention?: string; page?: string }>;
+type SP = Promise<{ q?: string; state?: string; stage?: string; attention?: string; sort?: string; page?: string }>;
 
 export default async function CompaniesPage({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
@@ -20,8 +20,9 @@ export default async function CompaniesPage({ searchParams }: { searchParams: SP
   const state = sp.state && sp.state in STATE_LABEL ? sp.state : "";
   const stage = STAGES.includes(sp.stage as Stage) ? (sp.stage as Stage) : "";
   const attention = sp.attention === "1";
+  const sort = (sp.sort && sp.sort in SORTS ? sp.sort : "new") as CompanySort;
   const page = Math.max(1, Number(sp.page) || 1);
-  const { rows, total, counts, stageCounts, capped } = await listCompanies({ q, state, stage, attention, page });
+  const { rows, total, counts, stageCounts, capped } = await listCompanies({ q, state, stage, attention, sort, page });
 
   return (
     <>
@@ -54,6 +55,14 @@ export default async function CompaniesPage({ searchParams }: { searchParams: SP
               <option key={s} value={s}>
                 {STAGE_LABEL[s].label}{stageCounts[s] ? ` (${stageCounts[s]})` : ""}
               </option>
+            ))}
+          </NativeSelect>
+        </div>
+        <div className="grid gap-1.5">
+          <label htmlFor="sort" className="text-xs text-muted-foreground">Order by</label>
+          <NativeSelect id="sort" name="sort" defaultValue={sort}>
+            {(Object.keys(SORTS) as CompanySort[]).map((k) => (
+              <option key={k} value={k}>{SORTS[k]}</option>
             ))}
           </NativeSelect>
         </div>
@@ -133,7 +142,7 @@ export default async function CompaniesPage({ searchParams }: { searchParams: SP
           )}
         </CardContent>
       </Card>
-      <Pager basePath="/master/companies" params={{ q, state, stage, attention: attention ? "1" : undefined }} page={page} total={total} pageSize={PAGE_SIZE} />
+      <Pager basePath="/master/companies" params={{ q, state, stage, sort: sort === "new" ? undefined : sort, attention: attention ? "1" : undefined }} page={page} total={total} pageSize={PAGE_SIZE} />
     </>
   );
 }

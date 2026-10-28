@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { cleanText, dueTone, healthOf, parseDueDate, stageOf, todayUtc, trialDaysLeft, type Signals } from "./health";
+import { cleanText, dueTone, healthOf, parseDueDate, stageOf, todayUtc, trialDaysLeft, weeklyCounts, type Signals } from "./health";
 
 const now = new Date("2026-11-10T10:00:00Z");
 const ago = (days: number) => new Date(now.getTime() - days * 86_400_000);
@@ -80,5 +80,13 @@ assert.equal(cleanText("  hello \r\n world ", 50), "hello \n world");
 assert.equal(cleanText("   ", 50), null);
 assert.equal(cleanText("x".repeat(51), 50), null);
 assert.equal(cleanText(5, 50), null);
+
+// Weekly trend: 2026-11-10 is a Tuesday, so the current week began Monday 2026-11-09
+const weeks = weeklyCounts([new Date("2026-11-09T00:00:00Z"), new Date("2026-11-10T23:59:00Z"), new Date("2026-11-08T12:00:00Z"), new Date("2026-08-17T00:00:00Z"), new Date("2026-08-16T23:00:00Z"), new Date("2026-11-17T00:00:00Z")], now, 12);
+assert.equal(weeks.length, 12);
+assert.equal(weeks[11].weekStart.toISOString(), "2026-11-09T00:00:00.000Z");
+assert.equal(weeks[0].weekStart.toISOString(), "2026-08-24T00:00:00.000Z");
+assert.deepEqual(weeks.map((w) => w.count), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2], "two this week, one last week, the older and the future ones are left out");
+assert.deepEqual(weeklyCounts([], now, 3).map((w) => w.count), [0, 0, 0]);
 
 console.log("client health: all checks passed");

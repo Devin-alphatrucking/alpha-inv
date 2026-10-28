@@ -5,12 +5,12 @@ import { cn } from "@/lib/utils";
 
 type Stat = { label: string; value: number | null; warn?: boolean };
 
-function ModuleCard({ href, title, blurb, icon: Icon, tone, stats, cta }: { href: string; title: string; blurb: string; icon: typeof Receipt; tone: string; stats: Stat[]; cta: string }) {
+function ModuleCard({ href, title, blurb, icon: Icon, tone, stats, cta, featured }: { href: string; title: string; blurb: string; icon: typeof Receipt; tone: string; stats: Stat[]; cta: string; featured?: boolean }) {
   const shown = stats.filter((s) => s.value !== null);
   return (
     <Link
       href={href}
-      className="group relative flex flex-col gap-4 overflow-hidden rounded-2xl border bg-card p-5 shadow-xs outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-md focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+      className={cn("group relative flex flex-col gap-4 overflow-hidden rounded-2xl border bg-card p-5 shadow-xs outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-md focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0", featured && "ring-1 ring-primary/20 xl:col-span-2")}
     >
       <span aria-hidden className={cn("pointer-events-none absolute -right-8 -top-8 size-28 rounded-full opacity-[0.12] transition-transform duration-300 group-hover:scale-125", tone)} />
       <div className="flex items-center gap-3">
@@ -48,16 +48,16 @@ const FLOW: { step: string; where: string; href: string; module: "site" | "purch
 /** The three modules as large cards with live numbers, and the path a purchase takes through them. */
 export function ModuleHubView({ hub, canOpen }: { hub: ModuleHub; canOpen: (href: string) => boolean }) {
   const cards = [
-    hub.site && { key: "site", node: <ModuleCard key="site" href="/site" title="Site work" blurb="Daily reports, photos and issues from site" icon={HardHat} tone="bg-amber-500" cta="Open site work" stats={[{ label: "Reports today", value: hub.site.reportsToday }, { label: "Open issues", value: hub.site.openIssues }, { label: "Overdue", value: hub.site.overdueIssues, warn: true }]} /> },
+    hub.accounts && { key: "accounts", node: <ModuleCard key="accounts" href="/invoices" title="Accounts" blurb="Invoices, payments and GST" icon={Receipt} tone="bg-emerald-600" cta="Open accounts" featured stats={[{ label: "To review", value: hub.accounts.toReview }, { label: "Unpaid", value: hub.accounts.unpaid }, { label: "Overdue", value: hub.accounts.overdue, warn: true }]} /> },
     hub.purchase && { key: "purchase", node: <ModuleCard key="purchase" href="/purchase" title="Purchase" blurb="Requests, orders and deliveries" icon={ShoppingCart} tone="bg-sky-600" cta="Open purchase" stats={[{ label: "To approve", value: hub.purchase.waitingForApproval }, { label: "To order", value: hub.purchase.approvedToOrder }, { label: "Awaiting delivery", value: hub.purchase.awaitingDelivery }]} /> },
-    hub.accounts && { key: "accounts", node: <ModuleCard key="accounts" href="/invoices" title="Accounts" blurb="Invoices, payments and GST" icon={Receipt} tone="bg-emerald-600" cta="Open accounts" stats={[{ label: "To review", value: hub.accounts.toReview }, { label: "Unpaid", value: hub.accounts.unpaid }, { label: "Overdue", value: hub.accounts.overdue, warn: true }]} /> },
+    hub.site && { key: "site", node: <ModuleCard key="site" href="/site" title="Site work" blurb="Daily reports, photos and issues from site" icon={HardHat} tone="bg-amber-500" cta="Open site work" stats={[{ label: "Reports today", value: hub.site.reportsToday }, { label: "Open issues", value: hub.site.openIssues }, { label: "Overdue", value: hub.site.overdueIssues, warn: true }]} /> },
   ].filter(Boolean) as { key: string; node: React.ReactNode }[];
   if (cards.length < 2) return null; // one module only (a staff member): the finance dashboard below is the whole story
   const flow = FLOW.filter((f) => canOpen(f.href.split("?")[0]));
 
   return (
     <section aria-label="Your modules" className="grid gap-4">
-      <div className={cn("grid gap-4", cards.length === 2 ? "md:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-3")}>{cards.map((c) => c.node)}</div>
+      <div className={cn("grid gap-4", cards.length === 2 ? "md:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-4")}>{cards.map((c) => c.node)}</div>
       {flow.length > 2 && (
         <nav aria-label="How a purchase flows" className="rounded-2xl border bg-card px-4 py-3">
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">From site to payment</p>

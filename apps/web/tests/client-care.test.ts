@@ -55,7 +55,10 @@ async function main() {
     await q(`INSERT INTO "Organization"(id,name,slug,status,"createdAt","updatedAt") VALUES ($1,$2,$1,'ACTIVE',$3,now())`, [id, `Care ${id}`, o.created.toISOString()]);
     await q(`INSERT INTO "Subscription"(id,"organizationId","planId",quantity,status,"trialEndsAt","currentPeriodEnd","updatedAt") VALUES ($1,$2,'plan_project',1,$3::"SubscriptionStatus",$4,$5,now())`, [`s_${id}`, id, o.status, o.trialEnds?.toISOString() ?? null, o.periodEnd?.toISOString() ?? null]);
     for (let i = 0; i < (o.projects ?? 0); i++) await q(`INSERT INTO "Project"(id,"organizationId",name,status,"updatedAt") VALUES ($1,$2,$3,'ACTIVE',now())`, [`p_${id}_${i}`, id, `Project ${i}`]);
-    if (o.lastActive) await q(`INSERT INTO "ActivityLog"(id,"organizationId",action,module,"createdAt") VALUES ($1,$2,'INVOICE_CREATED','INVOICE',$3)`, [`a_${id}`, id, o.lastActive.toISOString()]);
+    if (o.lastActive) {
+      await q(`INSERT INTO "ActivityLog"(id,"organizationId",action,module,"createdAt") VALUES ($1,$2,'INVOICE_CREATED','INVOICE',$3)`, [`a_${id}`, id, o.lastActive.toISOString()]);
+      await q(`UPDATE "Organization" SET "lastActiveAt"=$2 WHERE id=$1`, [id, o.lastActive.toISOString()]); // normally kept up to date by the activity log
+    }
   }
 
   await company("care_new", { created: ago(1), status: "TRIALING", trialEnds: ahead(13) });
@@ -168,6 +171,49 @@ async function main() {
     // Even inside a company's own scope.
     const { dbFor } = await import("@/lib/org/scoped-db");
     assert.equal((await dbFor("care_using").clientNote.findMany()).length, 0, "the database refuses, whatever the client does");
+  });
+
+  await check("times come back as the right moment whatever the server's time zone", async () => {
+    const [c] = (await queries.listCompanies({ q: "care_ending", page: 1 })).rows;
+    const [row] = await q<{ ms: string }>(`SELECT (extract(epoch FROM "lastActiveAt") * 1000)::bigint AS ms FROM "Organization" WHERE id='care_ending'`);
+    assert.equal(c.lastActiveAt!.getTime(), Number(row.ms));
+    assert.ok(Math.abs(c.lastActiveAt!.getTime() - ago(1).getTime()) < 60_000, "about one day ago");
+    assert.ok(Math.abs(c.createdAt.getTime() - ago(12).getTime()) < 60_000);
+  });
+
+  await check("the activity log keeps 'last active' on the company, at most every five minutes, and ignores our own visits", async () => {
+    const { logActivity } = await import("@/lib/activity");
+    await q(`UPDATE "Organization" SET "lastActiveAt"=NULL WHERE id='care_new'`);
+    await logActivity({ organizationId: "care_new", userId: null, action: "MASTER_VIEWED_COMPANY", module: "MASTER" });
+    assert.equal((await q<{ t: Date | null }>(`SELECT "lastActiveAt" AS t FROM "Organization" WHERE id='care_new'`))[0].t, null, "an operator's visit does not count");
+    await logActivity({ organizationId: "care_new", userId: null, action: "LOGIN", module: "AUTH" });
+    const first = (await q<{ t: Date | null }>(`SELECT "lastActiveAt" AS t FROM "Organization" WHERE id='care_new'`))[0].t;
+    assert.ok(first, "set by the first action");
+    await logActivity({ organizationId: "care_new", userId: null, action: "LOGIN", module: "AUTH" });
+    const second = (await q<{ t: Date | null }>(`SELECT "lastActiveAt" AS t FROM "Organization" WHERE id='care_new'`))[0].t;
+    assert.equal(second!.getTime(), first!.getTime(), "not touched again within five minutes");
+    await q(`UPDATE "Organization" SET "lastActiveAt"=(now() AT TIME ZONE 'UTC') - interval '10 minutes' WHERE id='care_new'`);
+    await logActivity({ organizationId: "care_new", userId: null, action: "LOGIN", module: "AUTH" });
+    const [third] = await q<{ age: string }>(`SELECT extract(epoch FROM ((now() AT TIME ZONE 'UTC') - "lastActiveAt")) AS age FROM "Organization" WHERE id='care_new'`);
+    assert.ok(Number(third.age) < 60, `refreshed after five minutes (age ${third.age}s)`);
+  });
+
+  await check("the list can be ordered, and the overview carries the trend and usage numbers", async () => {
+    const byName = (await queries.listCompanies({ q: "care_", sort: "name" })).rows.map((r) => r.name);
+    assert.deepEqual(byName, [...byName].sort((a, b) => a.localeCompare(b)));
+    const trial = (await queries.listCompanies({ q: "care_", sort: "trial" })).rows;
+    assert.equal(trial[0].id, "care_ending", "the trial ending soonest comes first");
+    const quiet = (await queries.listCompanies({ q: "care_", sort: "quiet" })).rows;
+    assert.ok(quiet[0].lastActiveAt === null || quiet[0].id === "care_gone" || quiet[0].lastActiveAt <= quiet[1].lastActiveAt!);
+    const o = await queries.overview();
+    assert.equal(o.signupsByWeek.length, 12);
+    assert.ok(o.signupsByWeek.reduce((n, w) => n + w.count, 0) >= 6, "six of the care companies were created in the last 12 weeks");
+    assert.ok(o.activeThisWeek >= 3);
+    assert.ok(o.trialsRunning >= 3);
+    assert.equal(typeof o.moduleUse, "object");
+    assert.ok(o.attentionList.length >= 1 && o.attentionList.every((c) => c.level === "risk"));
+    const d = await queries.companyDetail("care_using");
+    assert.equal(typeof d!.usage30, "object");
   });
 
   await owner.end();

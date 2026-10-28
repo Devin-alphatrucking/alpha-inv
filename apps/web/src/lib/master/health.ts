@@ -107,3 +107,17 @@ export function cleanText(raw: unknown, max: number): string | null {
   const t = typeof raw === "string" ? raw.replace(/\r\n/g, "\n").trim() : "";
   return t.length === 0 || t.length > max ? null : t;
 }
+
+// ---- Trends
+
+/** How many of `dates` fall in each of the last `weeks` weeks (oldest first); a week runs Monday to Sunday, in UTC, and the last one is the current week. */
+export function weeklyCounts(dates: Date[], now: Date, weeks = 12): { weekStart: Date; count: number }[] {
+  const today = todayUtc(now);
+  const monday = new Date(today.getTime() - ((today.getUTCDay() + 6) % 7) * DAY);
+  const buckets = Array.from({ length: weeks }, (_, i) => ({ weekStart: new Date(monday.getTime() - (weeks - 1 - i) * 7 * DAY), count: 0 }));
+  for (const d of dates) {
+    const at = Math.floor((d.getTime() - buckets[0].weekStart.getTime()) / (7 * DAY));
+    if (at >= 0 && at < weeks) buckets[at].count++;
+  }
+  return buckets;
+}

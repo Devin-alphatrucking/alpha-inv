@@ -269,7 +269,7 @@ export default async function DashboardPage({
 
       <ModuleHubView hub={hub} canOpen={(href) => canOpenPath(session.user.role, href)} />
 
-      {[hub.accounts, hub.site, hub.purchase].filter(Boolean).length >= 2 && <h2 className="-mb-2 text-lg font-semibold tracking-tight">Finance</h2>}
+      {[hub.accounts, hub.site, hub.purchase].filter(Boolean).length >= 2 && <h2 className="-mb-2 text-lg font-semibold tracking-tight">Accounts</h2>}
 
       <AttentionPanel summary={attention.summary} drafts={attention.drafts} money={(minor) => fmt.money(minor / 100, 2)} date={(d) => fmt.date(d)} budgets={budgetAlerts} />
 

@@ -70,7 +70,7 @@ Edit `.env` and set at least:
 | `AZURE_DOCUMENT_INTELLIGENCE_KEY` | Azure DI key |
 | `AZURE_STORAGE_CONNECTION_STRING` | Optional — leave empty to use local files |
 
-Never commit `.env` (it is gitignored).
+Never commit `.env` (it is gitignored). **Every key, where to get it (Azure, Google, Razorpay, email) and a checker: `docs/ENVIRONMENT-SETUP.md`, `npm run check:env`.**
 
 ### 3. Start Postgres
 

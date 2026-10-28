@@ -16,6 +16,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test:unit": "npm run test:unit --workspace @alpha/web",
     "test:isolation": "node scripts/test-isolation.mjs",
+    "check:env": "node scripts/check-env.mjs",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:generate": "npm run generate --workspace @alpha/db",

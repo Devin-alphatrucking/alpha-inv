@@ -24,7 +24,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const d = await companyDetail(id);
   if (!d) notFound();
-  const { org, entitlements: e, purchases, payments, members, projects, activity, tickets, invoices, notes, followUps, health } = d;
+  const { org, entitlements: e, purchases, payments, members, projects, activity, tickets, invoices, notes, followUps, health, usage30 } = d;
   const today = todayUtc();
   const sub = org.subscription;
   const o = parseOverrides(sub?.overrides);
@@ -113,6 +113,28 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Use in the last 30 days</CardTitle>
+          <CardDescription>Actions recorded in the activity log, by part of the product.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          {[
+            ["AUTH", "Sign-ins"],
+            ["INVOICE", "Invoices"],
+            ["PAYMENT", "Payments"],
+            ["PURCHASE", "Purchase"],
+            ["SITE", "Site work"],
+            ["VENDOR", "Vendors"],
+          ].map(([key, label]) => (
+            <div key={key} className="rounded-lg border px-3 py-2">
+              <p className="text-xl font-semibold tabular-nums">{usage30[key] ?? 0}</p>
+              <p className="text-xs text-muted-foreground">{label}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

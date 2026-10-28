@@ -1,6 +1,7 @@
 "use client";
 
 import { canOpenPath, hasPermission, type RoleName } from "@/lib/roles";
+import { REPORT_LINKS, SETTINGS_LINKS, hubLinksFor } from "@/lib/nav";
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -11,20 +12,12 @@ import {
   Plus,
   Wallet,
   LayoutGrid,
-  Boxes,
   Building2,
-  Tags,
-  Users,
   FolderKanban,
-  ScrollText,
-  Bug,
   LogOut,
   ChevronRight,
   Settings,
   Download,
-  Receipt,
-  CalendarRange,
-  Scale,
   HardHat,
   ShoppingCart,
   BarChart3,
@@ -62,17 +55,7 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
   const isUploadActive =
     pathname.startsWith("/invoices/upload") || pathname.includes("/review");
 
-  const isMoreActive = [
-    "/materials",
-    "/vendors",
-    "/reports",
-    "/categories",
-    "/users",
-    "/projects",
-    "/site",
-    "/purchase",
-    "/admin",
-  ].some((prefix) => pathname.startsWith(prefix));
+  const isMoreActive = ["/materials", "/vendors", "/reports", "/categories", "/users", "/projects", "/site", "/purchase", "/admin", "/settings", "/plan", "/support", "/payments/planner"].some((prefix) => pathname.startsWith(prefix));
 
   const allMoreItems = [
     {
@@ -80,12 +63,6 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
       label: "Download all data",
       description: "Excel workbook with every database table",
       icon: Download,
-    },
-    {
-      href: "/projects",
-      label: "Projects",
-      description: "Sites, teams & spend per project",
-      icon: FolderKanban,
     },
     {
       href: "/purchase",
@@ -100,76 +77,32 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
       icon: HardHat,
     },
     {
-      href: "/payments/planner",
-      label: "Payment planner",
-      description: "What falls due, and pay several bills at once",
-      icon: CalendarRange,
-    },
-    {
-      href: "/reports/purchase",
-      label: "Purchase report",
-      description: "Ordered, delivered, billed, paid; suppliers",
-      icon: BarChart3,
-    },
-    {
-      href: "/reports/gst",
-      label: "GST report",
-      description: "Tax by month and supplier, CSV",
-      icon: Receipt,
-    },
-    {
-      href: "/materials",
-      label: "Rate Sheet",
-      description: "Live material rates & averages",
-      icon: Boxes,
-    },
-    {
-      href: "/materials/compare",
-      label: "Price comparison",
-      description: "Who sells the same item cheaper",
-      icon: Scale,
-    },
-    {
       href: "/vendors",
       label: "Vendors",
       description: "Material suppliers & GSTINs",
       icon: Building2,
     },
     {
-      href: "/categories",
-      label: "Categories",
-      description: "Material categories & units",
-      icon: Tags,
+      href: "/reports",
+      label: "Reports & tools",
+      description: "GST, purchase, payment planner, rate sheet",
+      icon: BarChart3,
     },
     {
-      href: "/users",
-      label: "Users",
-      description: "User roles & site access",
-      icon: Users,
-    },
-    {
-      href: "/admin/activity",
-      label: "Activity Logs",
-      description: "Audit trail of actions",
-      icon: ScrollText,
-    },
-    {
-      href: "/admin/errors",
-      label: "Error Logs",
-      description: "API errors & request ids",
-      icon: Bug,
-    },
-    {
-      href: "/admin/settings",
+      href: "/settings",
       label: "Settings",
-      description: "Application settings & data reset",
+      description: "People, projects, company and plan",
       icon: Settings,
     },
   ];
-  // Each person sees only the places their role may open (the same table the sign-in guard uses).
-  const adminMoreItems = allMoreItems.filter((item) => canOpenPath(role, item.href));
+  // Each person sees only the places their role may open (the same table the sign-in guard uses); a hub only when something is inside it.
+  const adminMoreItems = allMoreItems.filter(
+    (item) =>
+      canOpenPath(role, item.href) &&
+      (item.href === "/reports" ? hubLinksFor(REPORT_LINKS, role).length > 0 : item.href === "/settings" ? hubLinksFor(SETTINGS_LINKS, role).length > 0 : true),
+  );
   // The full bar (with a More sheet) is for people who have somewhere to go besides their own projects and invoices.
-  const fullBar = adminMoreItems.some((item) => item.href !== "/projects");
+  const fullBar = adminMoreItems.some((item) => item.href !== "/settings");
   const canUpload = hasPermission(role, "invoice:upload");
   const canSeePayments = hasPermission(role, "payment:view");
   const tab4 = canSeePayments ? { href: "/payments", label: "Payments", Icon: Wallet } : { href: "/projects", label: "Projects", Icon: FolderKanban };
