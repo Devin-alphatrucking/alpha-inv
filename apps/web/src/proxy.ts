@@ -22,6 +22,7 @@ const PUBLIC_PATHS = [
   "/api/billing/razorpay/webhook",
   "/api/billing/reconcile",
   "/api/jobs/digest",
+  "/api/jobs/quiet-notices",
   "/api/jobs/trial-notices", // scheduler calls: protected by JOBS_SECRET in the route
   "/api/v1/auth/login",
   "/api/v1/auth/refresh",

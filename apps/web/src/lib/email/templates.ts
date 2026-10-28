@@ -287,6 +287,28 @@ ${d.link}`,
   };
 }
 
+export function quietCheckInMail(to: string, d: { name: string; company: string; days: number; link: string; brand: MailBrand }): Mail {
+  return {
+    to,
+    subject: `${d.company}: we have not seen you for a while`,
+    text: `Hi ${d.name},
+
+Nobody at ${d.company} has used ${d.brand.name} for ${d.days} days. Your data is safe and just as you left it.
+If something got in the way or you need a hand setting up, just reply to this email.
+Open it again:
+${d.link}`,
+    html: layout(
+      d.brand,
+      "Can we help?",
+      P(`Hi ${esc(d.name)},`) +
+        P(`Nobody at <strong>${esc(d.company)}</strong> has used ${esc(d.brand.name)} for ${d.days} days. Your data is safe and just as you left it.`) +
+        P("If something got in the way or you need a hand setting up, just reply to this email."),
+      { label: "Open it again", url: d.link },
+      "You get this because you are an administrator of this company. We write at most once a month.",
+    ),
+  };
+}
+
 export function digestMail(
   to: string,
   d: { name: string; company: string; overdue: DigestSection; dueSoon: DigestSection; drafts: number; budgets?: DigestBudget[]; link: string; brand: MailBrand },

@@ -165,7 +165,7 @@ section("7. Google sign-in", "optional", (add) => {
 section("8. Scheduler", "optional", (add) => {
   if (!has("JOBS_SECRET")) return add(MISSING, "JOBS_SECRET", "daily digest and trial emails are off");
   const p = secretLen("JOBS_SECRET", 16);
-  add(p ? BAD : OK, "JOBS_SECRET", p ?? "now make something call /api/jobs/digest and /api/jobs/trial-notices every hour");
+  add(p ? BAD : OK, "JOBS_SECRET", p ?? "now make something call /api/jobs/digest, /api/jobs/trial-notices and /api/jobs/quiet-notices every hour");
   const h = get("DIGEST_HOUR");
   if (h && !(Number.isInteger(Number(h)) && Number(h) >= 0 && Number(h) <= 23)) add(BAD, "DIGEST_HOUR", "a whole number from 0 to 23");
 });

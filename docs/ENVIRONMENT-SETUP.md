@@ -148,6 +148,7 @@ Something on your host must call these addresses once an hour with the header `A
 
 - `<APP_URL>/api/jobs/digest`: the daily email to administrators.
 - `<APP_URL>/api/jobs/trial-notices`: "your trial is ending" and "your trial has ended".
+- `<APP_URL>/api/jobs/quiet-notices`: a friendly check-in to the administrators of a company nobody has used for two weeks (at most once a month, never after 90 days quiet).
 
 And once a day, with `Authorization: Bearer <BILLING_CRON_SECRET>`: `<APP_URL>/api/billing/reconcile` (re-reads unfinished Razorpay purchases, a safety net for a missed webhook).
 

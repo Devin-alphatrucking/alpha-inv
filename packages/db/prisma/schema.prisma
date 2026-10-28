@@ -476,6 +476,7 @@ model Organization {
   supportUrl   String?
   appModel     String    @default("A") // A shared app | B branded (ours) | C branded (client's accounts)
   lastActiveAt DateTime? // the last time anyone in the company did something (kept up to date by the activity log, at most every 5 minutes)
+  quietNoticeAt DateTime? // when a quiet company was last sent a check-in email
   digestSentOn String? // YYYY-MM-DD (company time zone) of the last daily digest, so it goes out once a day
 
   logo             OrganizationLogo?
