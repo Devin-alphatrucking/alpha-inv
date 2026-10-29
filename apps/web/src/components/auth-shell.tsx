@@ -22,7 +22,7 @@ export async function AuthShell({
   points?: { title: string; text: string }[];
 }) {
   const brand = await getBrand();
-  const logo = <BrandLogo name={brand.name} logoUrl={brand.logoUrl} className="h-10 max-w-[200px]" />;
+  const logo = <BrandLogo name={brand.name} logoUrl={brand.logoUrl} size="lg" className="h-10 max-w-[200px]" />;
 
   if (!points) {
     return (

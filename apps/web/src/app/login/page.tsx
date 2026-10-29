@@ -14,17 +14,11 @@ export default async function LoginPage() {
       <AuthBackdrop />
       <div className="relative w-full max-w-[400px]">
         <div className="mb-8 text-center sm:mb-10">
-          {brand.logoUrl ? (
-            <div className="mb-4 flex justify-center">
-              <BrandLogo name={brand.name} logoUrl={brand.logoUrl} className="h-12 max-w-[220px]" />
-            </div>
-          ) : (
-            <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-              {brand.isDefault ? "Welcome" : brand.name}
-            </p>
-          )}
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            Invoice &amp; Billing
+          <div className="mb-4 flex justify-center">
+            <BrandLogo name={brand.name} logoUrl={brand.logoUrl} size="lg" className="h-12 max-w-[220px]" />
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            Welcome back
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             Upload and track purchase invoices

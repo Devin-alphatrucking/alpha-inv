@@ -71,7 +71,7 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
             {/* Mobile App Brand Title */}
             <div className="md:hidden">
-              <BrandLogo name={brand.name} logoUrl={brand.logoUrl} className="h-5" />
+              <BrandLogo name={brand.name} logoUrl={brand.logoUrl} size="sm" className="h-5" />
             </div>
             <div className="min-w-0 flex-1 md:max-w-xs">
               {!locked && (
