@@ -41,7 +41,7 @@ export function SignUpForm({ countries, termsUrl, privacyUrl }: Props) {
           If <span className="font-medium text-foreground">{sentTo}</span> can be used for a new account, we have emailed it a 6-digit code. Enter it below (it works for 10 minutes), or use the link in the same email.
         </p>
         <div className="w-full pt-1">
-          <EmailCodeForm email={sentTo} />
+          <EmailCodeForm email={sentTo} password={v.password} />
         </div>
         <p className="text-xs text-muted-foreground">Nothing arrived? Look in your spam folder.</p>
       </div>
@@ -51,51 +51,59 @@ export function SignUpForm({ countries, termsUrl, privacyUrl }: Props) {
   const fieldError = (name: string) => (error?.field === name ? <p className="text-xs text-destructive">{error.message}</p> : null);
 
   return (
-    <form onSubmit={submit} className="grid gap-4" noValidate>
-      <div className="grid gap-2">
-        <Label htmlFor="su-company">Company name</Label>
-        <Input id="su-company" value={v.companyName} maxLength={80} autoComplete="organization" onChange={(e) => set("companyName", e.target.value)} required />
-        {fieldError("companyName")}
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="su-name">Your name</Label>
-        <Input id="su-name" value={v.name} maxLength={80} autoComplete="name" onChange={(e) => set("name", e.target.value)} required />
-        {fieldError("name")}
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="su-email">Work email</Label>
-        <Input id="su-email" type="email" inputMode="email" autoComplete="email" value={v.email} onChange={(e) => set("email", e.target.value)} required />
-        {fieldError("email")}
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="su-phone">Mobile number</Label>
-        <Input id="su-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="98765 43210" value={v.phone} onChange={(e) => set("phone", e.target.value)} required />
-        <p className="text-xs text-muted-foreground">So your team and our support can reach you. Add the country code (+61...) if it is not from the country below.</p>
-        {fieldError("phone")}
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="su-password">Password</Label>
-        <Input id="su-password" type="password" autoComplete="new-password" value={v.password} onChange={(e) => set("password", e.target.value)} required />
-        <p className="text-xs text-muted-foreground">At least 10 characters. A few random words make a strong password.</p>
-        {fieldError("password")}
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="su-country">Country</Label>
-        <NativeSelect
-          id="su-country"
-          value={v.country}
-          onChange={(e) => set("country", e.target.value)}
-          className="border border-input bg-background px-3 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {countries.map((c) => (
-            <option key={c.code} value={c.code}>
-              {c.label}
-            </option>
-          ))}
-        </NativeSelect>
-        <p className="text-xs text-muted-foreground">Sets your currency and timezone. You can change them later.</p>
-        {fieldError("country")}
-      </div>
+    <form onSubmit={submit} className="grid gap-5" noValidate>
+      <fieldset className="grid gap-4 sm:grid-cols-2">
+        <legend className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Your company</legend>
+        <div className="grid content-start gap-2">
+          <Label htmlFor="su-company">Company name</Label>
+          <Input id="su-company" value={v.companyName} maxLength={80} autoComplete="organization" onChange={(e) => set("companyName", e.target.value)} required />
+          {fieldError("companyName")}
+        </div>
+        <div className="grid content-start gap-2">
+          <Label htmlFor="su-country">Country</Label>
+          <NativeSelect
+            id="su-country"
+            value={v.country}
+            onChange={(e) => set("country", e.target.value)}
+            className="border border-input bg-background px-3 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {countries.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.label}
+              </option>
+            ))}
+          </NativeSelect>
+          <p className="text-xs text-muted-foreground">Sets your currency and timezone. You can change them later.</p>
+          {fieldError("country")}
+        </div>
+      </fieldset>
+
+      <fieldset className="grid gap-4 sm:grid-cols-2">
+        <legend className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">About you</legend>
+        <div className="grid content-start gap-2">
+          <Label htmlFor="su-name">Your name</Label>
+          <Input id="su-name" value={v.name} maxLength={80} autoComplete="name" onChange={(e) => set("name", e.target.value)} required />
+          {fieldError("name")}
+        </div>
+        <div className="grid content-start gap-2">
+          <Label htmlFor="su-phone">Mobile number</Label>
+          <Input id="su-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="98765 43210" value={v.phone} onChange={(e) => set("phone", e.target.value)} required />
+          <p className="text-xs text-muted-foreground">Add the country code (+61...) if it is not from the country above.</p>
+          {fieldError("phone")}
+        </div>
+        <div className="grid content-start gap-2">
+          <Label htmlFor="su-email">Work email</Label>
+          <Input id="su-email" type="email" inputMode="email" autoComplete="email" value={v.email} onChange={(e) => set("email", e.target.value)} required />
+          <p className="text-xs text-muted-foreground">We email a code here to confirm it.</p>
+          {fieldError("email")}
+        </div>
+        <div className="grid content-start gap-2">
+          <Label htmlFor="su-password">Password</Label>
+          <Input id="su-password" type="password" autoComplete="new-password" value={v.password} onChange={(e) => set("password", e.target.value)} required />
+          <p className="text-xs text-muted-foreground">At least 10 characters. A few random words make a strong password.</p>
+          {fieldError("password")}
+        </div>
+      </fieldset>
       <label className="flex cursor-pointer items-start gap-2 text-sm">
         <input type="checkbox" checked={v.acceptTerms} onChange={(e) => set("acceptTerms", e.target.checked)} className="mt-1 size-4" />
         <span>

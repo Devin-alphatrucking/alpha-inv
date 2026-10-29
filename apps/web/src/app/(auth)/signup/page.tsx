@@ -18,6 +18,11 @@ export default async function SignUpPage() {
     <AuthShell
       title="Create your company account"
       subtitle="Start a free trial. You will confirm your email, then set up your team."
+      points={[
+        { title: "Accounts, site work and purchase in one place", text: "Invoices, payments, vendors, materials and site issues, with one team and one set of reports." },
+        { title: "14-day free trial", text: "Set up your company in minutes. Nothing is charged until you choose a plan." },
+        { title: "Your data stays yours", text: "Every company is kept apart from every other. Your team only sees what its role allows." },
+      ]}
       footer={
         <>
           Already have an account?{" "}
@@ -28,6 +33,7 @@ export default async function SignUpPage() {
         </>
       }
     >
+      <h2 className="mb-4 text-lg font-semibold tracking-tight">Create your account</h2>
       {google && (
         <Suspense fallback={null}>
           <div className="mb-5 grid gap-2">
@@ -37,6 +43,13 @@ export default async function SignUpPage() {
               {links.terms ? <a href={links.terms} className="underline underline-offset-2" target="_blank" rel="noreferrer">terms</a> : "terms"} and{" "}
               {links.privacy ? <a href={links.privacy} className="underline underline-offset-2" target="_blank" rel="noreferrer">privacy policy</a> : "privacy policy"}.
             </p>
+            {open && (
+              <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground" aria-hidden>
+                <span className="h-px flex-1 bg-border" />
+                or use your email
+                <span className="h-px flex-1 bg-border" />
+              </div>
+            )}
           </div>
         </Suspense>
       )}

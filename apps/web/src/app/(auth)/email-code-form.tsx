@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { signIn } from "next-auth/react";
 import { useEffect, useState, useTransition } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { CodeInput } from "@/components/code-input";
 import { confirmEmailCodeAction, resendVerificationAction } from "./actions";
 
 /** "Enter the 6-digit code we emailed you" to confirm an address (after sign-up, or from the confirm page). */
-export function EmailCodeForm({ email }: { email: string }) {
+export function EmailCodeForm({ email, password }: { email: string; password?: string }) {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -28,8 +29,17 @@ export function EmailCodeForm({ email }: { email: string }) {
     setError(null);
     start(async () => {
       const r = await confirmEmailCodeAction(email, code);
-      if (r.ok) setDone(true);
-      else {
+      if (r.ok) {
+        // Just signed up: the password is still in this page, so go straight in instead of asking for it again.
+        if (password) {
+          const signedIn = await signIn("credentials", { email, password, totp: "", redirect: false }).catch(() => null);
+          if (signedIn && !signedIn.error) {
+            window.location.assign("/");
+            return;
+          }
+        }
+        setDone(true);
+      } else {
         setError(r.error);
         setCode("");
       }
@@ -53,7 +63,7 @@ export function EmailCodeForm({ email }: { email: string }) {
       <div className="flex flex-col items-center gap-3 py-2 text-center">
         <CheckCircle2 className="size-10 text-emerald-600" />
         <p className="text-base font-semibold">Email confirmed</p>
-        <p className="text-sm text-muted-foreground">Your account is ready. You can sign in now.</p>
+        <p className="text-sm text-muted-foreground">Your account is ready. Sign in with your email and password.</p>
         <Button className="mt-1 w-full" render={<Link href="/login" />} nativeButton={false}>
           Continue to sign in
         </Button>
