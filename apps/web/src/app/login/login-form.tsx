@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { safeCallbackPath } from "@/lib/security/redirect";
 import { GoogleButton } from "@/components/google-button";
+import { rememberWelcome } from "@/components/welcome-greeting";
 
 export function LoginForm({ signupEnabled, googleEnabled = false }: { signupEnabled: boolean; googleEnabled?: boolean }) {
   const searchParams = useSearchParams();
@@ -61,6 +62,7 @@ export function LoginForm({ signupEnabled, googleEnabled = false }: { signupEnab
         return;
       }
 
+      rememberWelcome("back");
       // Full navigation so the session cookie is picked up on tunnel hosts.
       window.location.assign(safeCallbackPath(searchParams.get("callbackUrl")));
     } catch {

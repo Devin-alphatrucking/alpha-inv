@@ -84,13 +84,40 @@ async function main() {
     assert.equal((await dbFor(org.id).activityLog.findMany({ where: { action: "USER_SIGNED_UP" } })).length, 1);
   });
 
-  await check("sign-up: an existing email gets the SAME answer and no second company (it receives an 'already have an account' email)", async () => {
+  await check("sign-up: signing up again before confirming gives the same answer, no second company, and no 'already have an account' email", async () => {
     const before = (await q<{ c: number }>(`SELECT count(*)::int c FROM "Organization"`))[0].c;
     const r = await signUp({ ...signUpBase, companyName: "Second Try Ltd" }, { ip: ip() });
     assert.deepEqual(r, { ok: true, checkEmail: true });
     assert.equal((await q<{ c: number }>(`SELECT count(*)::int c FROM "Organization"`))[0].c, before);
-    assert.equal(mailsTo("ann@acme-co.test").filter((x) => x.subject.includes("Someone tried")).length, 1);
-    assert.equal(mailsTo("ann@acme-co.test").filter((x) => x.subject.includes("Confirm your email")).length, 1);
+    assert.equal(mailsTo("ann@acme-co.test").filter((x) => x.subject.includes("Someone tried")).length, 0, "an unconfirmed account is helped to confirm, not told it exists");
+    assert.equal(mailsTo("ann@acme-co.test").filter((x) => x.subject.includes("Confirm your email")).length, 1, "the code from a moment ago is still valid, so nothing new is sent");
+  });
+
+  await check("sign-up: someone who left before confirming can sign up again and gets a fresh code; the password is not replaced", async () => {
+    assert.ok((await signUp({ ...signUpBase, companyName: "Return Co", email: "back@acme-co.test" }, { ip: ip() })).ok);
+    const [first] = await q<{ passwordHash: string }>(`SELECT "passwordHash" FROM "User" WHERE email='back@acme-co.test'`);
+    await q(`UPDATE "OtpCode" SET "createdAt"=(now() AT TIME ZONE 'UTC') - interval '10 minutes' WHERE email='back@acme-co.test'`);
+    const again = await signUp({ ...signUpBase, companyName: "Return Co Again", email: "back@acme-co.test", password: "a completely different passphrase 77" }, { ip: ip() });
+    assert.deepEqual(again, { ok: true, checkEmail: true });
+    const confirms = mailsTo("back@acme-co.test").filter((x) => x.subject.includes("Confirm your email"));
+    assert.equal(confirms.length, 2, "a fresh code and link were sent");
+    assert.match(confirms[1].text, /\d{3} \d{3}/);
+    const [second] = await q<{ passwordHash: string }>(`SELECT "passwordHash" FROM "User" WHERE email='back@acme-co.test'`);
+    assert.equal(second.passwordHash, first.passwordHash, "typing a new password for someone else's address changes nothing");
+    assert.equal((await q(`SELECT 1 FROM "Organization" WHERE name='Return Co Again'`)).length, 0);
+    assert.equal(mailsTo("back@acme-co.test").filter((x) => x.subject.includes("Someone tried")).length, 0);
+  });
+
+  await check("sign-up: an address that is already confirmed gets the same answer and an email with a sign-in link", async () => {
+    assert.ok((await signUp({ ...signUpBase, companyName: "Done Co", email: "done@acme-co.test" }, { ip: ip() })).ok);
+    await q(`UPDATE "User" SET "emailVerifiedAt"=now() WHERE email='done@acme-co.test'`);
+    const before = (await q<{ c: number }>(`SELECT count(*)::int c FROM "Organization"`))[0].c;
+    assert.deepEqual(await signUp({ ...signUpBase, companyName: "Done Again", email: "done@acme-co.test" }, { ip: ip() }), { ok: true, checkEmail: true });
+    assert.equal((await q<{ c: number }>(`SELECT count(*)::int c FROM "Organization"`))[0].c, before);
+    const note = mailsTo("done@acme-co.test").filter((x) => x.subject.includes("Someone tried"));
+    assert.equal(note.length, 1);
+    assert.match(note[0].text, /app\.test\/login/);
+    assert.match(note[0].text, /forgot-password/);
   });
 
   await check("sign-up: weak passwords, a missing agreement and bad emails are refused with the field named", async () => {

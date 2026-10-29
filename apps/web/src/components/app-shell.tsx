@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ProjectSwitcher } from "@/components/project-switcher";
 import { BrandLogo } from "@/components/brand-logo";
+import { WelcomeGreeting } from "@/components/welcome-greeting";
 import { ExportDataButton } from "@/components/export-data-button";
 import { CompanySwitcher } from "@/components/company-switcher";
 import {
@@ -53,6 +54,7 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
 
   return (
     <div className="flex min-h-dvh bg-muted/30">
+      <WelcomeGreeting name={name} company={companies.find((c) => c.id === currentOrgId)?.name ?? brand.name} />
       {/* Desktop Sidebar (visible on md and up) */}
       <aside className="sticky top-0 print:hidden hidden h-dvh w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:flex">
         <div className="border-b border-sidebar-border px-5 py-5">

@@ -61,12 +61,18 @@ export function confirmActionMail(to: string, d: { name: string; code: string; a
   };
 }
 
-export function accountExistsMail(to: string, d: { link: string; brand: MailBrand }): Mail {
+export function accountExistsMail(to: string, d: { link: string; signInLink?: string; brand: MailBrand }): Mail {
+  const signIn = d.signInLink ? `If it was you, sign in here:\n${d.signInLink}\n\nForgotten your password? Reset it here:\n${d.link}` : `If it was you, sign in or reset your password here:\n${d.link}`;
   return {
     to,
     subject: `Someone tried to create an account with your email`,
-    text: `Someone used this email address to sign up for ${d.brand.name}, but you already have an account.\n\nIf it was you, sign in or reset your password here:\n${d.link}\n\nIf it was not you, no action is needed.`,
-    html: layout(d.brand, "You already have an account", P(`Someone used this email address to sign up for ${esc(d.brand.name)}, but you already have an account.`) + P("If it was you, you can reset your password. If not, no action is needed."), { label: "Reset my password", url: d.link }),
+    text: `Someone used this email address to sign up for ${d.brand.name}, but you already have an account.\n\n${signIn}\n\nIf it was not you, no action is needed.`,
+    html: layout(
+      d.brand,
+      "You already have an account",
+      P(`Someone used this email address to sign up for ${esc(d.brand.name)}, but you already have an account.`) + P(d.signInLink ? `If it was you, sign in with your email and password. Forgotten it? <a href="${esc(d.link)}">Reset your password</a>. If it was not you, no action is needed.` : "If it was you, you can reset your password. If not, no action is needed."),
+      d.signInLink ? { label: "Sign in", url: d.signInLink } : { label: "Reset my password", url: d.link },
+    ),
   };
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { EmailCodeForm } from "../email-code-form";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Loader2, MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,12 +39,22 @@ export function SignUpForm({ countries, termsUrl, privacyUrl }: Props) {
         <MailCheck className="size-10 text-emerald-600" />
         <p className="text-base font-semibold">Check your email</p>
         <p className="text-sm text-muted-foreground">
-          If <span className="font-medium text-foreground">{sentTo}</span> can be used for a new account, we have emailed it a 6-digit code. Enter it below (it works for 10 minutes), or use the link in the same email.
+          We have emailed a 6-digit code to <span className="font-medium text-foreground">{sentTo}</span>. Enter it below (it works for 10 minutes), or use the link in the same email.
         </p>
         <div className="w-full pt-1">
           <EmailCodeForm email={sentTo} password={v.password} />
         </div>
-        <p className="text-xs text-muted-foreground">Nothing arrived? Look in your spam folder.</p>
+        <p className="text-xs text-muted-foreground">
+          Nothing arrived? Look in your spam folder. If this address already has an account, the email tells you how to sign in instead.
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm">
+          <button type="button" onClick={() => setSentTo(null)} className="text-muted-foreground underline underline-offset-2 hover:text-foreground">
+            Use a different email
+          </button>
+          <Link href="/login" className="text-muted-foreground underline underline-offset-2 hover:text-foreground">
+            Already confirmed? Sign in
+          </Link>
+        </div>
       </div>
     );
   }

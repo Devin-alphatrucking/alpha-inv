@@ -41,8 +41,17 @@ export async function signUp(raw: unknown, ctx: { ip: string }): Promise<FlowRes
   if (existing) {
     // Do the same expensive work as a real sign-up, so the time taken does not tell an attacker the address is registered.
     await hashPassword(v.password);
-    if (!existing.deletedAt) {
-      await sendMailQuietly(accountExistsMail(v.email, { link: absoluteUrl("/forgot-password"), brand: mailBrand }));
+    if (!existing.deletedAt && !existing.emailVerifiedAt) {
+      // Signed up before but never confirmed the address (closed the tab, lost the email): send a fresh code and link so they can
+      // carry on. Their password is NOT changed (anyone could type any password for an address they do not own), so they use the
+      // one from the first time, or reset it.
+      const otp = await issueOtp({ purpose: "SIGNUP", email: v.email, userId: existing.id });
+      if (otp.ok) {
+        const token = await issueToken({ type: "EMAIL_VERIFY", email: v.email, userId: existing.id });
+        await sendMailQuietly(verifyEmailMail(v.email, { name: existing.name, link: absoluteUrl(`/verify-email?token=${token}`), brand: mailBrand, code: otp.code }));
+      }
+    } else if (!existing.deletedAt) {
+      await sendMailQuietly(accountExistsMail(v.email, { link: absoluteUrl("/forgot-password"), signInLink: absoluteUrl("/login"), brand: mailBrand }));
     }
     return { ok: true, checkEmail: true };
   }
