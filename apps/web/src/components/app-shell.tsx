@@ -1,18 +1,16 @@
 "use client";
 
 import { ROLE_INFO, type RoleName } from "@/lib/roles";
-import { Download, LogOut, Settings, ShieldCheck, UserRound } from "lucide-react";
+import { ChevronDown, Download, LogOut, Settings, ShieldCheck, UserRound } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { AppNav } from "@/components/app-nav";
 import { LockedNav } from "@/components/locked-nav";
 import { MobileBottomBar } from "@/components/mobile-bottom-bar";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ProjectSwitcher } from "@/components/project-switcher";
 import { BrandLogo } from "@/components/brand-logo";
 import { WelcomeGreeting } from "@/components/welcome-greeting";
-import { ExportDataButton } from "@/components/export-data-button";
 import { CompanySwitcher } from "@/components/company-switcher";
 import {
   DropdownMenu,
@@ -69,7 +67,7 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="print:hidden">{banner}</div>
         {/* Top Header */}
-        <header className="sticky top-0 z-40 print:hidden flex h-14 items-center justify-between gap-2 border-b border-border/80 bg-background px-4 sm:gap-3 sm:px-6">
+        <header className="sticky top-0 z-40 print:hidden flex h-14 items-center justify-between gap-2 border-b border-border/60 bg-background/95 px-4 backdrop-blur sm:gap-3 sm:px-6">
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
             {/* Mobile App Brand Title */}
             <div className="md:hidden">
@@ -82,33 +80,21 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
-            {role === "ADMIN" && !locked && (
-              <div className="hidden xl:block">
-                <ExportDataButton label="Download all data" />
-              </div>
-            )}
-            <Badge
-              variant="secondary"
-              className="hidden text-[11px] font-semibold xl:inline-flex"
-            >
-              {ROLE_INFO[role].label}
-            </Badge>
-            <Avatar className="hidden size-8 shrink-0 xl:flex">
-              <AvatarFallback className="text-xs font-semibold">{initials}</AvatarFallback>
-            </Avatar>
-            <div className="hidden min-w-0 text-right xl:block">
-              <p className="truncate text-sm font-medium leading-none">{name}</p>
-              <p className="truncate text-xs text-muted-foreground">{email}</p>
-            </div>
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            {!locked && <CompanySwitcher companies={companies} currentOrgId={currentOrgId} />}
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="flex size-10 shrink-0 items-center justify-center rounded-full outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring xl:hidden"
+                className="flex h-10 shrink-0 items-center gap-2 rounded-full pr-1 outline-none ring-offset-background hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring lg:pr-3"
                 aria-label="Open account menu"
               >
-                <Avatar className="size-9">
+                <Avatar className="size-8">
                   <AvatarFallback className="text-xs font-semibold">{initials}</AvatarFallback>
                 </Avatar>
+                <span className="hidden min-w-0 text-left lg:block">
+                  <span className="block max-w-36 truncate text-sm font-medium leading-tight">{name}</span>
+                  <span className="block text-[11px] leading-tight text-muted-foreground">{ROLE_INFO[role].label}</span>
+                </span>
+                <ChevronDown className="hidden size-3.5 text-muted-foreground lg:block" aria-hidden />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" sideOffset={8} className="w-64 p-1.5">
                 <DropdownMenuGroup>
@@ -137,6 +123,10 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
                   )}
                   {role === "ADMIN" && !locked && (
                     <>
+                      <DropdownMenuItem render={<a href="/admin/settings" />} className="px-2 py-2">
+                        <Settings className="size-4" />
+                        Settings
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         render={<a href="/api/admin/export?dataset=all&format=xlsx" download />}
                         className="px-2 py-2"
@@ -144,13 +134,9 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
                         <Download className="size-4" />
                         Download all data
                       </DropdownMenuItem>
-                      <DropdownMenuItem render={<a href="/admin/settings" />} className="px-2 py-2">
-                        <Settings className="size-4" />
-                        Settings
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
                     </>
                   )}
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     variant="destructive"
                     className="px-2 py-2"
@@ -162,25 +148,6 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
-            {!locked && <CompanySwitcher companies={companies} currentOrgId={currentOrgId} />}
-            {isPlatformAdmin && (
-              <Button variant="ghost" size="sm" className="hidden shrink-0 xl:inline-flex" render={<a href="/master" />} nativeButton={false}>
-                <ShieldCheck className="size-4" />
-                Master
-              </Button>
-            )}
-            <Button variant="ghost" size="sm" className="hidden shrink-0 xl:inline-flex" render={<a href="/account" />} nativeButton={false}>
-              <UserRound className="size-4" />
-              Account
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="hidden shrink-0 xl:inline-flex"
-              onClick={() => signOut({ callbackUrl: "/login" })}
-            >
-              Sign out
-            </Button>
           </div>
         </header>
 
