@@ -9,12 +9,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signUpAction } from "../actions";
 import { NativeSelect } from "@/components/ui/native-select";
+import { PHONE_EXAMPLE, phoneHint } from "@/lib/security/phone";
 
 type Props = {
   countries: { code: string; label: string }[];
   termsUrl: string | null;
   privacyUrl: string | null;
 };
+
+/**
+ * One field: label, input, then a line of help (or the error). Inside a two-column row every field shares the same three rows
+ * (subgrid), so the inputs line up whatever the length of the help text.
+ */
+function Field({ id, label, hint, error, children }: { id: string; label: string; hint?: string; error: string | null; children: React.ReactNode }) {
+  return (
+    <div className="row-span-3 grid grid-rows-subgrid gap-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      {children}
+      {error ? <p className="text-xs text-destructive">{error}</p> : <p className="text-xs text-muted-foreground">{hint ?? "\u00a0"}</p>}
+    </div>
+  );
+}
 
 export function SignUpForm({ countries, termsUrl, privacyUrl }: Props) {
   const [v, setV] = useState({ companyName: "", name: "", email: "", phone: "", password: "", country: "IN", acceptTerms: false });
@@ -59,19 +74,16 @@ export function SignUpForm({ countries, termsUrl, privacyUrl }: Props) {
     );
   }
 
-  const fieldError = (name: string) => (error?.field === name ? <p className="text-xs text-destructive">{error.message}</p> : null);
+  const err = (name: string) => (error?.field === name ? error.message : null);
 
   return (
     <form onSubmit={submit} className="grid gap-5" noValidate>
-      <fieldset className="grid gap-4 sm:grid-cols-2">
+      <fieldset className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
         <legend className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Your company</legend>
-        <div className="grid content-start gap-2">
-          <Label htmlFor="su-company">Company name</Label>
+        <Field id="su-company" label="Company name" error={err("companyName")} hint="As it should appear on your invoices.">
           <Input id="su-company" value={v.companyName} maxLength={80} autoComplete="organization" onChange={(e) => set("companyName", e.target.value)} required />
-          {fieldError("companyName")}
-        </div>
-        <div className="grid content-start gap-2">
-          <Label htmlFor="su-country">Country</Label>
+        </Field>
+        <Field id="su-country" label="Country" error={err("country")} hint="Sets your currency and timezone. You can change them later.">
           <NativeSelect
             id="su-country"
             value={v.country}
@@ -84,36 +96,23 @@ export function SignUpForm({ countries, termsUrl, privacyUrl }: Props) {
               </option>
             ))}
           </NativeSelect>
-          <p className="text-xs text-muted-foreground">Sets your currency and timezone. You can change them later.</p>
-          {fieldError("country")}
-        </div>
+        </Field>
       </fieldset>
 
-      <fieldset className="grid gap-4 sm:grid-cols-2">
+      <fieldset className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
         <legend className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">About you</legend>
-        <div className="grid content-start gap-2">
-          <Label htmlFor="su-name">Your name</Label>
+        <Field id="su-name" label="Your name" error={err("name")} hint="You will be the company's administrator.">
           <Input id="su-name" value={v.name} maxLength={80} autoComplete="name" onChange={(e) => set("name", e.target.value)} required />
-          {fieldError("name")}
-        </div>
-        <div className="grid content-start gap-2">
-          <Label htmlFor="su-phone">Mobile number</Label>
-          <Input id="su-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="98765 43210" value={v.phone} onChange={(e) => set("phone", e.target.value)} required />
-          <p className="text-xs text-muted-foreground">Add the country code (+61...) if it is not from the country above.</p>
-          {fieldError("phone")}
-        </div>
-        <div className="grid content-start gap-2">
-          <Label htmlFor="su-email">Work email</Label>
+        </Field>
+        <Field id="su-phone" label="Mobile number" error={err("phone")} hint={phoneHint(v.country)}>
+          <Input id="su-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder={PHONE_EXAMPLE[v.country] ?? PHONE_EXAMPLE.IN} value={v.phone} onChange={(e) => set("phone", e.target.value)} required />
+        </Field>
+        <Field id="su-email" label="Work email" error={err("email")} hint="We email a code here to confirm it.">
           <Input id="su-email" type="email" inputMode="email" autoComplete="email" value={v.email} onChange={(e) => set("email", e.target.value)} required />
-          <p className="text-xs text-muted-foreground">We email a code here to confirm it.</p>
-          {fieldError("email")}
-        </div>
-        <div className="grid content-start gap-2">
-          <Label htmlFor="su-password">Password</Label>
+        </Field>
+        <Field id="su-password" label="Password" error={err("password")} hint="At least 10 characters. A few random words make a strong password.">
           <Input id="su-password" type="password" autoComplete="new-password" value={v.password} onChange={(e) => set("password", e.target.value)} required />
-          <p className="text-xs text-muted-foreground">At least 10 characters. A few random words make a strong password.</p>
-          {fieldError("password")}
-        </div>
+        </Field>
       </fieldset>
       <label className="flex cursor-pointer items-start gap-2 text-sm">
         <input type="checkbox" checked={v.acceptTerms} onChange={(e) => set("acceptTerms", e.target.checked)} className="mt-1 size-4" />
@@ -137,7 +136,7 @@ export function SignUpForm({ countries, termsUrl, privacyUrl }: Props) {
           .
         </span>
       </label>
-      {fieldError("acceptTerms")}
+      {error?.field === "acceptTerms" && <p className="text-xs text-destructive">{error.message}</p>}
       {error && !error.field && <p className="text-sm text-destructive">{error.message}</p>}
       <Button type="submit" className="w-full" disabled={pending}>
         {pending && <Loader2 className="size-4 animate-spin" />}

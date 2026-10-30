@@ -137,15 +137,16 @@ async function main() {
   });
 
   await check("nothing goes out before the morning hour in the COMPANY's own time zone", async () => {
-    const c = await makeCompany("Digest Delta", "admin@digest-delta.test", "America/New_York");
+    // A zone without daylight saving, so the hours below are the same whatever day of the year the test runs.
+    const c = await makeCompany("Digest Delta", "admin@digest-delta.test", "Asia/Kolkata");
     await addInvoice(c, 450, { due: d("2026-09-01") });
-    // 05:00 UTC is 01:00 in New York: too early
-    assert.equal(hourIn("America/New_York", new Date(d("2026-10-26T05:00:00Z"))), 1);
-    await sendDailyDigests({ now: new Date(d("2026-10-26T05:00:00Z")), hour: 8 });
+    // 01:00 UTC is 06:30 in India: too early
+    assert.equal(hourIn("Asia/Kolkata", new Date(d("2026-10-26T01:00:00Z"))), 6);
+    await sendDailyDigests({ now: new Date(d("2026-10-26T01:00:00Z")), hour: 8 });
     assert.equal(digestsTo(c.email).length, 0);
     assert.equal(await sentOn(c.orgId), null, "not marked: it can still go out later");
-    // 13:00 UTC is 09:00 in New York
-    await sendDailyDigests({ now: new Date(d("2026-10-26T13:00:00Z")), hour: 8 });
+    // 04:00 UTC is 09:30 in India (still before 08:00 in UTC itself, so this proves the company's zone is used)
+    await sendDailyDigests({ now: new Date(d("2026-10-26T04:00:00Z")), hour: 8 });
     assert.equal(digestsTo(c.email).length, 1);
     assert.equal(await sentOn(c.orgId), d("2026-10-26"));
   });

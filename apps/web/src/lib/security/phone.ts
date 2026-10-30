@@ -12,6 +12,15 @@ const BAD = "Enter a mobile number with its area code, for example 98765 43210 o
  * A number without a leading + is read as a number of `country` (the company's country). Anything else must carry
  * its own + and country code. Returns the text to show when it cannot be read.
  */
+/** An example number for the country field of a form, written the way people in that country write it. */
+export const PHONE_EXAMPLE: Record<string, string> = { IN: "98765 43210", AU: "0412 345 678", NZ: "021 123 4567", GB: "07400 123456", US: "(201) 555-0123", CA: "(204) 555-0123", SG: "8123 4567", AE: "050 123 4567", ZA: "082 123 4567" };
+
+/** What to tell a person typing a mobile number for this country. */
+export function phoneHint(country: string): string {
+  if (country === "IN") return "10-digit Indian mobile number. No +91 needed.";
+  return `A ${country} number as you would dial it locally, or with its country code (+${DIAL_CODES[country] ?? ""}).`;
+}
+
 export function normalizePhone(raw: unknown, country = "IN"): PhoneResult {
   if (typeof raw !== "string") return { ok: false, error: BAD };
   const text = raw.trim();

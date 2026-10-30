@@ -16,6 +16,7 @@ export default async function SignUpPage() {
   const links = legalLinks();
   return (
     <AuthShell
+      neutral
       title="Create your company account"
       subtitle="Start a free trial. You will confirm your email, then set up your team."
       points={[

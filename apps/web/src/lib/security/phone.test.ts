@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { formatPhone, normalizePhone } from "./phone";
+import { DIAL_CODES, formatPhone, normalizePhone, PHONE_EXAMPLE, phoneHint } from "./phone";
 
 const ok = (raw: unknown, country?: string) => {
   const r = normalizePhone(raw, country);
@@ -34,5 +34,10 @@ assert.match((normalizePhone("abc") as { error: string }).error, /digits/);
 assert.equal(formatPhone("+919876543210"), "+91 98765 43210");
 assert.equal(formatPhone("+61412345678"), "+61412345678");
 assert.equal(formatPhone(null), "");
+
+// The sign-up form's example and help follow the chosen country, and every example is accepted for its own country.
+assert.match(phoneHint("IN"), /Indian mobile/);
+assert.match(phoneHint("AU"), /\+61/);
+for (const country of Object.keys(DIAL_CODES)) assert.ok(normalizePhone(PHONE_EXAMPLE[country], country).ok, `example number for ${country}`);
 
 console.log("phone: all checks passed");

@@ -1,6 +1,6 @@
 import { BrandLogo } from "@/components/brand-logo";
 import { AuthBackdrop } from "@/components/auth-backdrop";
-import { getBrand } from "@/lib/brand/brand";
+import { DEFAULT_BRAND, getBrand } from "@/lib/brand/brand";
 
 /**
  * Card used by sign-up, password reset, verification and invitation pages.
@@ -13,6 +13,7 @@ export async function AuthShell({
   children,
   footer,
   points,
+  neutral,
 }: {
   title: string;
   subtitle?: string;
@@ -20,8 +21,10 @@ export async function AuthShell({
   footer?: React.ReactNode;
   /** Short reasons to sign up, shown beside the form on a desktop. Makes the layout wide. */
   points?: { title: string; text: string }[];
+  /** Always show the product's own name and logo, never a remembered company (sign-up and email confirmation are about a new account). */
+  neutral?: boolean;
 }) {
-  const brand = await getBrand();
+  const brand = neutral ? DEFAULT_BRAND : await getBrand();
   const logo = <BrandLogo name={brand.name} logoUrl={brand.logoUrl} size="lg" className="h-10 max-w-[200px]" />;
 
   if (!points) {

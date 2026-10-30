@@ -37,6 +37,15 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,39}$/;
  * first visit already renders that company's branding (not only the second).
  */
 function nextWithBrand(req: NextRequest) {
+  // Creating a new company, or "not my company" on the sign-in page, forgets any remembered company: on a shared computer the next
+  // person must not see the last company's name and logo.
+  if (req.nextUrl.pathname.startsWith("/signup") || req.nextUrl.searchParams.get("brand") === "default") {
+    const headers = new Headers(req.headers);
+    headers.set("cookie", (headers.get("cookie") ?? "").split(";").map((c) => c.trim()).filter((c) => c && !c.startsWith(`${BRAND_COOKIE}=`)).join("; "));
+    const cleared = NextResponse.next({ request: { headers } });
+    cleared.cookies.delete(BRAND_COOKIE);
+    return cleared;
+  }
   const slug = req.nextUrl.searchParams.get("c")?.trim().toLowerCase();
   if (!slug || !SLUG_RE.test(slug)) return NextResponse.next();
 
@@ -53,7 +62,7 @@ function nextWithBrand(req: NextRequest) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 24 * 90,
+    // No expiry: it lasts until the browser is closed, so a link to one company's sign-in does not follow the computer for months.
   });
   return res;
 }

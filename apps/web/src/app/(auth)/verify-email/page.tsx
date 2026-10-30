@@ -15,6 +15,7 @@ export default async function VerifyEmailPage({ searchParams }: Props) {
 
   return (
     <AuthShell
+      neutral
       title="Confirm your email"
       subtitle={valid ? "One more step to finish setting up your account." : undefined}
       footer={
