@@ -311,6 +311,7 @@ export function createClient(opts: ClientOptions) {
     switchCompany: (companyId: string) => request<{ companyId: string }>("/api/v1/me/company", { json: { companyId } }),
     projects: () => request<{ projects: { id: string; name: string; status: string; monthlyPageLimit: number }[] }>("/api/v1/projects"),
     categories: () => request<{ categories: { id: string; name: string }[] }>("/api/v1/categories"),
+    createCategory: (name: string) => request<{ category: { id: string; name: string }; created: boolean }>("/api/v1/categories", { json: { name } }),
 
     invoices: (q: { q?: string; status?: string; projectId?: string; page?: number; pageSize?: number } = {}) => {
       const sp = new URLSearchParams();

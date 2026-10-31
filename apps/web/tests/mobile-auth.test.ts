@@ -142,6 +142,24 @@ async function main() {
     assert.equal(noneToo.status, 401);
   });
 
+  await check("phone upload: a new category can be added once; adding the same name again returns the existing one", async () => {
+    const categoriesRoute = await import("@/app/api/v1/categories/route");
+    const login = await loginMobile({ email: base.email, password: "a brand new passphrase 4711" }, { ip: ip() });
+    assert.ok(login.ok);
+    if (!login.ok) return;
+    const token = login.tokens.accessToken;
+    const first = await call(categoriesRoute.POST as never, token, { method: "POST", body: { name: "Tile Adhesive" } });
+    assert.equal(first.status, 201);
+    assert.equal(first.body.created, true);
+    const again = await call(categoriesRoute.POST as never, token, { method: "POST", body: { name: "Tile Adhesive" } });
+    assert.equal(again.body.created, false);
+    assert.equal(again.body.category.id, first.body.category.id);
+    const empty = await call(categoriesRoute.POST as never, token, { method: "POST", body: { name: "   " } });
+    assert.ok(empty.status >= 400);
+    const list = await call(categoriesRoute.GET as never, token);
+    assert.equal((list.body.categories as { name: string }[]).filter((c) => c.name === "Tile Adhesive").length, 1);
+  });
+
   // ---- Google: Google's check is replaced by a stand-in so the test needs no internet.
   const realFetch = globalThis.fetch;
   const tokenInfo: Record<string, { aud: string; iss?: string; exp?: string; email: string; email_verified: string; name?: string }> = {};
