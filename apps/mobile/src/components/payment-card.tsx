@@ -44,7 +44,7 @@ export function PaymentCard({ invoiceId, payments, paid, balance, canPay, onSave
   return (
     <Card style={{ gap: space.sm }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        <Text style={{ fontSize: 16, fontWeight: "700", color: t.text }}>Payments</Text>
+        <Text style={{ fontSize: 16, fontWeight: "600", color: t.text }}>Payments</Text>
         <Muted>Paid {money(paid, fmt)} · Balance {money(balance, fmt)}</Muted>
       </View>
       {payments.length === 0 ? <Muted>No payment recorded yet.</Muted> : null}

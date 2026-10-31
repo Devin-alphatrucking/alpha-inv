@@ -60,7 +60,7 @@ export function CodeStep({ email, password, onBack }: { email: string; password:
   return (
     <View style={{ gap: space.lg }}>
       <View style={{ gap: 6 }}>
-        <Text accessibilityRole="header" style={{ fontSize: 26, fontWeight: "700", color: t.text }}>Check your email</Text>
+        <Text accessibilityRole="header" style={{ fontSize: 26, fontWeight: "600", color: t.text }}>Check your email</Text>
         <Muted>We sent a 6-digit code to {email}. It works for 10 minutes.</Muted>
       </View>
       <Field

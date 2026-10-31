@@ -12,7 +12,16 @@ export type Theme = {
   danger: string;
   warn: string;
   ok: string;
+  /** The soft grey of secondary buttons, badges and avatars (the website's "secondary"/"muted" surface). */
+  soft: string;
+  /** Pale fills behind status badges. */
+  okBg: string;
+  warnBg: string;
+  dangerBg: string;
 };
+
+/** Corner radii, the same steps as the website (cards and buttons 14, small things 8). */
+export const radius = { sm: 8, md: 12, lg: 14, pill: 999 } as const;
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
@@ -23,17 +32,22 @@ function onColor(hex: string) {
   return lum > 0.62 ? "#0f172a" : "#ffffff";
 }
 
+// The website's colours (neutral greys on white), so the app and the website look like one product.
 export const baseTheme: Theme = {
-  bg: "#f6f7f9",
+  bg: "#fafafa", // the page behind the cards
   card: "#ffffff",
-  text: "#0f172a",
-  muted: "#64748b",
-  border: "#e2e8f0",
-  primary: "#0f172a",
-  onPrimary: "#ffffff",
-  danger: "#dc2626",
+  text: "#0a0a0a",
+  muted: "#737373",
+  border: "#e5e5e5",
+  primary: "#171717",
+  onPrimary: "#fafafa",
+  danger: "#e7000b",
   warn: "#b45309",
   ok: "#047857",
+  soft: "#f5f5f5",
+  okBg: "#ecfdf5",
+  warnBg: "#fffbeb",
+  dangerBg: "#fef2f2",
 };
 
 /** The look of the signed-in company: its brand colour on buttons and accents. */

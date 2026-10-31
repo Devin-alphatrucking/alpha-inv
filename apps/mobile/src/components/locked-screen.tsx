@@ -23,7 +23,7 @@ export function LockedScreen() {
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: space.xl, gap: space.lg }}>
         <View style={{ alignItems: "center", gap: space.sm }}>
           <Text style={{ fontSize: 40 }}>🔒</Text>
-          <Text accessibilityRole="header" style={{ fontSize: 24, fontWeight: "700", color: t.text, textAlign: "center" }}>Your data is locked</Text>
+          <Text accessibilityRole="header" style={{ fontSize: 24, fontWeight: "600", color: t.text, textAlign: "center" }}>Your data is locked</Text>
           <Muted style={{ textAlign: "center" }}>{MESSAGE[state] ?? MESSAGE.none}</Muted>
         </View>
         <Card style={{ gap: space.sm }}>

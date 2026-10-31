@@ -6,7 +6,7 @@ import { ApiError } from "@/lib/client";
 import { COUNTRIES } from "@/lib/countries";
 import { useSession } from "@/lib/session";
 import { space, useTheme } from "@/lib/theme";
-import { Button, Chips, Field, Muted, Screen } from "@/components/ui";
+import { BrandMark, Button, Chips, Field, Muted, Screen } from "@/components/ui";
 import { CodeStep } from "@/components/code-step";
 import { GoogleButton, googleAvailable } from "@/components/google-button";
 
@@ -57,7 +57,10 @@ export default function SignUp() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: space.xl, gap: space.lg }} keyboardShouldPersistTaps="handled">
           <View style={{ gap: 6 }}>
-            <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: "700", color: t.text }}>Create your company account</Text>
+            <View style={{ marginBottom: space.md }}>
+              <BrandMark name={Constants.expoConfig?.name ?? "Invoice & Billing"} size="lg" />
+            </View>
+            <Text accessibilityRole="header" style={{ fontSize: 26, fontWeight: "600", letterSpacing: -0.5, color: t.text }}>Create your company account</Text>
             <Muted>Start a free trial. You will confirm your email, then set up your team.</Muted>
           </View>
 

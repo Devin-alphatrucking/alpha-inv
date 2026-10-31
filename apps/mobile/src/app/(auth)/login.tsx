@@ -5,7 +5,7 @@ import Constants from "expo-constants";
 import { ApiError } from "@/lib/client";
 import { useSession } from "@/lib/session";
 import { space, useTheme } from "@/lib/theme";
-import { Button, Field, Muted, Screen } from "@/components/ui";
+import { BrandMark, Button, Field, Muted, Screen } from "@/components/ui";
 import { GoogleButton, googleAvailable } from "@/components/google-button";
 
 export default function Login() {
@@ -48,8 +48,10 @@ export default function Login() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: space.xl, gap: space.lg }} keyboardShouldPersistTaps="handled">
           <View style={{ gap: 6, marginBottom: space.md }}>
-            <Text style={{ color: t.muted, fontSize: 14, fontWeight: "600" }}>{Constants.expoConfig?.name ?? "Invoice & Billing"}</Text>
-            <Text accessibilityRole="header" style={{ fontSize: 30, fontWeight: "700", color: t.text }}>Welcome back</Text>
+            <View style={{ marginBottom: space.lg }}>
+              <BrandMark name={Constants.expoConfig?.name ?? "Invoice & Billing"} size="lg" />
+            </View>
+            <Text accessibilityRole="header" style={{ fontSize: 30, fontWeight: "600", letterSpacing: -0.6, color: t.text }}>Welcome back</Text>
             <Text style={{ color: t.muted, fontSize: 15 }}>Use the same email and password as on the website.</Text>
           </View>
           {notice ? <Text style={{ color: t.warn, fontSize: 14 }}>{notice}</Text> : null}

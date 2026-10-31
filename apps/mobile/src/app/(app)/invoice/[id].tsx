@@ -48,7 +48,7 @@ export default function InvoiceScreen() {
       <Card style={{ gap: space.sm }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: space.sm }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 20, fontWeight: "700", color: t.text }}>{i.vendor.name}</Text>
+            <Text style={{ fontSize: 20, fontWeight: "600", color: t.text }}>{i.vendor.name}</Text>
             <Muted>{i.invoiceNumber}{i.vendor.gstin ? ` · GSTIN ${i.vendor.gstin}` : ""}</Muted>
           </View>
           <Badge label={STATUS_LABEL[i.status] ?? i.status} tone={i.status === "PAID" ? "ok" : i.status === "OVERDUE" ? "danger" : "warn"} />
@@ -64,7 +64,7 @@ export default function InvoiceScreen() {
       </Card>
 
       <Card style={{ gap: space.sm }}>
-        <Text style={{ fontSize: 16, fontWeight: "700", color: t.text }}>Amounts</Text>
+        <Text style={{ fontSize: 16, fontWeight: "600", color: t.text }}>Amounts</Text>
         {row("Subtotal", money(i.subtotal, fmt))}
         {Number(i.cgst) ? row("CGST", money(i.cgst, fmt)) : null}
         {Number(i.sgst) ? row("SGST", money(i.sgst, fmt)) : null}
@@ -79,7 +79,7 @@ export default function InvoiceScreen() {
 
       {i.lineItems.length > 0 && (
         <Card style={{ gap: space.md }}>
-          <Text style={{ fontSize: 16, fontWeight: "700", color: t.text }}>Items ({i.lineItems.length})</Text>
+          <Text style={{ fontSize: 16, fontWeight: "600", color: t.text }}>Items ({i.lineItems.length})</Text>
           {i.lineItems.map((l) => (
             <View key={l.id} style={{ gap: 2, borderTopWidth: 1, borderTopColor: t.border, paddingTop: space.sm }}>
               <Text style={{ color: t.text, fontSize: 14, fontWeight: "600" }}>{l.description}</Text>
@@ -92,7 +92,7 @@ export default function InvoiceScreen() {
 
       {file && (
         <Card style={{ gap: space.sm }}>
-          <Text style={{ fontSize: 16, fontWeight: "700", color: t.text }}>Original</Text>
+          <Text style={{ fontSize: 16, fontWeight: "600", color: t.text }}>Original</Text>
           <Image accessibilityLabel="Original invoice" source={{ uri: file.uri, headers: file.headers }} resizeMode="contain" style={{ width: "100%", height: 420, backgroundColor: t.bg, borderRadius: 8 }} />
           <Muted>If the original is a PDF it will not show here. Open it on the website.</Muted>
         </Card>

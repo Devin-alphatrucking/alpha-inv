@@ -56,14 +56,14 @@ export default function Forgot() {
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: space.xl, gap: space.lg }} keyboardShouldPersistTaps="handled">
           {step === "done" ? (
             <View style={{ gap: space.lg }}>
-              <Text accessibilityRole="header" style={{ fontSize: 26, fontWeight: "700", color: t.text }}>Password changed</Text>
+              <Text accessibilityRole="header" style={{ fontSize: 26, fontWeight: "600", color: t.text }}>Password changed</Text>
               <Muted>You can sign in with your new password now.</Muted>
               <Button label="Go to sign in" onPress={() => router.replace("/login")} />
             </View>
           ) : (
             <>
               <View style={{ gap: 6 }}>
-                <Text accessibilityRole="header" style={{ fontSize: 26, fontWeight: "700", color: t.text }}>Reset your password</Text>
+                <Text accessibilityRole="header" style={{ fontSize: 26, fontWeight: "600", color: t.text }}>Reset your password</Text>
                 <Muted>{step === "email" ? "Enter your email and we will send you a 6-digit code." : "Enter the code we emailed you and choose a new password."}</Muted>
               </View>
               <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" autoComplete="email" editable={step === "email"} returnKeyType="go" onSubmitEditing={step === "email" ? send : undefined} error={step === "email" ? error : null} />

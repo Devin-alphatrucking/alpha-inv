@@ -10,7 +10,7 @@ export default function AppLayout() {
   // Trial over, plan ended or unpaid: the server hides company data, so the app shows the locked message instead of empty or failing screens.
   if (me && LOCKED_STATES.has(me.plan.state)) return <LockedScreen />;
   return (
-    <Stack screenOptions={{ headerTintColor: t.text, headerStyle: { backgroundColor: t.bg }, headerShadowVisible: false, contentStyle: { backgroundColor: t.bg }, headerBackTitle: "Back" }}>
+    <Stack screenOptions={{ headerTintColor: t.text, headerStyle: { backgroundColor: t.card }, headerTitleStyle: { fontWeight: "600", color: t.text }, headerShadowVisible: false, contentStyle: { backgroundColor: t.bg }, headerBackTitle: "Back" }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="pending" options={{ title: "Waiting to send" }} />
       <Stack.Screen name="payments" options={{ title: "Payments" }} />

@@ -6,7 +6,7 @@ import { ApiError, type SiteOverview } from "@/lib/client";
 import { can } from "@/lib/roles";
 import { useSession } from "@/lib/session";
 import { space, useTheme } from "@/lib/theme";
-import { Card, ErrorBox, Muted, Screen, SectionTitle } from "@/components/ui";
+import { BrandMark, Card, ErrorBox, Muted, Screen, SectionTitle } from "@/components/ui";
 import { PlanBanner } from "@/components/plan-banner";
 import { PendingBar } from "@/components/pending-bar";
 
@@ -97,9 +97,10 @@ export default function Home() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ padding: space.lg, gap: space.lg, paddingBottom: space.xl }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => (setRefreshing(true), void load())} tintColor={t.primary} />}>
+        <BrandMark name={companyName || "Company"} logoUrl={me.company.brand?.logoUrl} />
         <View style={{ gap: 2 }}>
-          <Text accessibilityRole="header" style={{ fontSize: 26, fontWeight: "700", color: t.text }}>Hello, {first}</Text>
-          <Muted>{companyName}</Muted>
+          <Text accessibilityRole="header" style={{ fontSize: 24, fontWeight: "600", letterSpacing: -0.4, color: t.text }}>Hello, {first}</Text>
+          <Muted>Here is what needs your attention today.</Muted>
         </View>
         <PlanBanner plan={me.plan} />
         <PendingBar />
