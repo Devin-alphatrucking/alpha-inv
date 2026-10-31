@@ -14,6 +14,9 @@ export const GST_STATES: Record<string, string> = {
   "35": "Andaman and Nicobar Islands", "36": "Telangana", "37": "Andhra Pradesh", "38": "Ladakh", "97": "Other Territory", "99": "Centre Jurisdiction",
 };
 
+/** The same list as [code, name] pairs in code order, for dropdowns. */
+export const GST_STATE_LIST: [string, string][] = Object.entries(GST_STATES).sort(([a], [b]) => a.localeCompare(b));
+
 /** The check character the first 14 characters should be followed by (the standard mod-36 scheme used for GSTINs). */
 export function gstinCheckChar(first14: string): string | null {
   if (!/^[0-9A-Z]{14}$/.test(first14)) return null;

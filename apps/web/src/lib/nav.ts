@@ -1,4 +1,5 @@
 import { canOpenPath, hasPermission, seesAllProjects, type Permission, type RoleName } from "@/lib/roles";
+import type { AddonKey } from "@/lib/addons";
 import {
   LayoutDashboard,
   FileText,
@@ -21,6 +22,8 @@ import {
   ShoppingCart,
   BarChart3,
   UserRound,
+  Puzzle,
+  FileSpreadsheet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -32,6 +35,8 @@ export type NavItem = {
   permission?: Permission;
   /** "all": only roles that see every project (the label says "Invoices"); "assigned": only roles limited to their projects ("My Invoices"). */
   scope?: "all" | "assigned";
+  /** Shown only when the company has switched this add-on on (Settings, Add-on modules). */
+  addon?: AddonKey;
   /** Which part of the sidebar: the top, the Accounts block (our main module), the other modules, or pinned at the bottom. */
   group: "top" | "accounts" | "modules" | "bottom";
   /** Whether this item is the current place, for a given address. */
@@ -59,6 +64,7 @@ export const NAV_ITEMS: NavItem[] = [
 
   { group: "modules", href: "/purchase", label: "Purchase", icon: ShoppingCart, permission: "request:view", active: (p) => under(p, "/purchase") },
   { group: "modules", href: "/site", label: "Site work", icon: HardHat, permission: "site:view", active: (p) => under(p, "/site") },
+  { group: "modules", href: "/sales", label: "Sales invoices", icon: FileSpreadsheet, permission: "sales:view", addon: "sales", active: (p) => under(p, "/sales") },
 
   { group: "bottom", href: "/settings", label: "Settings", icon: Settings, active: (p) => ["/settings", "/users", "/projects", "/categories", "/plan", "/support", "/admin"].some((x) => under(p, x)) },
 ];
@@ -72,6 +78,7 @@ export const SETTINGS_LINKS: HubLink[] = [
   { href: "/users", label: "Team and roles", description: "Invite people and choose what each can do", icon: Users },
   { href: "/projects", label: "Projects", description: "Sites, who is on them, spend and budgets", icon: FolderKanban },
   { href: "/categories", label: "Categories", description: "Material categories and units", icon: Tags },
+  { href: "/admin/add-ons", label: "Add-on modules", description: "Switch optional modules on or off", icon: Puzzle },
   { href: "/admin/settings", label: "Company settings", description: "Name, logo, colours, limits and data reset", icon: Settings },
   { href: "/plan", label: "Plan and billing", description: "Your plan, usage and payments", icon: CreditCard },
   { href: "/admin/activity", label: "Activity log", description: "Who did what, and when", icon: ScrollText },
@@ -91,8 +98,9 @@ export const REPORT_LINKS: HubLink[] = [
 /** The links of a hub page this role may open (the same table the sign-in guard uses). */
 export const hubLinksFor = (links: HubLink[], role: RoleName) => links.filter((l) => canOpenPath(role, l.href));
 
-export function getNavItemsForRole(role: RoleName): NavItem[] {
+export function getNavItemsForRole(role: RoleName, addons: readonly AddonKey[] = []): NavItem[] {
   const visible = NAV_ITEMS.filter((item) => {
+    if (item.addon && !addons.includes(item.addon)) return false;
     if (item.permission && !hasPermission(role, item.permission)) return false;
     if (item.scope === "all" && !seesAllProjects(role)) return false;
     if (item.scope === "assigned" && seesAllProjects(role)) return false;

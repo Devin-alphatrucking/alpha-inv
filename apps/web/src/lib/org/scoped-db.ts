@@ -58,6 +58,11 @@ export const COMPANY_SCOPED_MODELS: ReadonlySet<string> = new Set([
   "ApiErrorLog",
   "PageUsageEvent",
   "SupportTicket",
+  "SalesProfile",
+  "SalesCustomer",
+  "SalesInvoice",
+  "SalesInvoiceLine",
+  "SalesReceipt",
 ]);
 
 const WHERE_OPERATIONS = new Set([

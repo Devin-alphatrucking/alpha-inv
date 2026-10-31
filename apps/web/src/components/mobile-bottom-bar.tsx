@@ -21,8 +21,10 @@ import {
   HardHat,
   ShoppingCart,
   BarChart3,
+  FileSpreadsheet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { AddonKey } from "@/lib/addons";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,12 +37,13 @@ import {
 } from "@/components/ui/sheet";
 
 type MobileBottomBarProps = {
+  addons?: AddonKey[];
   role: RoleName;
   name: string;
   email: string;
 };
 
-export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
+export function MobileBottomBar({ role, name, email, addons = [] }: MobileBottomBarProps) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -55,7 +58,7 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
   const isUploadActive =
     pathname.startsWith("/invoices/upload") || pathname.includes("/review");
 
-  const isMoreActive = ["/materials", "/vendors", "/reports", "/categories", "/users", "/projects", "/site", "/purchase", "/admin", "/settings", "/plan", "/support", "/payments/planner"].some((prefix) => pathname.startsWith(prefix));
+  const isMoreActive = ["/materials", "/vendors", "/reports", "/categories", "/users", "/projects", "/site", "/purchase", "/admin", "/settings", "/plan", "/support", "/payments/planner", "/sales"].some((prefix) => pathname.startsWith(prefix));
 
   const allMoreItems = [
     {
@@ -83,6 +86,12 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
       icon: Building2,
     },
     {
+      href: "/sales",
+      label: "Sales invoices",
+      description: "GST tax invoices to your customers",
+      icon: FileSpreadsheet,
+    },
+    {
       href: "/reports",
       label: "Reports & tools",
       description: "GST, purchase, payment planner, rate sheet",
@@ -99,6 +108,7 @@ export function MobileBottomBar({ role, name, email }: MobileBottomBarProps) {
   const adminMoreItems = allMoreItems.filter(
     (item) =>
       canOpenPath(role, item.href) &&
+      (item.href !== "/sales" || addons.includes("sales")) &&
       (item.href === "/reports" ? hubLinksFor(REPORT_LINKS, role).length > 0 : item.href === "/settings" ? hubLinksFor(SETTINGS_LINKS, role).length > 0 : true),
   );
   // The full bar (with a More sheet) is for people who have somewhere to go besides their own projects and invoices.

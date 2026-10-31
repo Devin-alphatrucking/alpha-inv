@@ -51,6 +51,8 @@ export type Permission =
   | "order:write"
   | "delivery:view"
   | "delivery:write"
+  | "sales:view"
+  | "sales:write"
   | "logs:view";
 
 const ALL: Permission[] = [
@@ -58,7 +60,7 @@ const ALL: Permission[] = [
   "payment:plan", "project:view", "project:manage", "user:manage", "vendor:view", "vendor:manage", "category:manage", "material:view", "price:compare",
   "report:view", "budget:view", "site:view", "site:write", "site:manage", "document:write",
   "request:view", "request:write", "request:approve", "order:view", "order:write",
-  "delivery:view", "delivery:write", "logs:view",
+  "delivery:view", "delivery:write", "sales:view", "sales:write", "logs:view",
 ];
 
 const ROLE_PERMISSIONS: Record<RoleName, ReadonlySet<Permission>> = {
@@ -66,7 +68,7 @@ const ROLE_PERMISSIONS: Record<RoleName, ReadonlySet<Permission>> = {
   ACCOUNTANT: new Set<Permission>([
     "dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "invoice:delete", "comment:write", "payment:view", "payment:create", "payment:delete", "payment:plan",
     "project:view", "vendor:view", "vendor:manage", "category:manage", "material:view", "price:compare", "report:view", "budget:view", "site:view",
-    "request:view", "order:view", "delivery:view",
+    "request:view", "order:view", "delivery:view", "sales:view", "sales:write",
   ]),
   PURCHASE: new Set<Permission>(["dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "comment:write", "project:view", "vendor:view", "vendor:manage", "material:view", "price:compare", "site:view", "request:view", "request:write", "order:view", "order:write", "delivery:view", "delivery:write"]),
   MANAGER: new Set<Permission>(["dashboard:view", "invoice:view", "invoice:upload", "invoice:review", "comment:write", "project:view", "budget:view", "material:view", "site:view", "site:write", "site:manage", "document:write", "request:view", "request:write", "request:approve", "order:view", "delivery:view", "delivery:write"]),
@@ -111,6 +113,8 @@ export const ROUTE_PERMISSIONS: { prefix: string; permission: Permission | "ADMI
   { prefix: "/purchase", permission: "request:view" },
   { prefix: "/site", permission: "site:view" },
   { prefix: "/api/site", permission: "site:view" },
+  { prefix: "/sales", permission: "sales:view" },
+  { prefix: "/api/sales", permission: "sales:view" },
   { prefix: "/users", permission: "user:manage" },
   { prefix: "/admin", permission: "ADMIN_ONLY" },
   { prefix: "/plan", permission: "ADMIN_ONLY" },

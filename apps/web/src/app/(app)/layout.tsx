@@ -8,6 +8,7 @@ import { getEntitlements } from "@/lib/plans/entitlements";
 import { getProjectScope } from "@/lib/projects/scope";
 import { currentPlatformAdmin } from "@/lib/master/guard";
 import { companyLock } from "@/lib/plans/lock";
+import { enabledAddons } from "@/lib/addons";
 
 export default async function AppLayout({
   children,
@@ -24,6 +25,7 @@ export default async function AppLayout({
   const companies = await listMyCompanies(session.user.id);
   const entitlements = await getEntitlements(user.orgId);
   const isPlatformAdmin = (await currentPlatformAdmin()) !== null;
+  const addons = await enabledAddons(user.orgId);
 
   return (
     <FormatProvider format={brand.format}>
@@ -39,6 +41,7 @@ export default async function AppLayout({
       selectedProjectId={projectScope.selectedProjectId}
       isPlatformAdmin={isPlatformAdmin}
       locked={locked}
+      addons={addons}
     >
       {children}
     </AppShell>

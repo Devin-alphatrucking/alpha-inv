@@ -12,6 +12,7 @@ import { ProjectSwitcher } from "@/components/project-switcher";
 import { BrandLogo } from "@/components/brand-logo";
 import { WelcomeGreeting } from "@/components/welcome-greeting";
 import { CompanySwitcher } from "@/components/company-switcher";
+import type { AddonKey } from "@/lib/addons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,10 +40,12 @@ type AppShellProps = {
   isPlatformAdmin?: boolean;
   /** Trial over, plan ended or unpaid: only the Choose-a-plan screens are reachable and no company data is shown in the header. */
   locked?: boolean;
+  /** Optional add-on modules this company has switched on (they get a place in the menu). */
+  addons?: AddonKey[];
   children: React.ReactNode;
 };
 
-export function AppShell({ brand, banner, companies, currentOrgId, role, name, email, projects, selectedProjectId, isPlatformAdmin, locked, children }: AppShellProps) {
+export function AppShell({ brand, banner, companies, currentOrgId, role, name, email, projects, selectedProjectId, isPlatformAdmin, locked, addons = [], children }: AppShellProps) {
   const initials = name
     .split(" ")
     .map((part) => part[0])
@@ -60,7 +63,7 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
           <p className="mt-1 text-xs text-muted-foreground">Invoice &amp; Billing</p>
         </div>
         <div className="flex-1 overflow-y-auto p-3">
-          {locked ? <LockedNav role={role} variant="side" /> : <AppNav role={role} />}
+          {locked ? <LockedNav role={role} variant="side" /> : <AppNav role={role} addons={addons} />}
         </div>
       </aside>
 
@@ -158,7 +161,7 @@ export function AppShell({ brand, banner, companies, currentOrgId, role, name, e
       </div>
 
       {/* Mobile Bottom Navigation Bar (visible only on mobile) */}
-      {locked ? <LockedNav role={role} variant="bar" /> : <MobileBottomBar role={role} name={name} email={email} />}
+      {locked ? <LockedNav role={role} variant="bar" /> : <MobileBottomBar role={role} name={name} email={email} addons={addons} />}
     </div>
   );
 }

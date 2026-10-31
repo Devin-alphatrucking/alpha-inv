@@ -5,17 +5,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { GROUP_LABEL, getNavItemsForRole, type NavItem } from "@/lib/nav";
+import type { AddonKey } from "@/lib/addons";
 
 type AppNavProps = {
   role: RoleName;
   onNavigate?: () => void;
   className?: string;
+  addons?: AddonKey[];
 };
 
 /** The sidebar: Dashboard, then Accounts (our main module), then the other modules; Settings is pinned at the bottom. */
-export function AppNav({ role, onNavigate, className }: AppNavProps) {
+export function AppNav({ role, onNavigate, className, addons = [] }: AppNavProps) {
   const pathname = usePathname();
-  const items = getNavItemsForRole(role);
+  const items = getNavItemsForRole(role, addons);
   const groups: NavItem["group"][] = ["top", "accounts", "modules"];
   const bottom = items.filter((i) => i.group === "bottom");
 

@@ -24,6 +24,17 @@ for (const role of roles) {
   assert.equal(new Set(items.map((i) => i.label)).size, items.length, `${role}: no repeated entry`);
 }
 
+// Add-on modules: absent until the company switches them on, and then only for roles that hold their permission
+const withSales = (role: RoleName) => getNavItemsForRole(role, ["sales"]).map((i) => i.label);
+assert.ok(!labels("ADMIN").includes("Sales invoices"), "off by default");
+assert.ok(withSales("ADMIN").includes("Sales invoices"), "on for the administrator");
+assert.ok(withSales("ACCOUNTANT").includes("Sales invoices"), "on for the accountant");
+for (const r of ["PURCHASE", "MANAGER", "ENGINEER", "VIEWER", "STAFF"] as RoleName[]) assert.ok(!withSales(r).includes("Sales invoices"), `${r} has no sales permission`);
+assert.deepEqual(withSales("ADMIN").filter((l) => l !== "Sales invoices"), labels("ADMIN"), "switching it on changes nothing else");
+for (const role of roles) for (const i of getNavItemsForRole(role, ["sales"])) assert.ok(canOpenPath(role, i.href), `${role} sees ${i.label} but may not open ${i.href}`);
+assert.ok(hubLinksFor(SETTINGS_LINKS, "ADMIN").some((l) => l.href === "/admin/add-ons"), "the administrator can reach the switch page");
+assert.ok(!hubLinksFor(SETTINGS_LINKS, "ACCOUNTANT").some((l) => l.href === "/admin/add-ons"), "nobody else can");
+
 // Hubs: only what the role may open, and the administrator gets all of it
 assert.equal(hubLinksFor(SETTINGS_LINKS, "ADMIN").length, SETTINGS_LINKS.length);
 assert.equal(hubLinksFor(REPORT_LINKS, "ADMIN").length, REPORT_LINKS.length);

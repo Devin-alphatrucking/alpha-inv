@@ -12,7 +12,8 @@ export type ActivityModule =
   | "BILLING"
   | "MASTER"
   | "SITE"
-  | "PURCHASE";
+  | "PURCHASE"
+  | "SALES";
 
 export type ActivityAction =
   | "LOGIN"
@@ -38,6 +39,14 @@ export type ActivityAction =
   | "VENDOR_CREATED"
   | "VENDOR_DELETED"
   | "VENDOR_MERGED"
+  | "ADDON_ENABLED"
+  | "ADDON_DISABLED"
+  | "SALES_PROFILE_SAVED"
+  | "SALES_CUSTOMER_CREATED"
+  | "SALES_INVOICE_ISSUED"
+  | "SALES_INVOICE_CANCELLED"
+  | "SALES_RECEIPT_ADDED"
+  | "SALES_RECEIPT_DELETED"
   | "COMPANY_CREATED"
   | "COMPANY_UPDATED"
   | "COMPANY_CLOSED"
