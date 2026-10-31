@@ -41,6 +41,8 @@ export function BottomBar({ state }: TabBarProps) {
   const moreItems: { route: string; href: Href; label: string; description: string; icon: IconName }[] = [
     ...(canBuy && fourth.route !== "purchase" ? [{ route: "purchase", href: "/purchase" as Href, label: "Purchase", description: "Material requests and deliveries", icon: "shopping-cart" as IconName }] : []),
     ...(canSite && fourth.route !== "site" ? [{ route: "site", href: "/site" as Href, label: "Site work", description: "Daily reports, photos, issues and drawings", icon: "tool" as IconName }] : []),
+    ...(can(perms, "payment:view") ? [{ route: "payments", href: "/payments" as Href, label: "Payments", description: "What has been paid and what is still owed", icon: "credit-card" as IconName }] : []),
+    ...(can(perms, "vendor:view") ? [{ route: "vendors", href: "/vendors" as Href, label: "Vendors", description: "Suppliers and what you owe each", icon: "briefcase" as IconName }] : []),
     { route: "pending", href: "/pending", label: "Waiting to send", description: "Saved on this phone, not sent yet", icon: "upload-cloud" },
     ...(fourth.route !== "account" ? [{ route: "account", href: "/account" as Href, label: "Account", description: "Your details, company and plan", icon: "user" as IconName }] : []),
   ];

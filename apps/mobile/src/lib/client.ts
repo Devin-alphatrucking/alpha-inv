@@ -84,6 +84,20 @@ export type InvoiceDetail = InvoiceRow & {
   lineItems: { id: string; description: string; hsnCode: string | null; quantity: string; unit: string; rateExclGst: string; gstPercent: string; gstAmount: string; lineTotal: string }[];
 };
 
+export type PaymentRow = { id: string; amount: string; paidOn: string; mode: string | null; reference: string | null; notes?: string | null };
+export type InvoiceDetailResponse = { invoice: InvoiceDetail & { payments: PaymentRow[] }; paid: string; balance: string; canPay: boolean; fileUrl: string };
+export type PaymentInput = { amount: number; paidOn: string; mode?: string; reference?: string; notes?: string };
+export type PaymentsList = {
+  totals: { paid: string; paidThisMonth: string; outstanding: string };
+  payments: (PaymentRow & { invoice: { id: string; invoiceNumber: string; vendor: { name: string }; project: { name: string } } })[];
+};
+export type VendorRow = { id: string; name: string; gstin: string | null; invoiceCount: number };
+export type VendorDetail = {
+  vendor: { id: string; name: string; gstin: string | null };
+  totals: { billed: string; paid: string; owed: string };
+  invoices: { id: string; invoiceNumber: string; invoiceDate: string; dueDate: string | null; total: string; status: InvoiceStatus; project: { name: string } }[];
+};
+
 export type SignUpInput = { companyName: string; name: string; email: string; phone: string; password: string; country: string; acceptTerms: boolean };
 
 export type UploadResult = { invoiceId: string; duplicateWarning?: boolean; originalInvoiceNumber?: string | null };
@@ -304,7 +318,11 @@ export function createClient(opts: ClientOptions) {
       const s = sp.toString();
       return request<{ page: number; pageSize: number; total: number; items: InvoiceRow[] }>(`/api/v1/invoices${s ? `?${s}` : ""}`);
     },
-    invoice: (id: string) => request<{ invoice: InvoiceDetail; fileUrl: string }>(`/api/v1/invoices/${encodeURIComponent(id)}`),
+    invoice: (id: string) => request<InvoiceDetailResponse>(`/api/v1/invoices/${encodeURIComponent(id)}`),
+    recordPayment: (invoiceId: string, input: PaymentInput) => request<{ ok: true; paymentId: string; status: InvoiceStatus; paid: string; balance: string }>(`/api/v1/invoices/${encodeURIComponent(invoiceId)}/payments`, { json: input }),
+    payments: () => request<PaymentsList>("/api/v1/payments"),
+    vendors: (q = "") => request<{ vendors: VendorRow[] }>(`/api/v1/vendors${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ""}`),
+    vendor: (id: string) => request<VendorDetail>(`/api/v1/vendors/${encodeURIComponent(id)}`),
 
     /** Uploads one invoice (photo or PDF). `file` is what the camera, gallery or document picker returned. */
     upload(file: FileInput, projectId: string, categoryId: string) {

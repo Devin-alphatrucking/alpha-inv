@@ -76,6 +76,72 @@ async function main() {
     assert.ok((await loginMobile({ email: base.email, password: NEW }, { ip: ip() })).ok);
   });
 
+  // ---- Accounts on the phone: vendors, an invoice with its payments, and the payments list, through the real route handlers.
+  const call = async (handler: (req: Request, ctx: { params: Promise<Record<string, string>> }) => Promise<Response>, token: string, init: { method?: string; body?: unknown; params?: Record<string, string>; query?: string } = {}) => {
+    const req = new Request(`http://app.test/api${init.query ?? ""}`, { method: init.method ?? "GET", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: init.body === undefined ? undefined : JSON.stringify(init.body) });
+    const res = await handler(req, { params: Promise.resolve(init.params ?? {}) });
+    return { status: res.status, body: (await res.json()) as Record<string, any> };
+  };
+  await check("phone accounts: vendors, invoice detail with payments, recording a payment, and the payments list", async () => {
+    const vendorsRoute = await import("@/app/api/v1/vendors/route");
+    const vendorRoute = await import("@/app/api/v1/vendors/[id]/route");
+    const invoiceRoute = await import("@/app/api/v1/invoices/[id]/route");
+    const payRoute = await import("@/app/api/v1/invoices/[id]/payments/route");
+    const paymentsRoute = await import("@/app/api/v1/payments/route");
+    const { dbFor } = await import("@/lib/org/scoped-db");
+
+    const login = await loginMobile({ email: base.email, password: "a brand new passphrase 4711" }, { ip: ip() });
+    assert.ok(login.ok);
+    if (!login.ok) return;
+    const token = login.tokens.accessToken;
+    const db = dbFor(login.orgId);
+    const [project] = await db.project.findMany({ take: 1 });
+    const vendor = await db.vendor.create({ data: { organizationId: login.orgId, name: "Shree Cement Traders", gstin: "27ABCDE1234F1Z5" } });
+    const invoice = await db.invoice.create({
+      data: { organizationId: login.orgId, invoiceNumber: "INV-100", projectId: project.id, vendorId: vendor.id, invoiceDate: new Date("2026-10-01T00:00:00Z"), dueDate: new Date("2026-12-01T00:00:00Z"), subtotal: 1000, total: 1000, status: "UNPAID", fileUrl: "x" },
+    });
+
+    const vendors = await call(vendorsRoute.GET as never, token);
+    assert.equal(vendors.status, 200);
+    assert.ok((vendors.body.vendors as { name: string; invoiceCount: number }[]).some((v) => v.name === "Shree Cement Traders" && v.invoiceCount === 1));
+    const found = await call(vendorsRoute.GET as never, token, { query: "?q=27ABCDE" });
+    assert.equal((found.body.vendors as unknown[]).length, 1);
+    const one = await call(vendorRoute.GET as never, token, { params: { id: vendor.id } });
+    assert.equal(one.body.totals.billed, "1000.00");
+    assert.equal(one.body.totals.owed, "1000.00");
+
+    const detail = await call(invoiceRoute.GET as never, token, { params: { id: invoice.id } });
+    assert.equal(detail.status, 200);
+    assert.equal(detail.body.canPay, true);
+    assert.equal(detail.body.balance, "1000.00");
+
+    const tooMuch = await call(payRoute.POST as never, token, { method: "POST", params: { id: invoice.id }, body: { amount: 5000, paidOn: "2026-11-02" } });
+    assert.ok(tooMuch.status >= 400, "a payment above the balance is refused");
+    const part = await call(payRoute.POST as never, token, { method: "POST", params: { id: invoice.id }, body: { amount: 400, paidOn: "2026-11-02", mode: "UPI", reference: "UTR1" } });
+    assert.equal(part.status, 201);
+    assert.equal(part.body.status, "PARTIALLY_PAID");
+    assert.equal(part.body.balance, "600.00");
+
+    const after = await call(invoiceRoute.GET as never, token, { params: { id: invoice.id } });
+    assert.equal(after.body.paid, "400.00");
+    assert.equal((after.body.invoice.payments as unknown[]).length, 1);
+
+    const list = await call(paymentsRoute.GET as never, token);
+    assert.equal(list.status, 200);
+    assert.equal(list.body.totals.paid, "400.00");
+    assert.equal(list.body.totals.outstanding, "600.00");
+    assert.equal((list.body.payments as { invoice: { invoiceNumber: string } }[])[0].invoice.invoiceNumber, "INV-100");
+  });
+
+  await check("phone accounts: no token, or a role without the permission, gets a refusal", async () => {
+    const vendorsRoute = await import("@/app/api/v1/vendors/route");
+    const paymentsRoute = await import("@/app/api/v1/payments/route");
+    const none = await vendorsRoute.GET(new Request("http://app.test/api"), { params: Promise.resolve({}) } as never);
+    assert.equal(none.status, 401);
+    const noneToo = await paymentsRoute.GET(new Request("http://app.test/api"), { params: Promise.resolve({}) } as never);
+    assert.equal(noneToo.status, 401);
+  });
+
   // ---- Google: Google's check is replaced by a stand-in so the test needs no internet.
   const realFetch = globalThis.fetch;
   const tokenInfo: Record<string, { aud: string; iss?: string; exp?: string; email: string; email_verified: string; name?: string }> = {};

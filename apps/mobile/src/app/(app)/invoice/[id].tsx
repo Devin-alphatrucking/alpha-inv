@@ -1,18 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
 import { Image, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
-import { ApiError, type InvoiceDetail } from "@/lib/client";
+import { ApiError, type InvoiceDetailResponse } from "@/lib/client";
 import { day, money, STATUS_LABEL } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { space, useTheme } from "@/lib/theme";
 import { Badge, Card, ErrorBox, Loading, Muted } from "@/components/ui";
+import { PaymentCard } from "@/components/payment-card";
 
 export default function InvoiceScreen() {
   const t = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { client, me } = useSession();
   const fmt = me?.company.brand?.format;
-  const [data, setData] = useState<{ invoice: InvoiceDetail; fileUrl: string } | null>(null);
+  const [data, setData] = useState<InvoiceDetailResponse | null>(null);
   const [file, setFile] = useState<{ uri: string; headers: Record<string, string> } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,6 +72,10 @@ export default function InvoiceScreen() {
         {Number(i.rounding) ? row("Rounding", money(i.rounding, fmt)) : null}
         {row("Total", money(i.total, fmt))}
       </Card>
+
+      {i.status !== "NEEDS_REVIEW" && i.status !== "PROCESSING" ? (
+        <PaymentCard key={`${i.payments.length}-${data.balance}`} invoiceId={i.id} payments={i.payments} paid={data.paid} balance={data.balance} canPay={data.canPay} onSaved={load} />
+      ) : null}
 
       {i.lineItems.length > 0 && (
         <Card style={{ gap: space.md }}>
