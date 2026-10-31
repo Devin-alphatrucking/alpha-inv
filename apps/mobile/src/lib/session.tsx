@@ -23,6 +23,8 @@ type Session = {
   /** Shown on the login screen when the session ended on its own ("You were signed out"). */
   notice: string | null;
   signIn(email: string, password: string, totp?: string): Promise<void>;
+  /** Signs in with a Google ID token. Resolves to whether a new company was created. */
+  signInWithGoogle(idToken: string): Promise<{ created: boolean }>;
   signOut(): Promise<void>;
   reload(): Promise<void>;
   switchCompany(companyId: string): Promise<void>;
@@ -82,6 +84,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setNotice(null);
         await client.signIn(email, password, { deviceName: Constants.deviceName ?? undefined, platform: Platform.OS === "ios" ? "ios" : "android", appVersion: Constants.expoConfig?.version, ...(totp ? { totp } : {}) });
         await reload();
+      },
+      async signInWithGoogle(idToken) {
+        setNotice(null);
+        const r = await client.signInWithGoogle(idToken, { deviceName: Constants.deviceName ?? undefined, platform: Platform.OS === "ios" ? "ios" : "android", appVersion: Constants.expoConfig?.version });
+        await reload();
+        return r;
       },
       async signOut() {
         await client.signOut();

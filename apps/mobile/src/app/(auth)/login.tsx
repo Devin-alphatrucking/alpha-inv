@@ -1,12 +1,16 @@
 import { useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from "react-native";
+import { useRouter } from "expo-router";
+import Constants from "expo-constants";
 import { ApiError } from "@/lib/client";
 import { useSession } from "@/lib/session";
 import { space, useTheme } from "@/lib/theme";
-import { Button, Field, Screen } from "@/components/ui";
+import { Button, Field, Muted, Screen } from "@/components/ui";
+import { GoogleButton, googleAvailable } from "@/components/google-button";
 
 export default function Login() {
   const t = useTheme();
+  const router = useRouter();
   const { signIn, notice } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,7 +48,8 @@ export default function Login() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: space.xl, gap: space.lg }} keyboardShouldPersistTaps="handled">
           <View style={{ gap: 6, marginBottom: space.md }}>
-            <Text accessibilityRole="header" style={{ fontSize: 30, fontWeight: "700", color: t.text }}>Sign in</Text>
+            <Text style={{ color: t.muted, fontSize: 14, fontWeight: "600" }}>{Constants.expoConfig?.name ?? "Invoice & Billing"}</Text>
+            <Text accessibilityRole="header" style={{ fontSize: 30, fontWeight: "700", color: t.text }}>Welcome back</Text>
             <Text style={{ color: t.muted, fontSize: 15 }}>Use the same email and password as on the website.</Text>
           </View>
           {notice ? <Text style={{ color: t.warn, fontSize: 14 }}>{notice}</Text> : null}
@@ -87,9 +92,20 @@ export default function Login() {
             />
           ) : null}
           <Button label="Sign in" onPress={submit} busy={busy} />
-          <Text style={{ color: t.muted, fontSize: 13, textAlign: "center" }}>
-            No account yet, or forgot your password? Use the website to create a company or reset it.
+          <Text accessibilityRole="link" onPress={() => router.push("/forgot")} style={{ color: t.muted, fontSize: 14, textAlign: "center", textDecorationLine: "underline", paddingVertical: space.sm }}>
+            Forgot your password?
           </Text>
+          {googleAvailable ? (
+            <View style={{ gap: space.md }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>
+                <View style={{ flex: 1, height: 1, backgroundColor: t.border }} />
+                <Muted style={{ fontSize: 12 }}>or</Muted>
+                <View style={{ flex: 1, height: 1, backgroundColor: t.border }} />
+              </View>
+              <GoogleButton label="Continue with Google" onError={setError} />
+            </View>
+          ) : null}
+          <Button label="Create a company account" variant="outline" onPress={() => router.push("/signup")} />
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>

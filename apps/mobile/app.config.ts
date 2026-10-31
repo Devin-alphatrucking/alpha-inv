@@ -37,9 +37,16 @@ const config: ExpoConfig = {
     "expo-secure-store",
     ["expo-image-picker", { cameraPermission: `Allow ${name} to use the camera to photograph invoices, site work and deliveries.`, photosPermission: `Allow ${name} to choose invoice and site photos from your gallery.` }],
     "expo-document-picker",
+    "expo-web-browser",
   ],
   experiments: { typedRoutes: true },
-  extra: { apiUrl: env.API_URL ?? "http://localhost:3000" },
+  extra: {
+    apiUrl: env.API_URL ?? "http://localhost:3000",
+    // Google sign-in appears only when at least one client id is set (the server must list the same ids in GOOGLE_MOBILE_CLIENT_IDS).
+    googleClientIds: { web: env.GOOGLE_WEB_CLIENT_ID, ios: env.GOOGLE_IOS_CLIENT_ID, android: env.GOOGLE_ANDROID_CLIENT_ID },
+    // Shown in the app when a person needs the website (terms, privacy, plans). Defaults to the API address.
+    websiteUrl: env.WEBSITE_URL ?? env.API_URL ?? "http://localhost:3000",
+  },
 };
 
 export default config;

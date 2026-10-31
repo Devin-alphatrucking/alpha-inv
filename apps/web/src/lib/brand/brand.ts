@@ -1,5 +1,4 @@
 import { cache } from "react";
-import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
 import { rawDb } from "@/lib/db";
 import { DEFAULT_FORMAT, formatFromOrg, makeFormatters, type OrgFormat } from "@/lib/brand/format";
@@ -7,12 +6,11 @@ import { isHexColor } from "@/lib/brand/theme";
 import { PRODUCT_NAME } from "@/lib/brand/product";
 
 /**
- * Who the app looks like. Signed in: the user's company. Signed out: the company
- * named by the `brand-c` cookie (set from ?c=<company slug> by the proxy), else the
- * neutral product default. Mobile/web clients read the same data from /api/branding.
+ * Who the app looks like. Signed in: the user's company. Signed out: always the product's own
+ * name and logo, so a shared computer never shows the last company. Mobile/web clients read the
+ * same data from /api/branding.
  */
 
-export const BRAND_COOKIE = "brand-c";
 export const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,39}$/;
 
 export type Brand = {
@@ -127,11 +125,6 @@ export const getBrand = cache(async (): Promise<Brand> => {
   if (session?.user?.orgId) {
     const own = await loadBrandById(session.user.orgId);
     if (own) return own;
-  }
-  const slug = (await cookies()).get(BRAND_COOKIE)?.value;
-  if (slug) {
-    const fromCookie = await loadBrandBySlug(slug);
-    if (fromCookie) return fromCookie;
   }
   return DEFAULT_BRAND;
 });

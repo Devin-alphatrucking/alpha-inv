@@ -84,6 +84,8 @@ export type InvoiceDetail = InvoiceRow & {
   lineItems: { id: string; description: string; hsnCode: string | null; quantity: string; unit: string; rateExclGst: string; gstPercent: string; gstAmount: string; lineTotal: string }[];
 };
 
+export type SignUpInput = { companyName: string; name: string; email: string; phone: string; password: string; country: string; acceptTerms: boolean };
+
 export type UploadResult = { invoiceId: string; duplicateWarning?: boolean; originalInvoiceNumber?: string | null };
 
 
@@ -276,6 +278,20 @@ export function createClient(opts: ClientOptions) {
       access = null;
       await opts.store.clear();
     },
+
+    /** Sign in with a Google ID token from the phone's Google sign-in. Creates a company on a free trial for a brand new person. */
+    async signInWithGoogle(idToken: string, device: { deviceName?: string; platform?: "ios" | "android"; appVersion?: string } = {}) {
+      const body = await request<{ tokens: Tokens; created: boolean }>("/api/v1/auth/google", { json: { idToken, ...device }, auth: false });
+      await saveTokens(body.tokens);
+      return { created: body.created };
+    },
+
+    // ---- Sign-up and password help (no sign-in needed)
+    signUp: (input: SignUpInput) => request<{ checkEmail: true }>("/api/v1/auth/signup", { json: input, auth: false }),
+    confirmEmail: (email: string, code: string) => request<{ ok: true }>("/api/v1/auth/confirm", { json: { email: email.trim(), code: code.trim() }, auth: false }),
+    resendCode: (email: string) => request<{ message: string }>("/api/v1/auth/resend", { json: { email: email.trim() }, auth: false }),
+    forgotPassword: (email: string) => request<{ message: string }>("/api/v1/auth/forgot", { json: { email: email.trim() }, auth: false }),
+    resetPassword: (input: { email: string; code: string; password: string }) => request<{ ok: true }>("/api/v1/auth/reset", { json: { ...input, email: input.email.trim(), code: input.code.trim() }, auth: false }),
 
     me: () => request<Me>("/api/v1/me"),
     switchCompany: (companyId: string) => request<{ companyId: string }>("/api/v1/me/company", { json: { companyId } }),

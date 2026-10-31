@@ -77,25 +77,36 @@ export async function loginMobile(raw: unknown, ctx: { ip: string }): Promise<Mo
   const membership = pickDefaultMembership(memberships);
   if (!membership) return fail(403, "no_company", "Your company cannot be opened right now. Contact support.");
 
+  return startSession(user, membership.organizationId, v, ctx, "mobile");
+}
+
+/** Opens a phone session for a person who has already proved who they are (password, or Google). */
+export async function startSession(
+  user: { id: string; sessionVersion: number },
+  organizationId: string,
+  device: { deviceName?: string; platform?: "ios" | "android"; appVersion?: string },
+  ctx: { ip: string },
+  via: "mobile" | "google",
+): Promise<{ ok: true; tokens: Tokens; userId: string; orgId: string }> {
   const refresh = newRefreshToken();
   const now = new Date();
   const refreshExpiresAt = new Date(now.getTime() + REFRESH_DAYS * DAY);
   const session = await rawDb.mobileSession.create({
     data: {
       userId: user.id,
-      organizationId: membership.organizationId,
+      organizationId,
       refreshHash: refresh.hash,
       sessionVersion: user.sessionVersion,
-      deviceName: v.deviceName ?? null,
-      platform: v.platform ?? null,
-      appVersion: v.appVersion ?? null,
+      deviceName: device.deviceName ?? null,
+      platform: device.platform ?? null,
+      appVersion: device.appVersion ?? null,
       ip: ctx.ip.slice(0, 64),
       refreshExpiresAt,
       absoluteExpiresAt: new Date(now.getTime() + ABSOLUTE_DAYS * DAY),
     },
   });
-  await logActivity({ userId: user.id, organizationId: membership.organizationId, action: "LOGIN", module: "AUTH", entityId: user.id, details: { via: "mobile", platform: v.platform ?? null, device: v.deviceName ?? null } });
-  return { ok: true, tokens: issue(session.id, refresh, refreshExpiresAt), userId: user.id, orgId: membership.organizationId };
+  await logActivity({ userId: user.id, organizationId, action: "LOGIN", module: "AUTH", entityId: user.id, details: { via: via === "google" ? "mobile-google" : "mobile", platform: device.platform ?? null, device: device.deviceName ?? null } });
+  return { ok: true, tokens: issue(session.id, refresh, refreshExpiresAt), userId: user.id, orgId: organizationId };
 }
 
 async function revoke(sessionId: string, reason: string) {

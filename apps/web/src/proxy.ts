@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { canOpenPath, homeFor, isRole } from "@/lib/roles";
 import { masterGate } from "@/lib/master/gate";
@@ -25,47 +25,14 @@ const PUBLIC_PATHS = [
   "/api/jobs/quiet-notices",
   "/api/jobs/trial-notices", // scheduler calls: protected by JOBS_SECRET in the route
   "/api/v1/auth/login",
+  "/api/v1/auth/signup",
+  "/api/v1/auth/confirm",
+  "/api/v1/auth/resend",
+  "/api/v1/auth/forgot",
+  "/api/v1/auth/reset",
+  "/api/v1/auth/google",
   "/api/v1/auth/refresh",
 ];
-
-const BRAND_COOKIE = "brand-c";
-const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,39}$/;
-
-/**
- * `?c=<company slug>` remembers which company's branding to show on the sign-in page.
- * The cookie is also added to the request that is forwarded to the page, so the very
- * first visit already renders that company's branding (not only the second).
- */
-function nextWithBrand(req: NextRequest) {
-  // Creating a new company, or "not my company" on the sign-in page, forgets any remembered company: on a shared computer the next
-  // person must not see the last company's name and logo.
-  if (req.nextUrl.pathname.startsWith("/signup") || req.nextUrl.searchParams.get("brand") === "default") {
-    const headers = new Headers(req.headers);
-    headers.set("cookie", (headers.get("cookie") ?? "").split(";").map((c) => c.trim()).filter((c) => c && !c.startsWith(`${BRAND_COOKIE}=`)).join("; "));
-    const cleared = NextResponse.next({ request: { headers } });
-    cleared.cookies.delete(BRAND_COOKIE);
-    return cleared;
-  }
-  const slug = req.nextUrl.searchParams.get("c")?.trim().toLowerCase();
-  if (!slug || !SLUG_RE.test(slug)) return NextResponse.next();
-
-  const headers = new Headers(req.headers);
-  const others = (headers.get("cookie") ?? "")
-    .split(";")
-    .map((c) => c.trim())
-    .filter((c) => c && !c.startsWith(`${BRAND_COOKIE}=`));
-  headers.set("cookie", [...others, `${BRAND_COOKIE}=${slug}`].join("; "));
-
-  const res = NextResponse.next({ request: { headers } });
-  res.cookies.set(BRAND_COOKIE, slug, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    // No expiry: it lasts until the browser is closed, so a link to one company's sign-in does not follow the computer for months.
-  });
-  return res;
-}
 
 export default auth((req) => {
   const { nextUrl } = req;
@@ -79,7 +46,7 @@ export default auth((req) => {
   const isPublic = pathname === "/" || PUBLIC_PATHS.some((path) => pathname.startsWith(path));
 
   if (isPublic) {
-    return nextWithBrand(req);
+    return NextResponse.next();
   }
 
   // The mobile apps authenticate with a bearer token, which the route handlers verify themselves

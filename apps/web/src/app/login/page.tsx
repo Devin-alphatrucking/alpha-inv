@@ -31,14 +31,6 @@ export default async function LoginPage() {
         >
           <LoginForm signupEnabled={signupEnabled} googleEnabled={isGoogleConfigured()} />
         </Suspense>
-        {!brand.isDefault && (
-          <p className="mt-4 text-center text-xs text-muted-foreground">
-            Not {brand.name}?{" "}
-            <a href="/login?brand=default" className="underline underline-offset-2 hover:text-foreground">
-              Use the standard sign-in
-            </a>
-          </p>
-        )}
         {(brand.supportEmail || brand.supportUrl) && (
           <p className="mt-4 text-center text-xs text-muted-foreground">
             Need help?{" "}
