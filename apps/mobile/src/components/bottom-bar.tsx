@@ -6,7 +6,7 @@ import { useRouter, type Href, type Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { can, roleLabel } from "@/lib/roles";
 import { useSession } from "@/lib/session";
-import { space, useTheme } from "@/lib/theme";
+import { radius, space, useTheme } from "@/lib/theme";
 import { Badge } from "@/components/ui";
 
 type TabBarProps = Parameters<NonNullable<React.ComponentProps<typeof Tabs>["tabBar"]>>[0];
@@ -31,21 +31,30 @@ export function BottomBar({ state }: TabBarProps) {
   const canSite = can(perms, "site:view");
   const canBuy = can(perms, "request:view");
 
-  // The fourth place is the one this person uses most: site work for the crew, purchase for the buyers, otherwise their account.
-  const fourth: Slot = canSite
-    ? { route: "site", href: "/site", label: "Site", icon: "tool" }
-    : canBuy
-      ? { route: "purchase", href: "/purchase", label: "Purchase", icon: "shopping-cart" }
-      : { route: "account", href: "/account", label: "Account", icon: "user" };
+  const canPayments = can(perms, "payment:view");
+  const canVendors = can(perms, "vendor:view");
+  // Same rule as the website's phone bar: people who have somewhere to go besides their own invoices get the full bar with a More menu;
+  // everyone else gets Dashboard, My Invoices, Upload and Account.
+  const fullBar = canSite || canBuy || canPayments || canVendors;
+  // The fourth place, like the website's Payments: payments for those who see them, otherwise the module they use most.
+  const fourth: Slot = canPayments
+    ? { route: "payments", href: "/payments", label: "Payments", icon: "credit-card" }
+    : canSite
+      ? { route: "site", href: "/site", label: "Site", icon: "tool" }
+      : canBuy
+        ? { route: "purchase", href: "/purchase", label: "Purchase", icon: "shopping-cart" }
+        : { route: "vendors", href: "/vendors", label: "Vendors", icon: "briefcase" };
 
-  const moreItems: { route: string; href: Href; label: string; description: string; icon: IconName }[] = [
-    ...(canBuy && fourth.route !== "purchase" ? [{ route: "purchase", href: "/purchase" as Href, label: "Purchase", description: "Material requests and deliveries", icon: "shopping-cart" as IconName }] : []),
-    ...(canSite && fourth.route !== "site" ? [{ route: "site", href: "/site" as Href, label: "Site work", description: "Daily reports, photos, issues and drawings", icon: "tool" as IconName }] : []),
-    ...(can(perms, "payment:view") ? [{ route: "payments", href: "/payments" as Href, label: "Payments", description: "What has been paid and what is still owed", icon: "credit-card" as IconName }] : []),
-    ...(can(perms, "vendor:view") ? [{ route: "vendors", href: "/vendors" as Href, label: "Vendors", description: "Suppliers and what you owe each", icon: "briefcase" as IconName }] : []),
-    { route: "pending", href: "/pending", label: "Waiting to send", description: "Saved on this phone, not sent yet", icon: "upload-cloud" },
-    ...(fourth.route !== "account" ? [{ route: "account", href: "/account" as Href, label: "Account", description: "Your details, company and plan", icon: "user" as IconName }] : []),
+  // The More menu lists the same places as the website's, in the same order, then what only the phone has.
+  const places: { route: string; href: Href; label: string; description: string; icon: IconName; show: boolean }[] = [
+    { route: "purchase", href: "/purchase", label: "Purchase", description: "Material requests & deliveries", icon: "shopping-cart", show: canBuy },
+    { route: "site", href: "/site", label: "Site work", description: "Daily reports, photos, issues & drawings", icon: "tool", show: canSite },
+    { route: "vendors", href: "/vendors", label: "Vendors", description: "Material suppliers & GSTINs", icon: "briefcase", show: canVendors },
+    { route: "payments", href: "/payments", label: "Payments", description: "What has been paid and what is still owed", icon: "credit-card", show: canPayments },
+    { route: "pending", href: "/pending", label: "Waiting to send", description: "Saved on this phone, not sent yet", icon: "upload-cloud", show: true },
+    { route: "account", href: "/account", label: "Account", description: "Your details, company and plan", icon: "user", show: true },
   ];
+  const moreItems = places.filter((m) => m.show && m.route !== (fullBar ? fourth.route : ""));
   const moreActive = moreItems.some((m) => m.route === active);
 
   const initialsOf = (me?.user.name ?? "").split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase();
@@ -63,6 +72,18 @@ export function BottomBar({ state }: TabBarProps) {
     );
   }
 
+  function accountSlot() {
+    const isActive = active === "account";
+    return (
+      <Pressable key="account" accessibilityRole="button" accessibilityLabel="Account" accessibilityState={{ selected: isActive }} onPress={() => router.navigate("/account")} style={styles.slot}>
+        <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: t.soft, alignItems: "center", justifyContent: "center", borderWidth: isActive ? 1.5 : 0, borderColor: t.primary }}>
+          <Text style={{ color: t.text, fontSize: 9, fontWeight: "700" }}>{initialsOf || "?"}</Text>
+        </View>
+        <Text style={{ color: isActive ? t.primary : t.muted, fontSize: 11, fontWeight: isActive ? "700" : "500" }}>Account</Text>
+      </Pressable>
+    );
+  }
+
   function confirmSignOut() {
     setMoreOpen(false);
     Alert.alert("Sign out?", "You will need your email and password to sign in again.", [{ text: "Cancel", style: "cancel" }, { text: "Sign out", style: "destructive", onPress: () => void signOut() }]);
@@ -74,8 +95,8 @@ export function BottomBar({ state }: TabBarProps) {
     <>
       <View style={[styles.bar, { backgroundColor: t.card, borderTopColor: t.border, paddingBottom: Math.max(insets.bottom, 8) }]}>
         <View style={styles.row}>
-          {item({ route: "index", href: "/", label: "Home", icon: "grid" }, active === "index")}
-          {item({ route: "invoices", href: "/invoices", label: "Invoices", icon: "file-text" }, active === "invoices")}
+          {item({ route: "index", href: "/", label: "Dashboard", icon: "layout" }, active === "index")}
+          {item({ route: "invoices", href: "/invoices", label: fullBar ? "Invoices" : "My Invoices", icon: "file-text" }, active === "invoices")}
 
           {/* The raised Upload button in the middle (an empty space when this person may not upload). */}
           <View style={styles.slot} accessibilityElementsHidden={!canUpload} importantForAccessibility={canUpload ? "auto" : "no-hide-descendants"}>
@@ -92,15 +113,17 @@ export function BottomBar({ state }: TabBarProps) {
             ) : null}
           </View>
 
-          {item(fourth, active === fourth.route)}
+          {fullBar ? item(fourth, active === fourth.route) : accountSlot()}
 
-          <Pressable accessibilityRole="button" accessibilityLabel="More" accessibilityState={{ expanded: moreOpen, selected: moreActive }} onPress={() => setMoreOpen(true)} style={styles.slot}>
-            <View style={{ alignItems: "center" }}>
-              {moreActive ? <View style={[styles.dot, { backgroundColor: t.primary }]} /> : null}
-              <Feather name="menu" size={21} color={moreActive ? t.primary : t.muted} />
-            </View>
-            <Text style={{ color: moreActive ? t.primary : t.muted, fontSize: 11, fontWeight: moreActive ? "700" : "500" }}>More</Text>
-          </Pressable>
+          {fullBar ? (
+            <Pressable accessibilityRole="button" accessibilityLabel="More" accessibilityState={{ expanded: moreOpen, selected: moreActive }} onPress={() => setMoreOpen(true)} style={styles.slot}>
+              <View style={{ alignItems: "center" }}>
+                {moreActive ? <View style={[styles.dot, { backgroundColor: t.primary }]} /> : null}
+                <Feather name="grid" size={21} color={moreActive ? t.primary : t.muted} />
+              </View>
+              <Text style={{ color: moreActive ? t.primary : t.muted, fontSize: 11, fontWeight: moreActive ? "700" : "500" }}>More</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
 
@@ -109,15 +132,12 @@ export function BottomBar({ state }: TabBarProps) {
         <View style={[styles.sheet, { backgroundColor: t.card, paddingBottom: Math.max(insets.bottom, 16) }]}>
           <View style={[styles.grab, { backgroundColor: t.border }]} />
           <ScrollView bounces={false} contentContainerStyle={{ gap: space.sm }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: space.md, paddingBottom: space.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: t.border }}>
-              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.bg, alignItems: "center", justifyContent: "center" }}>
-                <Text style={{ color: t.text, fontWeight: "700" }}>{initialsOf || "?"}</Text>
+            <View style={{ paddingBottom: space.md, borderBottomWidth: 1, borderBottomColor: t.border, gap: 2 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <Text accessibilityRole="header" style={{ color: t.text, fontSize: 16, fontWeight: "600" }}>{me?.user.role === "ADMIN" ? "Administration" : "More"}</Text>
+                {me ? <Badge label={roleLabel(me.user.role)} /> : null}
               </View>
-              <View style={{ flex: 1 }}>
-                <Text numberOfLines={1} style={{ color: t.text, fontSize: 16, fontWeight: "700" }}>{me?.user.name}</Text>
-                <Text numberOfLines={1} style={{ color: t.muted, fontSize: 13 }}>{me?.user.email}</Text>
-              </View>
-              {me ? <Badge label={roleLabel(me.user.role)} /> : null}
+              <Text style={{ color: t.muted, fontSize: 12 }}>{me?.user.role === "ADMIN" ? "Manage suppliers, payments and site work" : "Everything else you can open"}</Text>
             </View>
 
             {moreItems.map((m) => (
@@ -128,13 +148,13 @@ export function BottomBar({ state }: TabBarProps) {
                   setMoreOpen(false);
                   router.navigate(m.href);
                 }}
-                style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: space.md, padding: space.md, borderRadius: 12, backgroundColor: pressed ? t.bg : "transparent" })}
+                style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: space.md, padding: space.md, borderRadius: radius.lg, backgroundColor: pressed ? t.soft : "transparent" })}
               >
-                <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: t.bg, alignItems: "center", justifyContent: "center" }}>
+                <View style={{ width: 36, height: 36, borderRadius: radius.md, backgroundColor: t.soft, alignItems: "center", justifyContent: "center" }}>
                   <Feather name={m.icon} size={18} color={t.muted} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: t.text, fontSize: 15, fontWeight: "600" }}>{m.label}</Text>
+                  <Text style={{ color: t.text, fontSize: 14, fontWeight: "500" }}>{m.label}</Text>
                   <Text style={{ color: t.muted, fontSize: 12, marginTop: 2 }}>{m.description}</Text>
                 </View>
                 <Feather name="chevron-right" size={18} color={t.muted} />
@@ -143,8 +163,8 @@ export function BottomBar({ state }: TabBarProps) {
 
             {/* Plans are bought on the website, never in the app. On Android a person can jump there; on iPhone the app only says so (App Store rules about steering to outside payment). */}
             {Platform.OS === "android" && website && me?.user.role === "ADMIN" ? (
-              <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(website)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: space.md, padding: space.md, borderRadius: 12, backgroundColor: pressed ? t.bg : "transparent" })}>
-                <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: t.bg, alignItems: "center", justifyContent: "center" }}>
+              <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(website)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: space.md, padding: space.md, borderRadius: radius.lg, backgroundColor: pressed ? t.soft : "transparent" })}>
+                <View style={{ width: 36, height: 36, borderRadius: radius.md, backgroundColor: t.soft, alignItems: "center", justifyContent: "center" }}>
                   <Feather name="external-link" size={18} color={t.muted} />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -154,10 +174,21 @@ export function BottomBar({ state }: TabBarProps) {
               </Pressable>
             ) : null}
 
-            <Pressable accessibilityRole="button" onPress={confirmSignOut} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space.sm, minHeight: 48, marginTop: space.sm, borderRadius: 12, borderWidth: 1, borderColor: t.border, backgroundColor: pressed ? t.bg : "transparent" })}>
-              <Feather name="log-out" size={17} color={t.danger} />
-              <Text style={{ color: t.danger, fontSize: 15, fontWeight: "600" }}>Sign out</Text>
-            </Pressable>
+            <View style={{ marginTop: space.sm, borderRadius: radius.lg, borderWidth: 1, borderColor: t.border, backgroundColor: t.bg, padding: space.md, gap: space.md }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>
+                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: t.soft, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ color: t.text, fontSize: 12, fontWeight: "700" }}>{initialsOf || "?"}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text numberOfLines={1} style={{ color: t.text, fontSize: 14, fontWeight: "500" }}>{me?.user.name}</Text>
+                  <Text numberOfLines={1} style={{ color: t.muted, fontSize: 12 }}>{me?.user.email}</Text>
+                </View>
+              </View>
+              <Pressable accessibilityRole="button" onPress={confirmSignOut} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space.sm, minHeight: 44, borderRadius: radius.lg, borderWidth: 1, borderColor: t.border, backgroundColor: pressed ? t.dangerBg : t.card })}>
+                <Feather name="log-out" size={16} color={t.danger} />
+                <Text style={{ color: t.danger, fontSize: 15, fontWeight: "500" }}>Sign out</Text>
+              </Pressable>
+            </View>
           </ScrollView>
         </View>
       </Modal>
@@ -172,6 +203,6 @@ const styles = StyleSheet.create({
   dot: { position: "absolute", top: -7, width: 4, height: 4, borderRadius: 2 },
   fab: { width: 54, height: 54, borderRadius: 27, alignItems: "center", justifyContent: "center", marginTop: -26, borderWidth: 4, shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
   backdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.4)" },
-  sheet: { borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingHorizontal: space.lg, paddingTop: space.sm, maxHeight: "80%" },
+  sheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingHorizontal: space.lg, paddingTop: space.sm, maxHeight: "80%" },
   grab: { alignSelf: "center", width: 40, height: 4, borderRadius: 2, marginBottom: space.md },
 });
